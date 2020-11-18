@@ -26,7 +26,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.13.4
+          go-version: 1.15.3
       - name: Build
         run: go build -race  ./...
       - name: Test
@@ -34,15 +34,14 @@ jobs:
   golangci-lint:
     name: golangci-lint
     runs-on: ubuntu-latest
-    env:
-      GOLANGCI_LINT_CONTAINER: golangci/golangci-lint:v1.23.2
+    if: github.repository != 'networkservicemesh/cmd-template'
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-      - name: Pull golangci-lint docker container
-        run: docker pull ${GOLANGCI_LINT_CONTAINER}
-      - name: Run golangci-lint
-        run: docker run --rm -v $(pwd):/app -w /app ${GOLANGCI_LINT_CONTAINER} golangci-lint run
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.31
 
   excludeFmtErrorf:
     name: exclude fmt.Errorf
@@ -77,26 +76,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v1
         with:
-          go-version: 1.13
+          go-version: 1.15.3
       - run: go mod tidy
       - name: Check for changes in go.mod or go.sum
         run: |
           git diff --name-only --exit-code go.mod || ( echo "Run go tidy" && false )
           git diff --name-only --exit-code go.sum || ( echo "Run go tidy" && false )
-  license:
-    name: license header check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v1
-        with:
-          go-version: 1.13
-      - name: Install go-header
-        run: 'go get github.com/denis-tingajkin/go-header@v0.2.2'
-      - name: Run go-header
-        run: |
-          eval $(go env)
-          ${GOPATH}/bin/go-header
   excludereplace:
     name: Exclude replace in go.mod
     runs-on: ubuntu-latest
@@ -133,4 +118,3 @@ jobs:
         with:
           GITHUB_LOGIN: nsmbot
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
