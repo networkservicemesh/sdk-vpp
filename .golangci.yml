@@ -21,6 +21,16 @@ linters-settings:
     min-confidence: 0.8
   goimports:
     local-prefixes: github.com/networkservicemesh/sdk-vpp/
+  goheader:
+    template-path: ".ci/license/template.txt"
+    values:
+      const:
+        year: 2020
+      regexp:
+        year-range: ((\d\d\d\d-{{year}})|({{year}}))
+        company: .*
+        copyright-holder: Copyright \(c\) {{year-range}} {{company}}\n\n
+        copyright-holders: ({{copyright-holder}})+
   gocyclo:
     min-complexity: 15
   maligned:
@@ -132,6 +142,7 @@ linters:
     - gocritic
     - gocyclo
     - gofmt
+    - goheader
     - goimports
     - golint
     - gosec
