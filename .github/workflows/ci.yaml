@@ -102,19 +102,19 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-and-test
-    if: github.actor == 'nsmbot' && github.base_ref == 'master' && github.event_name == 'pull_request'
+    if: github.actor == 'nsmbot' && github.base_ref == 'main' && github.event_name == 'pull_request'
     steps:
       - name: Check out the code
         uses: actions/checkout@v2
-      - name: Fetch master
+      - name: Fetch main
         run: |
           git remote -v
-          git fetch --depth=1 origin master
+          git fetch --depth=1 origin main
       - name: Only allow go.mod and go.sum changes
         run: |
-          find . -type f ! -name 'go.mod' ! -name 'go.sum' -exec git diff --exit-code origin/master -- {} +
+          find . -type f ! -name 'go.mod' ! -name 'go.sum' -exec git diff --exit-code origin/main -- {} +
       - name: Automerge nsmbot PR
-        uses: ridedott/merge-me-action@master
+        uses: ridedott/merge-me-action@main
         with:
           GITHUB_LOGIN: nsmbot
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
