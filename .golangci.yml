@@ -171,4 +171,8 @@ issues:
     - path: pkg/networkservice/mechanisms/kernel/kernelvethpair/common.go
       linters:
         - funlen
-      text: "Function 'create' has too many statements"
+      text: "Function 'create'"
+    - path: pkg/networkservice/mechanisms/kernel/common.go
+      linters:
+        - funlen
+      text: "Function 'create'"
