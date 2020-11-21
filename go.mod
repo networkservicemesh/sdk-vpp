@@ -9,6 +9,7 @@ require (
 	github.com/networkservicemesh/api v0.0.0-20201117093615-ae6039374f31
 	github.com/networkservicemesh/sdk v0.0.0-20201120210623-eccd909eaf05
 	github.com/pkg/errors v0.9.1
+	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	google.golang.org/grpc v1.33.2

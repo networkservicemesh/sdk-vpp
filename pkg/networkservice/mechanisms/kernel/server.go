@@ -19,20 +19,52 @@
 package kernel
 
 import (
+	"context"
 	"os"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kerneltap"
 )
 
+type kernelServer struct{}
+
 // NewServer return a NetworkServiceServer chain element that correctly handles the kernel Mechanism
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewServer(vppConn)
+		return chain.NewNetworkServiceServer(
+			kerneltap.NewServer(vppConn),
+			&kernelServer{},
+		)
 	}
-	return kernelvethpair.NewServer(vppConn)
+	return chain.NewNetworkServiceServer(
+		kernelvethpair.NewServer(vppConn),
+		&kernelServer{},
+	)
+}
+
+func (k *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if err := create(ctx, request.GetConnection(), false); err != nil {
+		return nil, err
+	}
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		_ = del(ctx, request.GetConnection(), metadata.IsClient(k))
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if err := del(ctx, conn, metadata.IsClient(k)); err != nil {
+		return nil, err
+	}
+	return next.Server(ctx).Close(ctx, conn)
 }

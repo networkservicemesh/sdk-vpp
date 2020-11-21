@@ -24,7 +24,6 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"google.golang.org/grpc"
 
@@ -43,12 +42,6 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 }
 
 func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	mechanism := &networkservice.Mechanism{
-		Cls:        cls.LOCAL,
-		Type:       MECHANISM,
-		Parameters: make(map[string]string),
-	}
-	request.MechanismPreferences = append(request.MechanismPreferences, mechanism)
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err

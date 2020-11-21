@@ -21,18 +21,15 @@ package kernelvethpair
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
-	"github.com/pkg/errors"
+	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/netlinkhandle"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 )
 
@@ -46,72 +43,53 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if isClient {
 			namingConn.Id = namingConn.GetNextPathSegment().GetId()
 		}
-		la.Name = linuxIfaceName(mechanism.GetInterfaceName(namingConn))
-		la.Alias = fmt.Sprintf("server-%s", namingConn.GetId())
+		la.Name = randstr.Hex(7)
+		alias := fmt.Sprintf("server-%s", namingConn.GetId())
 		if isClient {
-			la.Alias = fmt.Sprintf("client-%s", namingConn.GetId())
+			alias = fmt.Sprintf("client-%s", namingConn.GetId())
 		}
-		nsHandle, err := toNsHandle(mechanism)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		la.Namespace = netlink.NsFd(nsHandle)
-		handle, err := toNetlinkHandle(ctx, nsHandle)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		netlinkhandle.Store(ctx, isClient, handle)
+
+		// Create the veth pair
+		now := time.Now()
 		l := &netlink.Veth{
 			LinkAttrs: la,
-			PeerName:  linuxIfaceName(la.Alias),
+			PeerName:  linuxIfaceName(alias),
 		}
-		now := time.Now()
 		if addErr := netlink.LinkAdd(l); addErr != nil {
 			return addErr
 		}
 		trace.Log(ctx).
 			WithField("link.Name", l.Name).
 			WithField("link.PeerName", l.PeerName).
-			WithField("link.Alias", l.Alias).
-			WithField("link.OperState", l.OperState).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkAdd").Debug("completed")
 
+		// Get the peerLink
 		now = time.Now()
-		peerLink, err := netlink.LinkByName(linuxIfaceName(la.Alias))
+		peerLink, err := netlink.LinkByName(l.PeerName)
 		if err != nil {
 			_ = netlink.LinkDel(l)
 			return err
 		}
 		trace.Log(ctx).
-			WithField("link.Name", linuxIfaceName(la.Alias)).
+			WithField("link.Name", l.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
 
+		// Set Alias of peerLink
 		now = time.Now()
-		if err = netlink.LinkSetAlias(peerLink, fmt.Sprintf("veth-%s", la.Alias)); err != nil {
+		if err = netlink.LinkSetAlias(peerLink, fmt.Sprintf("veth-%s", alias)); err != nil {
 			_ = netlink.LinkDel(l)
 			_ = netlink.LinkDel(peerLink)
 			return err
 		}
 		trace.Log(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
-			WithField("alias", fmt.Sprintf("veth-%s", la.Alias)).
+			WithField("peerLink", fmt.Sprintf("veth-%s", alias)).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetAlias").Debug("completed")
 
-		now = time.Now()
-		err = handle.LinkSetUp(l)
-		if err != nil {
-			_ = netlink.LinkDel(l)
-			_ = netlink.LinkDel(peerLink)
-			return err
-		}
-		trace.Log(ctx).
-			WithField("link.Name", l.Attrs().Name).
-			WithField("duration", time.Since(now)).
-			WithField("netlink", "LinkSetUp").Debug("completed")
-
+		// Up the peerLink
 		now = time.Now()
 		err = netlink.LinkSetUp(peerLink)
 		if err != nil {
@@ -124,6 +102,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
 
+		// Store the link and peerLink
 		link.Store(ctx, isClient, l)
 		peer.Store(ctx, isClient, peerLink)
 	}
@@ -133,6 +112,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 func del(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if peerLink, ok := peer.Load(ctx, isClient); ok {
+			// Delete the peerLink which deletes all associated pair partners, routes, etc
 			now := time.Now()
 			if err := netlink.LinkDel(peerLink); err != nil {
 				return err
@@ -151,31 +131,4 @@ func linuxIfaceName(ifaceName string) string {
 		return ifaceName
 	}
 	return ifaceName[:kernel.LinuxIfMaxLength]
-}
-
-func toNsHandle(mechanism *kernel.Mechanism) (netns.NsHandle, error) {
-	u, err := url.Parse(mechanism.GetNetNSURL())
-	if err != nil {
-		return 0, err
-	}
-	if u.Scheme != "file" {
-		return 0, errors.Errorf("NetNSURL Scheme required to be %q actual %q", "file", u.Scheme)
-	}
-	return netns.GetFromPath(u.Path)
-}
-
-func toNetlinkHandle(ctx context.Context, nsHandle netns.NsHandle) (*netlink.Handle, error) {
-	curNsHandle, err := netns.Get()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	now := time.Now()
-	handle, err := netlink.NewHandleAtFrom(nsHandle, curNsHandle)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	trace.Log(ctx).
-		WithField("duration", time.Since(now)).
-		WithField("netlink", "NewHandleAtFrom").Debug("completed")
-	return handle, nil
 }
