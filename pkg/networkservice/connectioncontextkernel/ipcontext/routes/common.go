@@ -31,7 +31,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/netlinkhandle"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
@@ -40,10 +40,13 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if !ok {
 			return nil
 		}
-		handle, ok := netlinkhandle.Load(ctx, isClient)
-		if !ok {
-			return errors.Errorf("did not find netlink handle with which to program routes")
+
+		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
 		}
+		defer handle.Delete()
+
 		from := conn.GetContext().GetIpContext().GetSrcIPNet()
 		to := conn.GetContext().GetIpContext().GetDstIPNet()
 		if isClient {
