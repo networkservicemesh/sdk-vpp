@@ -29,10 +29,13 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/thanhpk/randstr"
+	"github.com/vishvananda/netlink"
 
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
@@ -41,25 +44,29 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			return nil
 		}
 		now := time.Now()
-		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV2(ctx, &tapv2.TapCreateV2{
+		tapCreateV2 := &tapv2.TapCreateV2{
 			ID:            ^uint32(0),
 			UseRandomMac:  true,
 			NumRxQueues:   1,
+			TxRingSz:      1024,
+			RxRingSz:      1024,
 			HostIfNameSet: true,
-			HostIfName:    linuxIfaceName(mechanism.GetInterfaceName(conn)),
+			HostIfName:    randstr.Hex(7),
 			//TapFlags:         0, // TODO - TUN support for v3 payloads
-		})
+		}
+		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV2(ctx, tapCreateV2)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		trace.Log(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
+			WithField("HostIfName", tapCreateV2.HostIfName).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "TapCreateV2").Debug("completed")
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 
 		now = time.Now()
-		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
+		if _, err = interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
 			SwIfIndex: rsp.SwIfIndex,
 			Mode:      interface_types.RX_MODE_API_ADAPTIVE,
 		}); err != nil {
@@ -70,6 +77,17 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
+
+		now = time.Now()
+		l, err := netlink.LinkByName(tapCreateV2.HostIfName)
+		if err != nil {
+			return errors.Wrapf(err, "unable to find hostIfName %s", tapCreateV2.HostIfName)
+		}
+		trace.Log(ctx).
+			WithField("link.Name", tapCreateV2.HostIfName).
+			WithField("duration", time.Since(now)).
+			WithField("netlink", "LinkByName").Debug("completed")
+		link.Store(ctx, isClient, l)
 	}
 	return nil
 }
@@ -89,11 +107,4 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		return nil
 	}
 	return nil
-}
-
-func linuxIfaceName(ifaceName string) string {
-	if len(ifaceName) <= kernel.LinuxIfMaxLength {
-		return ifaceName
-	}
-	return ifaceName[:kernel.LinuxIfMaxLength]
 }
