@@ -26,10 +26,12 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/pkg/errors"
 	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 )
 
@@ -38,6 +40,10 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// TODO - short circuit if already done
 		la := netlink.NewLinkAttrs()
 
+		// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
+		// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
+		// if we are on the client side, we want to name based on the connection id from the NSE that is Next
+		// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
 		namingConn := conn.Clone()
 		namingConn.Id = namingConn.GetPrevPathSegment().GetId()
 		if isClient {
@@ -51,28 +57,108 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		// Create the veth pair
 		now := time.Now()
-		l := &netlink.Veth{
+		veth := &netlink.Veth{
 			LinkAttrs: la,
 			PeerName:  linuxIfaceName(alias),
 		}
+		var l netlink.Link = veth
 		if addErr := netlink.LinkAdd(l); addErr != nil {
 			return addErr
 		}
 		trace.Log(ctx).
-			WithField("link.Name", l.Name).
-			WithField("link.PeerName", l.PeerName).
+			WithField("link.Name", l.Attrs().Name).
+			WithField("link.PeerName", veth.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkAdd").Debug("completed")
 
+		// Construct the nsHandle and netlink handle for the target namespace for this kernel interface
+		nsHandle, err := mechutils.ToNSHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		// Set the link l to the correct netns
+		now = time.Now()
+		if err = netlink.LinkSetNsFd(l, int(nsHandle)); err != nil {
+			return errors.Wrapf(err, "unable to change to netns")
+		}
+		trace.Log(ctx).
+			WithField("link.Name", l.Attrs().Name).
+			WithField("duration", time.Since(now)).
+			WithField("netlink", "LinkSetNsFd").Debug("completed")
+
+		// Get the link l in the new namespace
+		now = time.Now()
+		name := l.Attrs().Name
+		l, err = handle.LinkByName(name)
+		if err != nil {
+			trace.Log(ctx).
+				WithField("duration", time.Since(now)).
+				WithField("link.Name", name).
+				WithField("err", err).
+				WithField("netlink", "LinkByName").Debug("error")
+			return errors.WithStack(err)
+		}
+		trace.Log(ctx).
+			WithField("duration", time.Since(now)).
+			WithField("link.Name", name).
+			WithField("netlink", "LinkByName").Debug("completed")
+
+		name = mechanism.GetInterfaceName(namingConn)
+		// Set the LinkName
+		now = time.Now()
+		if err = handle.LinkSetName(l, name); err != nil {
+			trace.Log(ctx).
+				WithField("link.Name", l.Attrs().Name).
+				WithField("link.NewName", name).
+				WithField("duration", time.Since(now)).
+				WithField("err", err).
+				WithField("netlink", "LinkSetName").Debug("error")
+			return errors.WithStack(err)
+		}
+		trace.Log(ctx).
+			WithField("link.Name", l.Attrs().Name).
+			WithField("link.NewName", name).
+			WithField("duration", time.Since(now)).
+			WithField("netlink", "LinkSetName").Debug("completed")
+
+		// Set the Link Alias
+		now = time.Now()
+		if err = handle.LinkSetAlias(l, alias); err != nil {
+			return errors.WithStack(err)
+		}
+		trace.Log(ctx).
+			WithField("link.Name", l.Attrs().Name).
+			WithField("alias", alias).
+			WithField("duration", time.Since(now)).
+			WithField("netlink", "LinkSetAlias").Debug("completed")
+
+		// Up the link
+		now = time.Now()
+		err = handle.LinkSetUp(l)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		trace.Log(ctx).
+			WithField("link.Name", l.Attrs().Name).
+			WithField("duration", time.Since(now)).
+			WithField("netlink", "LinkSetUp").Debug("completed")
+
+		link.Store(ctx, isClient, l)
+
 		// Get the peerLink
 		now = time.Now()
-		peerLink, err := netlink.LinkByName(l.PeerName)
+		peerLink, err := netlink.LinkByName(veth.PeerName)
 		if err != nil {
 			_ = netlink.LinkDel(l)
 			return err
 		}
 		trace.Log(ctx).
-			WithField("link.Name", l.PeerName).
+			WithField("link.Name", veth.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
 
@@ -103,7 +189,6 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("netlink", "LinkSetUp").Debug("completed")
 
 		// Store the link and peerLink
-		link.Store(ctx, isClient, l)
 		peer.Store(ctx, isClient, peerLink)
 	}
 	return nil

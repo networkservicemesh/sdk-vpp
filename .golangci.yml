@@ -172,7 +172,7 @@ issues:
       linters:
         - funlen
       text: "Function 'create'"
-    - path: pkg/networkservice/mechanisms/kernel/common.go
+    - path: pkg/networkservice/mechanisms/kernel/kerneltap/common.go
       linters:
         - funlen
       text: "Function 'create'"

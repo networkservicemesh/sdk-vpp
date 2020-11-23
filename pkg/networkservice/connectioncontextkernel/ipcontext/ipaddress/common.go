@@ -29,7 +29,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/netlinkhandle"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
@@ -38,10 +38,13 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if !ok {
 			return nil
 		}
-		handle, ok := netlinkhandle.Load(ctx, isClient)
-		if !ok {
-			return errors.Errorf("did not find netlink handle with which to program routes")
+
+		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
 		}
+		defer handle.Delete()
+
 		// Note: These are switched from normal because if we are the client, we need to assign the IP
 		// in the Endpoints NetNS for the Dst.  If we are the *server* we need to assign the IP for the
 		// clients NetNS (ie the source).
