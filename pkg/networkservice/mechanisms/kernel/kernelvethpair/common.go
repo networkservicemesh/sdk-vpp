@@ -40,20 +40,8 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// TODO - short circuit if already done
 		la := netlink.NewLinkAttrs()
 
-		// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
-		// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
-		// if we are on the client side, we want to name based on the connection id from the NSE that is Next
-		// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
-		namingConn := conn.Clone()
-		namingConn.Id = namingConn.GetPrevPathSegment().GetId()
-		if isClient {
-			namingConn.Id = namingConn.GetNextPathSegment().GetId()
-		}
 		la.Name = randstr.Hex(7)
-		alias := fmt.Sprintf("server-%s", namingConn.GetId())
-		if isClient {
-			alias = fmt.Sprintf("client-%s", namingConn.GetId())
-		}
+		alias := mechutils.ToAlias(conn, isClient)
 
 		// Create the veth pair
 		now := time.Now()
@@ -108,7 +96,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("link.Name", name).
 			WithField("netlink", "LinkByName").Debug("completed")
 
-		name = mechanism.GetInterfaceName(namingConn)
+		name = mechutils.ToInterfaceName(conn, isClient)
 		// Set the LinkName
 		now = time.Now()
 		if err = handle.LinkSetName(l, name); err != nil {
