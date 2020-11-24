@@ -20,8 +20,10 @@
 package mechutils
 
 import (
+	"fmt"
 	"net/url"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
@@ -69,4 +71,36 @@ func ToNetlinkHandle(mechanism *kernel.Mechanism) (*netlink.Handle, error) {
 		return nil, errors.WithStack(err)
 	}
 	return handle, nil
+}
+
+// ToInterfaceName - create interface name from conn for client or server side for forwarder.
+//                   Note: Don't use this in a non-forwarder context
+func ToInterfaceName(conn *networkservice.Connection, isClient bool) string {
+	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
+	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
+	// if we are on the client side, we want to name based on the connection id from the NSE that is Next
+	// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
+	namingConn := conn.Clone()
+	namingConn.Id = namingConn.GetPrevPathSegment().GetId()
+	if isClient {
+		namingConn.Id = namingConn.GetNextPathSegment().GetId()
+	}
+	return kernel.ToMechanism(conn.GetMechanism()).GetInterfaceName(namingConn)
+}
+
+// ToAlias - create interface alias/tag from conn for client or server side for forwarder.
+//           Note: Don't use this in a non-forwarder context
+func ToAlias(conn *networkservice.Connection, isClient bool) string {
+	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
+	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
+	// if we are on the client side, we want to name based on the connection id from the NSE that is Next
+	// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
+	namingConn := conn.Clone()
+	namingConn.Id = namingConn.GetPrevPathSegment().GetId()
+	alias := fmt.Sprintf("server-%s", namingConn.GetId())
+	if isClient {
+		namingConn.Id = namingConn.GetNextPathSegment().GetId()
+		alias = fmt.Sprintf("client-%s", namingConn.GetId())
+	}
+	return alias
 }
