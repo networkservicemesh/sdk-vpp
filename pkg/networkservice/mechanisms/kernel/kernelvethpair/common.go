@@ -30,7 +30,6 @@ import (
 	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 )
@@ -135,8 +134,6 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
-
-		link.Store(ctx, isClient, l)
 
 		// Get the peerLink
 		now = time.Now()
