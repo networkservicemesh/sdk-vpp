@@ -33,7 +33,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
@@ -124,8 +123,6 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
-
-		link.Store(ctx, isClient, l)
 	}
 	return nil
 }

@@ -30,23 +30,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		l, ok := link.Load(ctx, isClient)
-		if !ok {
-			return nil
-		}
-
-		handle, err := mechutils.ToNetlinkHandle(mechanism)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		defer handle.Delete()
-
 		from := conn.GetContext().GetIpContext().GetSrcIPNet()
 		to := conn.GetContext().GetIpContext().GetDstIPNet()
 		if isClient {
@@ -56,6 +44,21 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		routes := conn.GetContext().GetIpContext().GetDstRoutes()
 		if isClient {
 			routes = conn.GetContext().GetIpContext().GetSrcRoutes()
+		}
+
+		if to == nil && from == nil && len(routes) == 0 {
+			return nil
+		}
+
+		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer handle.Delete()
+
+		l, err := handle.LinkByName(mechutils.ToInterfaceName(conn, isClient))
+		if err != nil {
+			return errors.WithStack(err)
 		}
 		for _, route := range routes {
 			if err := routeAdd(ctx, handle, l, netlink.SCOPE_UNIVERSE, route.GetPrefixIPNet(), to); err != nil {

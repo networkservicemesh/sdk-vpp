@@ -28,23 +28,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		l, ok := link.Load(ctx, isClient)
-		if !ok {
-			return nil
-		}
-
-		handle, err := mechutils.ToNetlinkHandle(mechanism)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		defer handle.Delete()
-
 		// Note: These are switched from normal because if we are the client, we need to assign the IP
 		// in the Endpoints NetNS for the Dst.  If we are the *server* we need to assign the IP for the
 		// clients NetNS (ie the source).
@@ -55,6 +43,18 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if ipNet == nil {
 			return nil
 		}
+
+		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer handle.Delete()
+
+		l, err := handle.LinkByName(mechutils.ToInterfaceName(conn, isClient))
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
 		now := time.Now()
 		if err := handle.AddrAdd(l, &netlink.Addr{
 			IPNet: ipNet,
