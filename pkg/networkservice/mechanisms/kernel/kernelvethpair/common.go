@@ -25,6 +25,9 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
 	"github.com/pkg/errors"
 	"github.com/thanhpk/randstr"
@@ -57,6 +60,11 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("link.PeerName", veth.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkAdd").Debug("completed")
+
+		err := ethtool.DisableVethChkSumOffload(veth)
+		if err != nil {
+			return errors.WithStack(err)
+		}
 
 		// Construct the nsHandle and netlink handle for the target namespace for this kernel interface
 		nsHandle, err := mechutils.ToNSHandle(mechanism)
