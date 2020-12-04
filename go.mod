@@ -6,8 +6,8 @@ require (
 	git.fd.io/govpp.git v0.3.6-0.20200903151113-c94a96227985
 	github.com/edwarnicke/govpp v0.0.0-20201111163523-106f68b6ba26
 	github.com/golang/protobuf v1.4.3
-	github.com/networkservicemesh/api v0.0.0-20201117093615-ae6039374f31
-	github.com/networkservicemesh/sdk v0.0.0-20201201111053-98deb86e4ee8
+	github.com/networkservicemesh/api v0.0.0-20201204031251-69c62e4cdcea
+	github.com/networkservicemesh/sdk v0.0.0-20201204151507-956c7f2609f0
 	github.com/pkg/errors v0.9.1
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
