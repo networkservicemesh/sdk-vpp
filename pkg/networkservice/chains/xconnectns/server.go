@@ -31,6 +31,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
@@ -69,11 +70,12 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		clienturl.NewServer(clientURL),
 		connect.NewServer(
 			ctx,
-			client.NewCrossConnectClientFactory(
+			client.NewClientFactory(
 				name,
 				// What to call onHeal
 				addressof.NetworkServiceClient(adapters.NewServerToClient(rv)),
 				tokenGenerator,
+				mechanismtranslation.NewClient(),
 				connectioncontextkernel.NewClient(),
 				tag.NewClient(ctx, vppConn),
 				// mechanisms
