@@ -20,10 +20,22 @@ package xconnectns
 
 import (
 	"context"
+	"net"
 	"net/url"
 
 	"git.fd.io/govpp.git/api"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
+
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
@@ -31,11 +43,9 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
-	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
@@ -43,8 +53,6 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -58,7 +66,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, baseDir string, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, baseDir string, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	var lastSocketID uint32
 	rv := &xconnectNSServer{}
 	rv.Endpoint = endpoint.NewServer(ctx, name,
@@ -70,24 +78,28 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		clienturl.NewServer(clientURL),
 		connect.NewServer(
 			ctx,
-			client.NewClientFactory(
-				name,
-				// What to call onHeal
-				addressof.NetworkServiceClient(adapters.NewServerToClient(rv)),
-				tokenGenerator,
-				mechanismtranslation.NewClient(),
-				connectioncontextkernel.NewClient(),
-				tag.NewClient(ctx, vppConn),
-				// mechanisms
-				memif.NewClient(vppConn, &lastSocketID),
-				kernel.NewClient(vppConn),
-				recvfd.NewClient(),
-			),
+			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
+				return client.NewClient(ctx,
+					name,
+					addressof.NetworkServiceClient(adapters.NewServerToClient(rv)),
+					tokenGenerator,
+					cc,
+					mechanismtranslation.NewClient(),
+					connectioncontextkernel.NewClient(),
+					tag.NewClient(ctx, vppConn),
+					// mechanisms
+					memif.NewClient(vppConn, &lastSocketID),
+					kernel.NewClient(vppConn),
+					vxlan.NewClient(vppConn, tunnelIP),
+					recvfd.NewClient(),
+				)
+			},
 			clientDialOptions...,
 		),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn, baseDir, &lastSocketID),
 			kernel.MECHANISM: kernel.NewServer(vppConn),
+			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
 		}),
 		tag.NewServer(ctx, vppConn),
 		connectioncontextkernel.NewServer(),
