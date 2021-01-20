@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
+	"git.fd.io/govpp.git/binapi/vpe"
 	"github.com/edwarnicke/govpp/binapi/vxlan"
 	"github.com/pkg/errors"
 
@@ -49,12 +50,30 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 
 		now := time.Now()
+
+		addNextNode := &vpe.AddNodeNext{
+			NodeName: "vxlan4-input",
+			NextName: "ethernet-input",
+		}
+
+		addNextNodeRsp, err := vpe.NewServiceClient(vppConn).AddNodeNext(ctx, addNextNode)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		log.FromContext(ctx).
+			WithField("NextIndex", addNextNodeRsp.NextIndex).
+			WithField("NodeName", addNextNode.NodeName).
+			WithField("NextName", addNextNode.NextName).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "AddNodeNext").Debug("completed")
+
+		now = time.Now()
 		vxlanAddDelTunnel := &vxlan.VxlanAddDelTunnel{
 			IsAdd:          isAdd,
 			Instance:       ^uint32(0),
 			SrcAddress:     types.ToVppAddress(mechanism.SrcIP()),
 			DstAddress:     types.ToVppAddress(mechanism.DstIP()),
-			DecapNextIndex: ^uint32(0),
+			DecapNextIndex: addNextNodeRsp.NextIndex,
 			Vni:            mechanism.VNI(),
 		}
 		if !isClient {

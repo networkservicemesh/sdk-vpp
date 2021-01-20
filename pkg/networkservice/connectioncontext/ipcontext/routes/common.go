@@ -69,7 +69,7 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 	now := time.Now()
 	if _, err := ip.NewServiceClient(vppConn).IPRouteAddDel(ctx, &ip.IPRouteAddDel{
 		IsAdd:       isAdd,
-		IsMultipath: true,
+		IsMultipath: false,
 		Route:       route,
 	}); err != nil {
 		return errors.WithStack(err)
