@@ -41,9 +41,9 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			from = conn.GetContext().GetIpContext().GetDstIPNet()
 			to = conn.GetContext().GetIpContext().GetSrcIPNet()
 		}
-		routes := conn.GetContext().GetIpContext().GetDstRoutes()
+		routes := conn.GetContext().GetIpContext().GetSrcRoutes()
 		if isClient {
-			routes = conn.GetContext().GetIpContext().GetSrcRoutes()
+			routes = conn.GetContext().GetIpContext().GetDstRoutes()
 		}
 
 		if to == nil && from == nil && len(routes) == 0 {
@@ -60,13 +60,17 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		for _, route := range routes {
-			if err := routeAdd(ctx, handle, l, netlink.SCOPE_UNIVERSE, route.GetPrefixIPNet(), to); err != nil {
+		if to != nil && !to.Contains(from.IP) {
+			if err := routeAdd(ctx, handle, l, netlink.SCOPE_LINK, to, nil); err != nil {
 				return err
 			}
 		}
-		if to != nil && !to.Contains(from.IP) {
-			if err := routeAdd(ctx, handle, l, netlink.SCOPE_LINK, to, nil); err != nil {
+		for _, route := range routes {
+			if route.GetPrefixIPNet() == nil || to.Contains(route.GetPrefixIPNet().IP) {
+				trace.Log(ctx).Debugf("Skipping adding route %+v because it prefix %s is contained in %s", route, route.GetPrefixIPNet(), to)
+				continue
+			}
+			if err := routeAdd(ctx, handle, l, netlink.SCOPE_UNIVERSE, route.GetPrefixIPNet(), to); err != nil {
 				return err
 			}
 		}

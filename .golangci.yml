@@ -176,3 +176,7 @@ issues:
       linters:
         - funlen
       text: "Function 'create'"
+    - path: pkg/networkservice/connectioncontextkernel/ipcontext/routes/common.go
+      linters:
+        - gocyclo
+      text: "func `create` is high"
