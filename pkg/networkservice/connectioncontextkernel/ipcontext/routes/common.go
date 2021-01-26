@@ -23,7 +23,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
@@ -67,7 +67,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		for _, route := range routes {
 			if route.GetPrefixIPNet() == nil || to.Contains(route.GetPrefixIPNet().IP) {
-				trace.Log(ctx).Debugf("Skipping adding route %+v because it prefix %s is contained in %s", route, route.GetPrefixIPNet(), to)
+				logger.Log(ctx).Debugf("Skipping adding route %+v because it prefix %s is contained in %s", route, route.GetPrefixIPNet(), to)
 				continue
 			}
 			if err := routeAdd(ctx, handle, l, netlink.SCOPE_UNIVERSE, route.GetPrefixIPNet(), to); err != nil {
@@ -91,7 +91,7 @@ func routeAdd(ctx context.Context, handle *netlink.Handle, l netlink.Link, scope
 	if err := handle.RouteAdd(route); err != nil {
 		return errors.WithStack(err)
 	}
-	trace.Log(ctx).
+	logger.Log(ctx).
 		WithField("link.Name", l.Attrs().Name).
 		WithField("route.Dst", route.Dst).
 		WithField("route.Gw", route.Gw).
