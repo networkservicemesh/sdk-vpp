@@ -30,7 +30,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/ip_types"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
@@ -75,7 +75,7 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, tag st
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	trace.Log(ctx).
+	logger.Log(ctx).
 		WithField("swIfIndex", interfaceACLList.SwIfIndex).
 		WithField("acls", interfaceACLList.Acls).
 		WithField("NInput", interfaceACLList.NInput).
@@ -100,7 +100,7 @@ func addToVxlanACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection,
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("aclIndex", rsp.ACLIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "ACLAddReplace").Debug("completed")
@@ -139,7 +139,7 @@ func aclDetails(ctx context.Context, vppConn api.Connection, aclIndeces []uint32
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("aclIndex", aclIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "ACLDump").Debugf("completed")
@@ -161,7 +161,7 @@ func interfaceACLIndeces(ctx context.Context, vppConn api.Connection, swIfIndex 
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	trace.Log(ctx).
+	logger.Log(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "ACLInterfaceListDump").Debug("initiated")
@@ -190,7 +190,7 @@ func vxlanSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net.IP
 		ipDetails, ipDumpErr := ipDumpClient.Recv()
 		for ipDumpErr == nil {
 			if types.FromVppAddressWithPrefix(ipDetails.Prefix).IP.Equal(tunnelIP) {
-				trace.Log(ctx).
+				logger.Log(ctx).
 					WithField("swIfIndex", swIfDetails.SwIfIndex).
 					WithField("duration", time.Since(now)).
 					WithField("vppapi", "SwInterfaceDump").Debugf("found interface with ip %s", tunnelIP)
@@ -200,7 +200,7 @@ func vxlanSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net.IP
 		}
 		swIfDetails, swIfDumpErr = swIfDumpClient.Recv()
 	}
-	trace.Log(ctx).
+	logger.Log(ctx).
 		WithField("swIfIndex", swIfDetails.SwIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceDump").Debugf("did not find interface with ip %s", tunnelIP)

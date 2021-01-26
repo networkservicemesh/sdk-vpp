@@ -28,7 +28,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
@@ -52,7 +52,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "AfPacketCreate").Debug("completed")
@@ -65,7 +65,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}); err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 			WithField("duration", time.Since(now)).
@@ -92,7 +92,7 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("swIfIndex", swIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "AfPacketDelete").Debug("completed")

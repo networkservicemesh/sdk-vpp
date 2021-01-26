@@ -26,7 +26,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	vxlanMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vxlan"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
@@ -65,7 +65,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("SrcAddress", vxlanAddDelTunnel.SrcAddress).
 			WithField("DstAddress", vxlanAddDelTunnel.DstAddress).

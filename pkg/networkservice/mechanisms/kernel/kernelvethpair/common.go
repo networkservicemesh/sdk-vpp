@@ -28,7 +28,7 @@ import (
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
 
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/trace"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 	"github.com/pkg/errors"
 	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
@@ -55,7 +55,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if addErr := netlink.LinkAdd(l); addErr != nil {
 			return addErr
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("link.PeerName", veth.PeerName).
 			WithField("duration", time.Since(now)).
@@ -81,7 +81,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err = netlink.LinkSetNsFd(l, int(nsHandle)); err != nil {
 			return errors.Wrapf(err, "unable to change to netns")
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetNsFd").Debug("completed")
@@ -91,14 +91,14 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		name := l.Attrs().Name
 		l, err = handle.LinkByName(name)
 		if err != nil {
-			trace.Log(ctx).
+			logger.Log(ctx).
 				WithField("duration", time.Since(now)).
 				WithField("link.Name", name).
 				WithField("err", err).
 				WithField("netlink", "LinkByName").Debug("error")
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("duration", time.Since(now)).
 			WithField("link.Name", name).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -107,7 +107,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// Set the LinkName
 		now = time.Now()
 		if err = handle.LinkSetName(l, name); err != nil {
-			trace.Log(ctx).
+			logger.Log(ctx).
 				WithField("link.Name", l.Attrs().Name).
 				WithField("link.NewName", name).
 				WithField("duration", time.Since(now)).
@@ -115,7 +115,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("netlink", "LinkSetName").Debug("error")
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("link.NewName", name).
 			WithField("duration", time.Since(now)).
@@ -126,7 +126,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err = handle.LinkSetAlias(l, alias); err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("alias", alias).
 			WithField("duration", time.Since(now)).
@@ -138,7 +138,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
@@ -150,7 +150,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(l)
 			return err
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", veth.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -162,7 +162,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(peerLink)
 			return err
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
 			WithField("peerLink", fmt.Sprintf("veth-%s", alias)).
 			WithField("duration", time.Since(now)).
@@ -176,7 +176,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(peerLink)
 			return err
 		}
-		trace.Log(ctx).
+		logger.Log(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
@@ -195,7 +195,7 @@ func del(ctx context.Context, conn *networkservice.Connection, isClient bool) er
 			if err := netlink.LinkDel(peerLink); err != nil {
 				return err
 			}
-			trace.Log(ctx).
+			logger.Log(ctx).
 				WithField("link.Name", peerLink.Attrs().Name).
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
