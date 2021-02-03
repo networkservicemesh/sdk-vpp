@@ -7,7 +7,7 @@ require (
 	github.com/edwarnicke/govpp v0.0.0-20201111163523-106f68b6ba26
 	github.com/golang/protobuf v1.4.3
 	github.com/networkservicemesh/api v0.0.0-20210202152048-ec956057eb3a
-	github.com/networkservicemesh/sdk v0.0.0-20210203090322-a11ecd1ddce3
+	github.com/networkservicemesh/sdk v0.0.0-20210203162332-58e640d45d44
 	github.com/pkg/errors v0.9.1
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
