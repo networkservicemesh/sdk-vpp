@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,7 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package l2xconnect
+// +build linux
+
+package ipneighbor
 
 import (
 	"context"
@@ -24,46 +26,40 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"google.golang.org/grpc"
 )
 
-type l2XConnectServer struct {
+type ipneighborClient struct {
 	vppConn api.Connection
 }
 
-// NewClient returns a Client chain element that will cross connect a client and server vpp interface (if present)
+// NewClient - creates new ipneigbor client chain element to correct for the L2 nature of vethpairs when used for payload.IP
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
-	return &l2XConnectServer{
+	return &ipneighborClient{
 		vppConn: vppConn,
 	}
 }
 
-func (v *l2XConnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	if request.GetConnection().GetPayload() != payload.Ethernet {
+func (i *ipneighborClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Client(ctx).Request(ctx, request, opts...)
 	}
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := addDel(ctx, v.vppConn, true); err != nil {
-		_, _ = v.Close(ctx, conn, opts...)
+	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), true); err != nil {
+		_, _ = i.Close(ctx, conn, opts...)
 		return nil, err
 	}
 	return conn, nil
 }
 
-func (v *l2XConnectServer) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	if conn.GetPayload() != payload.Ethernet {
+func (i *ipneighborClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	if conn.GetPayload() != payload.IP {
 		return next.Client(ctx).Close(ctx, conn, opts...)
 	}
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := addDel(ctx, v.vppConn, false); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = addDel(ctx, conn, i.vppConn, metadata.IsClient(i), false)
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }

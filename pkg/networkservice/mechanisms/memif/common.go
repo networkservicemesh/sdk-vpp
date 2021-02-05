@@ -177,9 +177,9 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			}
 			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: socketFile(conn)}).String())
 		}
-		mode := memif.MEMIF_MODE_API_ETHERNET
-		if conn.GetPayload() == payload.IP {
-			mode = memif.MEMIF_MODE_API_IP
+		mode := memif.MEMIF_MODE_API_IP
+		if conn.GetPayload() == payload.Ethernet {
+			mode = memif.MEMIF_MODE_API_ETHERNET
 		}
 		socketID, err := createMemifSocket(ctx, mechanism, vppConn, isClient)
 		if err != nil {

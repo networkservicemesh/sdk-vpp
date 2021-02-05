@@ -27,8 +27,9 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
-
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
 	"github.com/pkg/errors"
 	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
@@ -146,6 +147,9 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
+
+		// Store the link for use by ipneighbor
+		link.Store(ctx, isClient, l)
 
 		// Get the peerLink
 		now = time.Now()

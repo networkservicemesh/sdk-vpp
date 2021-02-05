@@ -47,7 +47,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -99,7 +99,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		}),
 		tag.NewServer(ctx, vppConn),
 		connectioncontextkernel.NewServer(),
-		l2xconnect.NewServer(vppConn),
+		xconnect.NewServer(vppConn),
 		up.NewServer(ctx, vppConn),
 		sendfd.NewServer(),
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,49 +14,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package l2xconnect
+package l3xconnect
 
 import (
 	"context"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
+
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 )
 
-type l2XconnectServer struct {
+type l3XconnectServer struct {
 	vppConn api.Connection
 }
 
 // NewServer returns a Server chain element that will cross connect a client and server vpp interface (if present)
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
-	return &l2XconnectServer{
+	return &l3XconnectServer{
 		vppConn: vppConn,
 	}
 }
 
-func (v *l2XconnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if request.GetConnection().GetPayload() != payload.Ethernet {
+func (v *l3XconnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Server(ctx).Request(ctx, request)
 	}
-	if err := addDel(ctx, v.vppConn, true); err != nil {
+	if err := create(ctx, v.vppConn, request.GetConnection()); err != nil {
 		return nil, err
 	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = addDel(ctx, v.vppConn, false)
+		_ = del(ctx, v.vppConn)
 		return nil, err
 	}
 	return conn, nil
 }
 
-func (v *l2XconnectServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if conn.GetPayload() != payload.Ethernet {
+func (v *l3XconnectServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
-	if err := addDel(ctx, v.vppConn, false); err != nil {
+	if err := del(ctx, v.vppConn); err != nil {
 		return nil, err
 	}
 	return next.Server(ctx).Close(ctx, conn)
