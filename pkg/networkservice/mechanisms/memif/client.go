@@ -30,15 +30,13 @@ import (
 )
 
 type memifClient struct {
-	vppConn      api.Connection
-	lastSocketID *uint32
+	vppConn api.Connection
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(vppConn api.Connection, lastSocketID *uint32) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &memifClient{
-		vppConn:      vppConn,
-		lastSocketID: lastSocketID,
+		vppConn: vppConn,
 	}
 }
 
@@ -53,7 +51,7 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 	if err != nil {
 		return nil, err
 	}
-	if err := create(ctx, conn, m.vppConn, m.lastSocketID, "", metadata.IsClient(m)); err != nil {
+	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		_, _ = m.Close(ctx, conn, opts...)
 		return nil, err
 	}

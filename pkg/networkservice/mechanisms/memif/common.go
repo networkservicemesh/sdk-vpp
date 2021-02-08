@@ -18,8 +18,8 @@ package memif
 
 import (
 	"context"
-	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
@@ -37,7 +37,9 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn api.Connection, lastSocketID *uint32, isClient bool) (socketID uint32, err error) {
+var lastSocketID uint32
+
+func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn api.Connection, isClient bool) (socketID uint32, err error) {
 	// Extract the socket filename
 	u, err := url.Parse(mechanism.GetSocketFileURL())
 	if err != nil {
@@ -48,7 +50,7 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 	}
 
 	// Create the socketID
-	socketID = atomic.AddUint32(lastSocketID, 1) // TODO - work out a solution that works long term
+	socketID = atomic.AddUint32(&lastSocketID, 1) // TODO - work out a solution that works long term
 	now := time.Now()
 	memifSocketAddDel := &memif.MemifSocketFilenameAddDel{
 		IsAdd:          true,
@@ -148,7 +150,7 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	return nil
 }
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, lastSocketID *uint32, baseDir string, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// Direct memif if applicable
 		if memifSocketAddDel, ok := load(ctx, true); ok && !isClient {
@@ -168,10 +170,12 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			return nil
 		}
 		if !isClient {
-			socketFile := filepath.Join(baseDir, fmt.Sprintf("%s.memif.socket", conn.GetId()))
-			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: socketFile}).String())
+			if err := os.MkdirAll(filepath.Dir(socketFile(conn)), 0700); err != nil {
+				return errors.Wrapf(err, "failed to create memif socket directory %s", socketFile(conn))
+			}
+			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: socketFile(conn)}).String())
 		}
-		socketID, err := createMemifSocket(ctx, mechanism, vppConn, lastSocketID, isClient)
+		socketID, err := createMemifSocket(ctx, mechanism, vppConn, isClient)
 		if err != nil {
 			return err
 		}
@@ -190,6 +194,15 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		if err := deleteMemifSocket(ctx, vppConn, isClient); err != nil {
 			return err
 		}
+		if !isClient {
+			if err := os.RemoveAll(filepath.Dir(socketFile(conn))); err != nil {
+				return errors.Wrapf(err, "failed to delete %s", filepath.Dir(socketFile(conn)))
+			}
+		}
 	}
 	return nil
+}
+
+func socketFile(conn *networkservice.Connection) string {
+	return filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
 }
