@@ -28,22 +28,18 @@ import (
 )
 
 type memifServer struct {
-	vppConn      api.Connection
-	baseDir      string
-	lastSocketID *uint32
+	vppConn api.Connection
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(vppConn api.Connection, baseDir string, lastSocketID *uint32) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return &memifServer{
-		vppConn:      vppConn,
-		baseDir:      baseDir,
-		lastSocketID: lastSocketID,
+		vppConn: vppConn,
 	}
 }
 
 func (m *memifServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), m.vppConn, m.lastSocketID, m.baseDir, metadata.IsClient(m)); err != nil {
+	if err := create(ctx, request.GetConnection(), m.vppConn, metadata.IsClient(m)); err != nil {
 		return nil, err
 	}
 	conn, err := next.Server(ctx).Request(ctx, request)

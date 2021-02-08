@@ -66,8 +66,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, baseDir string, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
-	var lastSocketID uint32
+func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	rv := &xconnectNSServer{}
 	rv.Endpoint = endpoint.NewServer(ctx, name,
 		authzServer,
@@ -88,7 +87,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					connectioncontextkernel.NewClient(),
 					tag.NewClient(ctx, vppConn),
 					// mechanisms
-					memif.NewClient(vppConn, &lastSocketID),
+					memif.NewClient(vppConn),
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP),
 					recvfd.NewClient(),
@@ -97,7 +96,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 			clientDialOptions...,
 		),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:  memif.NewServer(vppConn, baseDir, &lastSocketID),
+			memif.MECHANISM:  memif.NewServer(vppConn),
 			kernel.MECHANISM: kernel.NewServer(vppConn),
 			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
 		}),
