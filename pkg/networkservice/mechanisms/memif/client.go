@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !windows
+
 package memif
 
 import (
@@ -23,10 +25,13 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
 )
 
 type memifClient struct {
@@ -35,9 +40,12 @@ type memifClient struct {
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
-	return &memifClient{
-		vppConn: vppConn,
-	}
+	return chain.NewNetworkServiceClient(
+		&memifClient{
+			vppConn: vppConn,
+		},
+		memifproxy.New(),
+	)
 }
 
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
