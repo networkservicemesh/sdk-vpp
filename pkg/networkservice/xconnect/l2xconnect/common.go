@@ -24,7 +24,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/l2"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
@@ -47,7 +47,7 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("RxSwIfIndex", clientIfIndex).
 		WithField("TxSwIfIndex", serverIfIndex).
 		WithField("Enable", addDel).
@@ -62,7 +62,7 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("RxSwIfIndex", serverIfIndex).
 		WithField("TxSwIfIndex", clientIfIndex).
 		WithField("Enable", addDel).

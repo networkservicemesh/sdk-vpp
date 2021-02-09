@@ -24,7 +24,7 @@ import (
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -49,7 +49,7 @@ func up(ctx context.Context, vppConn api.Connection, apiChannel api.Channel, isC
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceSetFlags").Debug("completed")
@@ -81,7 +81,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving SwInterfaceDetails for swIfIndex %d", swIfIndex)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("details.Flags", details.Flags).
 		WithField("duration", time.Since(now)).
@@ -99,7 +99,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 			if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 				msg.SwIfIndex == swIfIndex &&
 				msg.Flags&interface_types.IF_STATUS_API_FLAG_LINK_UP != 0 {
-				logger.Log(ctx).
+				log.FromContext(ctx).
 					WithField("swIfIndex", swIfIndex).
 					WithField("msg.Flags", msg.Flags).
 					WithField("duration", time.Since(now)).
@@ -124,7 +124,7 @@ func initFunc(ctx context.Context, vppConn Connection) (api.Channel, error) {
 		apiChannel.Close()
 		return nil, errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "WantInterfaceEvents").Info("completed")
 
