@@ -26,7 +26,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/ip"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -74,7 +74,7 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("prefix", prefix).
 		WithField("isAdd", isAdd).

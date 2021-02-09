@@ -23,7 +23,7 @@ import (
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -42,7 +42,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("tag", conn.GetId()).
 		WithField("duration", time.Since(now)).

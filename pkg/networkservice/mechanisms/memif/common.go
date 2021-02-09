@@ -30,7 +30,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
@@ -60,7 +60,7 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDel(ctx, memifSocketAddDel); err != nil {
 		return 0, errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
@@ -80,7 +80,7 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDel(ctx, memifSocketAddDel); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
@@ -103,7 +103,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, i
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", rsp.SwIfIndex).
 		WithField("Role", memifCreate.Role).
 		WithField("SocketID", memifCreate.SocketID).
@@ -118,7 +118,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, i
 	}); err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", rsp.SwIfIndex).
 		WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 		WithField("duration", time.Since(now)).
@@ -143,7 +143,7 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Log(ctx).
+	log.FromContext(ctx).
 		WithField("swIfIndex", memifDel.SwIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifDelete").Debug("completed")

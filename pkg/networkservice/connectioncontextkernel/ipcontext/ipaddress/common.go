@@ -24,7 +24,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 
@@ -61,7 +61,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}); err != nil {
 			return err
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("Addr", ipNet.String()).
 			WithField("duration", time.Since(now)).

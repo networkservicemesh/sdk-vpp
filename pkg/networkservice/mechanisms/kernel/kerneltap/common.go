@@ -28,7 +28,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/tapv2"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -63,7 +63,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("HostIfName", tapCreateV2.HostIfName).
 			WithField("HostNamespace", tapCreateV2.HostNamespace).
@@ -78,7 +78,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}); err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 			WithField("duration", time.Since(now)).
@@ -94,7 +94,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.Wrapf(err, "unable to find hostIfName %s", tapCreateV2.HostIfName)
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("link.Name", tapCreateV2.HostIfName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -106,7 +106,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err = handle.LinkSetAlias(l, alias); err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("alias", alias).
 			WithField("duration", time.Since(now)).
@@ -118,7 +118,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Log(ctx).
+		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
