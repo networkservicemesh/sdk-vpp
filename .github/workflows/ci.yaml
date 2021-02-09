@@ -125,6 +125,8 @@ jobs:
       matrix:
         repository:
           - cmd-forwarder-vpp
+          - cmd-nsc-vpp
+          - cmd-nse-icmp-responder-vpp
     name: Update ${{ matrix.repository }}
     runs-on: ubuntu-latest
     needs:
