@@ -46,8 +46,8 @@ func newProxyConnection(in, out net.Conn) (*proxyConnection, error) {
 }
 
 func (p *proxyConnection) Close() error {
-	inErr := p.in.Close()
 	outErr := p.out.Close()
+	inErr := p.in.Close()
 	if inErr != nil {
 		return multierror.Append(inErr, outErr)
 	}
