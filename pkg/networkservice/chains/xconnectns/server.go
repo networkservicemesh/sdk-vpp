@@ -24,18 +24,9 @@ import (
 	"net/url"
 
 	"git.fd.io/govpp.git/api"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
-
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
-
 	"google.golang.org/grpc"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
@@ -43,16 +34,19 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -91,6 +85,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP),
 					recvfd.NewClient(),
+					sendfd.NewClient(),
 				)
 			},
 			clientDialOptions...,
