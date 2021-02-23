@@ -73,19 +73,20 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 			ctx,
 			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
 				return client.NewClient(ctx,
-					name,
-					addressof.NetworkServiceClient(adapters.NewServerToClient(rv)),
-					tokenGenerator,
 					cc,
-					mechanismtranslation.NewClient(),
-					connectioncontextkernel.NewClient(),
-					tag.NewClient(ctx, vppConn),
-					// mechanisms
-					memif.NewClient(vppConn),
-					kernel.NewClient(vppConn),
-					vxlan.NewClient(vppConn, tunnelIP),
-					recvfd.NewClient(),
-					sendfd.NewClient(),
+					client.WithName(name),
+					client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+					client.WithAdditionalFunctionality(
+						mechanismtranslation.NewClient(),
+						connectioncontextkernel.NewClient(),
+						tag.NewClient(ctx, vppConn),
+						// mechanisms
+						memif.NewClient(vppConn),
+						kernel.NewClient(vppConn),
+						vxlan.NewClient(vppConn, tunnelIP),
+						recvfd.NewClient(),
+						sendfd.NewClient(),
+					),
 				)
 			},
 			clientDialOptions...,
