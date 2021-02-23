@@ -8,10 +8,12 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/networkservicemesh/api v0.0.0-20210218170701-1a72f1cba074
-	github.com/networkservicemesh/sdk v0.0.0-20210220122417-bab01203bb73
+	github.com/networkservicemesh/sdk v0.0.0-20210223164059-9e80b2138699
 	github.com/pkg/errors v0.9.1
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
-	google.golang.org/grpc v1.33.2
+	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
+	golang.org/x/tools v0.0.0-20200812195022-5ae4c3c160a0 // indirect
+	google.golang.org/grpc v1.35.0
 )
