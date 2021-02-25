@@ -56,7 +56,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 
 		now := time.Now()
-		if err := handle.AddrAdd(l, &netlink.Addr{
+		if err := handle.AddrReplace(l, &netlink.Addr{
 			IPNet: ipNet,
 		}); err != nil {
 			return err

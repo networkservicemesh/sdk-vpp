@@ -88,7 +88,7 @@ func routeAdd(ctx context.Context, handle *netlink.Handle, l netlink.Link, scope
 		route.Gw = gw.IP
 	}
 	now := time.Now()
-	if err := handle.RouteAdd(route); err != nil {
+	if err := handle.RouteReplace(route); err != nil {
 		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
