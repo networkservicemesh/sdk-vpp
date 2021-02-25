@@ -3,8 +3,8 @@ module github.com/networkservicemesh/sdk-vpp
 go 1.15
 
 require (
-	git.fd.io/govpp.git v0.3.6-0.20200903151113-c94a96227985
-	github.com/edwarnicke/govpp v0.0.0-20201111163523-106f68b6ba26
+	git.fd.io/govpp.git v0.3.6-0.20210202134006-4c1cccf48cd1
+	github.com/edwarnicke/govpp v0.0.0-20210225052125-79125273957c
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/networkservicemesh/api v0.0.0-20210218170701-1a72f1cba074
