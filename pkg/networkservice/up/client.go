@@ -21,11 +21,15 @@ import (
 	"context"
 	"sync"
 
+	"google.golang.org/grpc"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"google.golang.org/grpc"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up/peerup"
 )
 
 type upClient struct {
@@ -37,10 +41,13 @@ type upClient struct {
 
 // NewClient provides a NetworkServiceClient chain elements that 'up's the swIfIndex
 func NewClient(ctx context.Context, vppConn Connection) networkservice.NetworkServiceClient {
-	return &upClient{
-		ctx:     ctx,
-		vppConn: vppConn,
-	}
+	return chain.NewNetworkServiceClient(
+		peerup.NewClient(ctx, vppConn),
+		&upClient{
+			ctx:     ctx,
+			vppConn: vppConn,
+		},
+	)
 }
 
 func (u *upClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
