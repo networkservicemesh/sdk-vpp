@@ -40,10 +40,13 @@ import (
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// TODO - short circuit if already done
-		la := netlink.NewLinkAttrs()
-
-		la.Name = randstr.Hex(7)
 		alias := mechutils.ToAlias(conn, isClient)
+		if _, err := netlink.LinkByName(linuxIfaceName(alias)); err == nil {
+			return nil
+		}
+
+		la := netlink.NewLinkAttrs()
+		la.Name = randstr.Hex(7)
 
 		// Create the veth pair
 		now := time.Now()
@@ -75,6 +78,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		defer handle.Delete()
 
 		// Set the link l to the correct netns
 		now = time.Now()
