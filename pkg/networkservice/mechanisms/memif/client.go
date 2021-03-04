@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+//
+// Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -25,6 +27,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"google.golang.org/grpc"
@@ -48,13 +51,23 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	)
 }
 
-func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	mechanism := &networkservice.Mechanism{
-		Cls:        cls.LOCAL,
-		Type:       MECHANISM,
-		Parameters: make(map[string]string),
+func mechanismsContain(list []*networkservice.Mechanism, t string) bool {
+	for _, m := range list {
+		if m.Type == t {
+			return true
+		}
 	}
-	request.MechanismPreferences = append(request.MechanismPreferences, mechanism)
+	return false
+}
+
+func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	if !mechanismsContain(request.MechanismPreferences, memif.MECHANISM) {
+		request.MechanismPreferences = append(request.MechanismPreferences, &networkservice.Mechanism{
+			Cls:        cls.LOCAL,
+			Type:       memif.MECHANISM,
+			Parameters: make(map[string]string),
+		})
+	}
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err

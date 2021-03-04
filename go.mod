@@ -10,6 +10,7 @@ require (
 	github.com/networkservicemesh/api v0.0.0-20210218170701-1a72f1cba074
 	github.com/networkservicemesh/sdk v0.0.0-20210304150727-68e58775b5d7
 	github.com/pkg/errors v0.9.1
+	github.com/stretchr/testify v1.6.1
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
