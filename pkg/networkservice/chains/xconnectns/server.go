@@ -44,6 +44,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2xconnect"
@@ -67,6 +68,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		tokenGenerator,
 		metadata.NewServer(),
 		recvfd.NewServer(),
+		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
 		connect.NewServer(
@@ -79,6 +81,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					client.WithAdditionalFunctionality(
 						mechanismtranslation.NewClient(),
 						connectioncontextkernel.NewClient(),
+						stats.NewClient(ctx),
 						tag.NewClient(ctx, vppConn),
 						// mechanisms
 						memif.NewClient(vppConn),
