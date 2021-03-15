@@ -63,47 +63,49 @@ type xconnectNSServer struct {
 // NewServer - returns an implementation of the xconnectns network service
 func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	rv := &xconnectNSServer{}
-	rv.Endpoint = endpoint.NewServer(ctx, name,
-		authzServer,
-		tokenGenerator,
-		metadata.NewServer(),
-		recvfd.NewServer(),
-		stats.NewServer(ctx),
-		// Statically set the url we use to the unix file socket for the NSMgr
-		clienturl.NewServer(clientURL),
-		connect.NewServer(
-			ctx,
-			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
-				return client.NewClient(ctx,
-					cc,
-					client.WithName(name),
-					client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
-					client.WithAdditionalFunctionality(
-						mechanismtranslation.NewClient(),
-						connectioncontextkernel.NewClient(),
-						stats.NewClient(ctx),
-						tag.NewClient(ctx, vppConn),
-						// mechanisms
-						memif.NewClient(vppConn),
-						kernel.NewClient(vppConn),
-						vxlan.NewClient(vppConn, tunnelIP),
-						recvfd.NewClient(),
-						sendfd.NewClient(),
-					),
-				)
-			},
-			clientDialOptions...,
+	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
+		endpoint.WithName(name),
+		endpoint.WithAuthorizeServer(authzServer),
+		endpoint.WithAdditionalFunctionality(
+			metadata.NewServer(),
+			recvfd.NewServer(),
+			stats.NewServer(ctx),
+			// Statically set the url we use to the unix file socket for the NSMgr
+			clienturl.NewServer(clientURL),
+			connect.NewServer(
+				ctx,
+				func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
+					return client.NewClient(ctx,
+						cc,
+						client.WithName(name),
+						client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+						client.WithAdditionalFunctionality(
+							mechanismtranslation.NewClient(),
+							connectioncontextkernel.NewClient(),
+							stats.NewClient(ctx),
+							tag.NewClient(ctx, vppConn),
+							// mechanisms
+							memif.NewClient(vppConn),
+							kernel.NewClient(vppConn),
+							vxlan.NewClient(vppConn, tunnelIP),
+							recvfd.NewClient(),
+							sendfd.NewClient(),
+						),
+					)
+				},
+				clientDialOptions...,
+			),
+			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+				memif.MECHANISM:  memif.NewServer(vppConn),
+				kernel.MECHANISM: kernel.NewServer(vppConn),
+				vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
+			}),
+			tag.NewServer(ctx, vppConn),
+			connectioncontextkernel.NewServer(),
+			l2xconnect.NewServer(vppConn),
+			up.NewServer(ctx, vppConn),
+			sendfd.NewServer(),
 		),
-		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:  memif.NewServer(vppConn),
-			kernel.MECHANISM: kernel.NewServer(vppConn),
-			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
-		}),
-		tag.NewServer(ctx, vppConn),
-		connectioncontextkernel.NewServer(),
-		l2xconnect.NewServer(vppConn),
-		up.NewServer(ctx, vppConn),
-		sendfd.NewServer(),
 	)
 	return rv
 }
