@@ -30,6 +30,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
@@ -89,7 +90,7 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 	return nil
 }
 
-func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, isClient bool) error {
+func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, mode memif.MemifMode, isClient bool) error {
 	role := memif.MEMIF_ROLE_API_MASTER
 	if isClient {
 		role = memif.MEMIF_ROLE_API_SLAVE
@@ -98,6 +99,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, i
 	memifCreate := &memif.MemifCreate{
 		Role:     role,
 		SocketID: socketID,
+		Mode:     mode,
 	}
 	rsp, err := memif.NewServiceClient(vppConn).MemifCreate(ctx, memifCreate)
 	if err != nil {
@@ -175,11 +177,15 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			}
 			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: socketFile(conn)}).String())
 		}
+		mode := memif.MEMIF_MODE_API_ETHERNET
+		if conn.GetPayload() == payload.IP {
+			mode = memif.MEMIF_MODE_API_IP
+		}
 		socketID, err := createMemifSocket(ctx, mechanism, vppConn, isClient)
 		if err != nil {
 			return err
 		}
-		if err := createMemif(ctx, vppConn, socketID, isClient); err != nil {
+		if err := createMemif(ctx, vppConn, socketID, mode, isClient); err != nil {
 			return err
 		}
 	}
