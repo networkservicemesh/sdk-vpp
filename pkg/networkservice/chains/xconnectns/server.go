@@ -90,7 +90,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					),
 				)
 			},
-			clientDialOptions...,
+			connect.WithDialOptions(clientDialOptions...),
 		),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn),
