@@ -22,6 +22,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
@@ -48,6 +49,9 @@ func NewServer(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 }
 
 func (v *vxlanServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.Ethernet {
+		return next.Server(ctx).Request(ctx, request)
+	}
 	if err := addDel(ctx, request.GetConnection(), v.vppConn, true, metadata.IsClient(v)); err != nil {
 		return nil, err
 	}
@@ -60,6 +64,9 @@ func (v *vxlanServer) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (v *vxlanServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if conn.GetPayload() != payload.Ethernet {
+		return next.Server(ctx).Close(ctx, conn)
+	}
 	if err := addDel(ctx, conn, v.vppConn, false, false); err != nil {
 		return nil, err
 	}

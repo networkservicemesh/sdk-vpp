@@ -34,6 +34,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
@@ -48,6 +49,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		now := time.Now()
 		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreate(ctx, &af_packet.AfPacketCreate{
 			HostIfName: peerLink.Attrs().Name,
+			HwAddr:     types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
 		})
 		if err != nil {
 			return errors.WithStack(err)

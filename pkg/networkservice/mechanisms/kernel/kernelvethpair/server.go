@@ -30,6 +30,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/afpacket"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/ipneighbor"
 )
 
 type kernelVethPairServer struct{}
@@ -39,6 +40,7 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
 		&kernelVethPairServer{},
 		afpacket.NewServer(vppConn),
+		ipneighbor.NewServer(vppConn),
 	)
 }
 

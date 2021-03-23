@@ -28,6 +28,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/tapv2"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
@@ -57,8 +58,13 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			HostIfName:       mechutils.ToInterfaceName(conn, isClient),
 			HostNamespaceSet: true,
 			HostNamespace:    nsFilename,
-			//TapFlags:         0, // TODO - TUN support for v3 payloads
+			TapFlags:         tapv2.TAP_API_FLAG_TUN,
 		}
+
+		if conn.GetPayload() == payload.Ethernet {
+			tapCreateV2.TapFlags ^= tapv2.TAP_API_FLAG_TUN
+		}
+
 		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV2(ctx, tapCreateV2)
 		if err != nil {
 			return errors.WithStack(err)
@@ -67,6 +73,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("HostIfName", tapCreateV2.HostIfName).
 			WithField("HostNamespace", tapCreateV2.HostNamespace).
+			WithField("TapFlags", tapCreateV2.TapFlags).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "TapCreateV2").Debug("completed")
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)

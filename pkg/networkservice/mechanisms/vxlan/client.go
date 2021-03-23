@@ -22,6 +22,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
@@ -52,6 +53,9 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 }
 
 func (v *vxlanClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.Ethernet {
+		return next.Client(ctx).Request(ctx, request, opts...)
+	}
 	mechanism := &networkservice.Mechanism{
 		Cls:        cls.REMOTE,
 		Type:       MECHANISM,
@@ -71,6 +75,9 @@ func (v *vxlanClient) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (v *vxlanClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	if conn.GetPayload() != payload.Ethernet {
+		return next.Client(ctx).Close(ctx, conn, opts...)
+	}
 	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
 	if err != nil {
 		return nil, err

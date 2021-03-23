@@ -32,6 +32,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/afpacket"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/ipneighbor"
 )
 
 type kernelVethPairClient struct{}
@@ -39,6 +40,7 @@ type kernelVethPairClient struct{}
 // NewClient - return a new Client chain element implementing the kernel mechanism with vpp using a veth pair
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
+		ipneighbor.NewClient(vppConn),
 		afpacket.NewClient(vppConn),
 		&kernelVethPairClient{},
 	)

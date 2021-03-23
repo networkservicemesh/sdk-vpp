@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,7 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package l2xconnect
+// +build linux
+
+package ipneighbor
 
 import (
 	"context"
@@ -24,40 +26,34 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
-type l2XconnectServer struct {
+type ipneighborServer struct {
 	vppConn api.Connection
 }
 
-// NewServer returns a Server chain element that will cross connect a client and server vpp interface (if present)
+// NewServer - creates new ipneigbor server chain element to correct for the L2 nature of vethpairs when used for payload.IP
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
-	return &l2XconnectServer{
+	return &ipneighborServer{
 		vppConn: vppConn,
 	}
 }
 
-func (v *l2XconnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if request.GetConnection().GetPayload() != payload.Ethernet {
+func (i *ipneighborServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Server(ctx).Request(ctx, request)
 	}
-	if err := addDel(ctx, v.vppConn, true); err != nil {
+	if err := addDel(ctx, request.GetConnection(), i.vppConn, metadata.IsClient(i), true); err != nil {
 		return nil, err
 	}
-	conn, err := next.Server(ctx).Request(ctx, request)
-	if err != nil {
-		_ = addDel(ctx, v.vppConn, false)
-		return nil, err
-	}
-	return conn, nil
+	return next.Server(ctx).Request(ctx, request)
 }
 
-func (v *l2XconnectServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if conn.GetPayload() != payload.Ethernet {
+func (i *ipneighborServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
-	if err := addDel(ctx, v.vppConn, false); err != nil {
-		return nil, err
-	}
+	_ = addDel(ctx, conn, i.vppConn, metadata.IsClient(i), false)
 	return next.Server(ctx).Close(ctx, conn)
 }
