@@ -31,6 +31,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
@@ -69,13 +70,13 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
+		heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
 		connect.NewServer(
 			ctx,
 			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
 				return client.NewClient(ctx,
 					cc,
 					client.WithName(name),
-					client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
 					client.WithAdditionalFunctionality(
 						mechanismtranslation.NewClient(),
 						connectioncontextkernel.NewClient(),
