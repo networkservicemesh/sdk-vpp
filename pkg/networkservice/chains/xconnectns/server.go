@@ -71,6 +71,11 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
 		heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			memif.MECHANISM:  memif.NewServer(vppConn),
+			kernel.MECHANISM: kernel.NewServer(vppConn),
+			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
+		}),
 		connect.NewServer(
 			ctx,
 			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
@@ -93,11 +98,6 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 			},
 			connect.WithDialOptions(clientDialOptions...),
 		),
-		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:  memif.NewServer(vppConn),
-			kernel.MECHANISM: kernel.NewServer(vppConn),
-			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
-		}),
 		tag.NewServer(ctx, vppConn),
 		connectioncontextkernel.NewServer(),
 		xconnect.NewServer(vppConn),
