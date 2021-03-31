@@ -7,10 +7,10 @@ require (
 	github.com/edwarnicke/govpp v0.0.0-20210225052125-79125273957c
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/networkservicemesh/api v0.0.0-20210323151719-3156ce7533e9
-	github.com/networkservicemesh/sdk v0.0.0-20210331094157-964332cc797d
+	github.com/networkservicemesh/api v0.0.0-20210331143834-12761e9f673f
+	github.com/networkservicemesh/sdk v0.0.0-20210331144417-68a6beb66557
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
