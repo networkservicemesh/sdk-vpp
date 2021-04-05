@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,24 +16,27 @@
 
 // +build linux
 
-package connectioncontextkernel
+package mtu
 
 import (
+	"context"
+
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/mtu"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/ipaddress"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/routes"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
-// NewClient provides a NetworkServiceClient that applies the connectioncontext to a kernel interface
-// It applies the connectioncontext on the *kernel* side of an interface leaving the
-// Client.  Generally only used by privileged Clients like those implementing
+type mtuServer struct {
+}
+
+// NewServer provides a NetworkServiceServer that sets the MTU on a kernel interface
+// It sets the MTU on the *kernel* side of an interface plugged into the
+// Endpoint.  Generally only used by privileged Endpoints like those implementing
 // the Cross Connect Network Service for K8s (formerly known as NSM Forwarder).
-//                                         Client
+//                                         Endpoint
 //                              +---------------------------+
 //                              |                           |
 //                              |                           |
@@ -42,8 +45,8 @@ import (
 //                              |                           |
 //                              |                           |
 //                              |                           |
-//                              |                           +-------------------+
-//                              |                           |          connectioncontextkernel.NewClient()
+//          +-------------------+                           |
+//  mtu.NewServer()             |                           |
 //                              |                           |
 //                              |                           |
 //                              |                           |
@@ -52,10 +55,23 @@ import (
 //                              |                           |
 //                              +---------------------------+
 //
-func NewClient() networkservice.NetworkServiceClient {
-	return chain.NewNetworkServiceClient(
-		mtu.NewClient(),
-		routes.NewClient(),
-		ipaddress.NewClient(),
-	)
+func NewServer() networkservice.NetworkServiceServer {
+	return &mtuServer{}
+}
+
+func (m *mtuServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if err := setMTU(ctx, conn, metadata.IsClient(m)); err != nil {
+		log.FromContext(ctx).Debugf("about to Close due to error: %+v", err)
+		_, _ = m.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (m *mtuServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	return next.Server(ctx).Close(ctx, conn)
 }

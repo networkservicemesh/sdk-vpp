@@ -17,4 +17,5 @@ require (
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
 	golang.org/x/tools v0.0.0-20200812195022-5ae4c3c160a0 // indirect
 	google.golang.org/grpc v1.35.0
+	google.golang.org/protobuf v1.25.0
 )

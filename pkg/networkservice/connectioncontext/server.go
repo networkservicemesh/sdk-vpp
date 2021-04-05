@@ -24,6 +24,8 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/ipaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/routes"
 )
@@ -52,6 +54,7 @@ import (
 //
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
+		mtu.NewServer(vppConn),
 		routes.NewServer(vppConn),
 		ipaddress.NewServer(vppConn),
 	)

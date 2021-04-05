@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,26 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build linux
-
-package connectioncontextkernel
+package mtu
 
 import (
+	"context"
+
+	"git.fd.io/govpp.git/api"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/mtu"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/ipaddress"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/routes"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
-// NewClient provides a NetworkServiceClient that applies the connectioncontext to a kernel interface
-// It applies the connectioncontext on the *kernel* side of an interface leaving the
-// Client.  Generally only used by privileged Clients like those implementing
-// the Cross Connect Network Service for K8s (formerly known as NSM Forwarder).
-//                                         Client
+type mtuServer struct {
+	vppConn api.Connection
+}
+
+// NewServer creates a NetworkServiceServer chain element to set the MTU on a vpp interface
+// It sets the MTU on the *vpp* side of an interface plugged into the
+// Endpoint.
+//                                         Endpoint
 //                              +---------------------------+
 //                              |                           |
 //                              |                           |
@@ -42,8 +42,8 @@ import (
 //                              |                           |
 //                              |                           |
 //                              |                           |
-//                              |                           +-------------------+
-//                              |                           |          connectioncontextkernel.NewClient()
+//          +-------------------+ mtu.NewServer()           |
+//                              |                           |
 //                              |                           |
 //                              |                           |
 //                              |                           |
@@ -52,10 +52,25 @@ import (
 //                              |                           |
 //                              +---------------------------+
 //
-func NewClient() networkservice.NetworkServiceClient {
-	return chain.NewNetworkServiceClient(
-		mtu.NewClient(),
-		routes.NewClient(),
-		ipaddress.NewClient(),
-	)
+func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+	return &mtuServer{
+		vppConn: vppConn,
+	}
+}
+
+func (m *mtuServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	setConnContextMTU(request)
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if err := setVPPMTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		_, _ = m.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (m *mtuServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	return next.Server(ctx).Close(ctx, conn)
 }

@@ -22,12 +22,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/mtu"
 
 	"google.golang.org/grpc"
 
@@ -48,6 +49,7 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 		&vxlanClient{
 			vppConn: vppConn,
 		},
+		mtu.NewClient(vppConn, tunnelIP),
 		vni.NewClient(tunnelIP),
 	)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,11 +20,13 @@ package connectioncontext
 
 import (
 	"git.fd.io/govpp.git/api"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/ipaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/routes"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 )
 
 // NewClient creates a NetworkServiceClient chain element to set the ip address on a vpp interface
@@ -51,6 +53,7 @@ import (
 //
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
+		mtu.NewClient(vppConn),
 		routes.NewClient(vppConn),
 		ipaddress.NewClient(vppConn),
 	)
