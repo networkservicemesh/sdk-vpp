@@ -44,10 +44,15 @@ func (i *ipneighborServer) Request(ctx context.Context, request *networkservice.
 	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Server(ctx).Request(ctx, request)
 	}
-	if err := addDel(ctx, request.GetConnection(), i.vppConn, metadata.IsClient(i), true); err != nil {
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
 		return nil, err
 	}
-	return next.Server(ctx).Request(ctx, request)
+	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), true); err != nil {
+		_, _ = i.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
 }
 
 func (i *ipneighborServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -25,6 +25,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
 type afPacketServer struct {
@@ -39,14 +40,15 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (a *afPacketServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), a.vppConn, false); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = del(ctx, conn, a.vppConn, false)
+		return nil, err
 	}
-	return conn, err
+	if err := create(ctx, conn, a.vppConn, metadata.IsClient(a)); err != nil {
+		_, _ = a.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
 }
 
 func (a *afPacketServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

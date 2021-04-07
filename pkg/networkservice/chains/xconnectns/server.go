@@ -24,6 +24,7 @@ import (
 	"net/url"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -32,15 +33,15 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/supported"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -48,8 +49,6 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -66,17 +65,21 @@ type xconnectNSServer struct {
 func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
-		supported.NewServer(supported.WithSupportedMechanismTypes(
-			memif.MECHANISM,
-			kernel.MECHANISM,
-			vxlan.MECHANISM,
-		)),
-		metadata.NewServer(),
 		recvfd.NewServer(),
+		sendfd.NewServer(),
 		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
 		heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+		up.NewServer(ctx, vppConn),
+		xconnect.NewServer(vppConn),
+		connectioncontextkernel.NewServer(),
+		tag.NewServer(ctx, vppConn),
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			memif.MECHANISM:  memif.NewServer(vppConn),
+			kernel.MECHANISM: kernel.NewServer(vppConn),
+			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
+		}),
 		connect.NewServer(
 			ctx,
 			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
@@ -99,16 +102,6 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 			},
 			connect.WithDialOptions(clientDialOptions...),
 		),
-		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:  memif.NewServer(vppConn),
-			kernel.MECHANISM: kernel.NewServer(vppConn),
-			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
-		}),
-		tag.NewServer(ctx, vppConn),
-		connectioncontextkernel.NewServer(),
-		xconnect.NewServer(vppConn),
-		up.NewServer(ctx, vppConn),
-		sendfd.NewServer(),
 	}
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,

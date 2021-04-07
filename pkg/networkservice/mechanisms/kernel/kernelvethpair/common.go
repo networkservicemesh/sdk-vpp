@@ -26,9 +26,10 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/pkg/errors"
 	"github.com/thanhpk/randstr"
