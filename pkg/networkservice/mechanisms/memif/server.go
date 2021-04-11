@@ -39,12 +39,12 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (m *memifServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), m.vppConn, metadata.IsClient(m)); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = del(ctx, conn, m.vppConn, metadata.IsClient(m))
+		return nil, err
+	}
+	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		_, _ = m.Close(ctx, conn)
 		return nil, err
 	}
 	return conn, nil

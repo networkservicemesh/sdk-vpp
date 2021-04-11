@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,8 +20,9 @@ package connectioncontext
 
 import (
 	"git.fd.io/govpp.git/api"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/ipaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/ipcontext/routes"
@@ -51,7 +52,7 @@ import (
 //
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
-		ipaddress.NewServer(vppConn),
 		routes.NewServer(vppConn),
+		ipaddress.NewServer(vppConn),
 	)
 }

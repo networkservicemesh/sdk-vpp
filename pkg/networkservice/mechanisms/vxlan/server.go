@@ -52,12 +52,16 @@ func (v *vxlanServer) Request(ctx context.Context, request *networkservice.Netwo
 	if request.GetConnection().GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Request(ctx, request)
 	}
-	if err := addDel(ctx, request.GetConnection(), v.vppConn, true, metadata.IsClient(v)); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = addDel(ctx, request.GetConnection(), v.vppConn, false, metadata.IsClient(v))
+		return nil, err
+	}
+
+	if err := addDel(ctx, conn, v.vppConn, true, metadata.IsClient(v)); err != nil {
+		_, _ = v.Close(ctx, conn)
+		return nil, err
+	}
+	if err := addDel(ctx, request.GetConnection(), v.vppConn, true, metadata.IsClient(v)); err != nil {
 		return nil, err
 	}
 	return conn, nil

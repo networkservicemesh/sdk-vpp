@@ -39,15 +39,13 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (v *l3XconnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if request.GetConnection().GetPayload() != payload.IP {
-		return next.Server(ctx).Request(ctx, request)
-	}
-	if err := create(ctx, v.vppConn, request.GetConnection()); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = del(ctx, v.vppConn)
+		return nil, err
+	}
+
+	if err := create(ctx, v.vppConn, conn); err != nil {
+		_, _ = v.Close(ctx, conn)
 		return nil, err
 	}
 	return conn, nil
@@ -57,8 +55,12 @@ func (v *l3XconnectServer) Close(ctx context.Context, conn *networkservice.Conne
 	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
+	rv, err := next.Server(ctx).Close(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
 	if err := del(ctx, v.vppConn); err != nil {
 		return nil, err
 	}
-	return next.Server(ctx).Close(ctx, conn)
+	return rv, nil
 }

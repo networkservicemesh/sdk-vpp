@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -46,13 +46,20 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 	if err := u.init(ctx); err != nil {
 		return nil, err
 	}
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := up(ctx, u.vppConn, u.apiChannel, true); err != nil {
+		_, _ = u.Close(ctx, conn)
 		return nil, err
 	}
 	if err := up(ctx, u.vppConn, u.apiChannel, false); err != nil {
+		_, _ = u.Close(ctx, conn)
 		return nil, err
 	}
-	return next.Server(ctx).Request(ctx, request)
+	return conn, nil
 }
 
 func (u *upServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

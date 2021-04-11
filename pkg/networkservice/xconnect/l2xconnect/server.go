@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -41,12 +41,13 @@ func (v *l2XconnectServer) Request(ctx context.Context, request *networkservice.
 	if request.GetConnection().GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Request(ctx, request)
 	}
-	if err := addDel(ctx, v.vppConn, true); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = addDel(ctx, v.vppConn, false)
+		return nil, err
+	}
+
+	if err := addDel(ctx, v.vppConn, true); err != nil {
+		_, _ = v.Close(ctx, conn)
 		return nil, err
 	}
 	return conn, nil
@@ -56,8 +57,12 @@ func (v *l2XconnectServer) Close(ctx context.Context, conn *networkservice.Conne
 	if conn.GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Close(ctx, conn)
 	}
+	rv, err := next.Server(ctx).Close(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
 	if err := addDel(ctx, v.vppConn, false); err != nil {
 		return nil, err
 	}
-	return next.Server(ctx).Close(ctx, conn)
+	return rv, nil
 }

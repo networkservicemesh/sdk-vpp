@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -39,10 +39,15 @@ func NewServer(ctx context.Context, vppConn api.Connection) networkservice.Netwo
 }
 
 func (t *tagServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), t.vppConn, true); err != nil {
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
 		return nil, err
 	}
-	return next.Server(ctx).Request(ctx, request)
+	if err := create(ctx, conn, t.vppConn, true); err != nil {
+		_, _ = t.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
 }
 
 func (t *tagServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

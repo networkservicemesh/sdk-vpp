@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -41,14 +41,15 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), k.vppConn, metadata.IsClient(k)); err != nil {
-		return nil, err
-	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = del(ctx, conn, k.vppConn, false)
+		return nil, err
 	}
-	return conn, err
+	if err := create(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
+		_, _ = k.Close(ctx, conn)
+		return nil, err
+	}
+	return conn, nil
 }
 
 func (k *kernelTapServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
