@@ -28,6 +28,11 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
@@ -39,9 +44,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -75,6 +77,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
 		tag.NewServer(ctx, vppConn),
+		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn),
 			kernel.MECHANISM: kernel.NewServer(vppConn),
@@ -90,6 +93,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 						mechanismtranslation.NewClient(),
 						connectioncontextkernel.NewClient(),
 						stats.NewClient(ctx),
+						mtu.NewClient(vppConn),
 						tag.NewClient(ctx, vppConn),
 						// mechanisms
 						memif.NewClient(vppConn),

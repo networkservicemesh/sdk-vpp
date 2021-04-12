@@ -20,10 +20,12 @@ package connectioncontextkernel
 
 import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/ipaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/ipcontext/routes"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel/mtu"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 )
 
 // NewServer provides a NetworkServiceServer that applies the connection context to a kernel interface
@@ -52,6 +54,7 @@ import (
 //
 func NewServer() networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
+		mtu.NewServer(),
 		routes.NewServer(),
 		ipaddress.NewServer(),
 	)
