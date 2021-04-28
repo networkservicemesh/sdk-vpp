@@ -35,26 +35,28 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	if !ok {
 		return errors.New("no swIfIndex available")
 	}
-	ipNet := conn.GetContext().GetIpContext().GetDstIPNet()
+	ipNets := conn.GetContext().GetIpContext().GetDstIPNets()
 	if isClient {
-		ipNet = conn.GetContext().GetIpContext().GetSrcIPNet()
+		ipNets = conn.GetContext().GetIpContext().GetSrcIPNets()
 	}
-	if ipNet == nil {
+	if ipNets == nil {
 		return nil
 	}
-	now := time.Now()
-	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceAddDelAddress(ctx, &interfaces.SwInterfaceAddDelAddress{
-		SwIfIndex: swIfIndex,
-		IsAdd:     isAdd,
-		Prefix:    types.ToVppAddressWithPrefix(ipNet),
-	}); err != nil {
-		return errors.WithStack(err)
+	for _, ipNet := range ipNets {
+		now := time.Now()
+		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceAddDelAddress(ctx, &interfaces.SwInterfaceAddDelAddress{
+			SwIfIndex: swIfIndex,
+			IsAdd:     isAdd,
+			Prefix:    types.ToVppAddressWithPrefix(ipNet),
+		}); err != nil {
+			return errors.WithStack(err)
+		}
+		log.FromContext(ctx).
+			WithField("swIfIndex", swIfIndex).
+			WithField("prefix", ipNets).
+			WithField("isAdd", isAdd).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "SwInterfaceAddDelAddress").Debug("completed")
 	}
-	log.FromContext(ctx).
-		WithField("swIfIndex", swIfIndex).
-		WithField("prefix", ipNet).
-		WithField("isAdd", isAdd).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "SwInterfaceAddDelAddress").Debug("completed")
 	return nil
 }

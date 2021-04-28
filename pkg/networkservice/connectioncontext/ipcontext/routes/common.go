@@ -18,7 +18,6 @@ package routes
 
 import (
 	"context"
-	"net"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -38,45 +37,40 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	if !ok {
 		return nil
 	}
-	from := conn.GetContext().GetIpContext().GetDstIPNet()
-	to := conn.GetContext().GetIpContext().GetSrcIPNet()
+	var routes []*networkservice.Route
 	if isClient {
-		from = conn.GetContext().GetIpContext().GetSrcIPNet()
-		to = conn.GetContext().GetIpContext().GetDstIPNet()
-	}
-	routes := conn.GetContext().GetIpContext().GetDstRoutes()
-	if isClient {
-		routes = conn.GetContext().GetIpContext().GetSrcRoutes()
+		// Prepend any routes needed to be able to reach the SrcIPs
+		routes = conn.GetContext().GetIpContext().GetDstIPRoutes()
+		routes = append(routes, conn.GetContext().GetIpContext().GetSrcRoutesWithExplicitNextHop()...)
+	} else {
+		routes = conn.GetContext().GetIpContext().GetSrcIPRoutes()
+		routes = append(routes, conn.GetContext().GetIpContext().GetDstRoutesWithExplicitNextHop()...)
 	}
 	for _, route := range routes {
-		if err := routeAddDel(ctx, vppConn, swIfIndex, isAdd, route.GetPrefixIPNet(), to); err != nil {
+		if err := routeAddDel(ctx, vppConn, swIfIndex, isAdd, route); err != nil {
 			return err
 		}
 	}
-	if to != nil && !to.Contains(from.IP) {
-		if err := routeAddDel(ctx, vppConn, swIfIndex, isAdd, to, nil); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
-func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isAdd bool, prefix, gw *net.IPNet) error {
-	if prefix == nil {
-		return errors.New("route prefix must not be nil")
+func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isAdd bool, route *networkservice.Route) error {
+	if route.GetPrefixIPNet() == nil {
+		return errors.New("vppRoute prefix must not be nil")
 	}
-	route := route(prefix, swIfIndex, gw)
+	vppRoute := toRoute(route, swIfIndex)
 	now := time.Now()
 	if _, err := ip.NewServiceClient(vppConn).IPRouteAddDel(ctx, &ip.IPRouteAddDel{
 		IsAdd:       isAdd,
 		IsMultipath: false,
-		Route:       route,
+		Route:       vppRoute,
 	}); err != nil {
 		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
-		WithField("prefix", prefix).
+		WithField("prefix", vppRoute.Prefix).
 		WithField("isAdd", isAdd).
 		WithField("type", isAdd).
 		WithField("duration", time.Since(now)).
@@ -84,10 +78,11 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 	return nil
 }
 
-func route(dst *net.IPNet, via interface_types.InterfaceIndex, nh *net.IPNet) ip.IPRoute {
-	route := ip.IPRoute{
+func toRoute(route *networkservice.Route, via interface_types.InterfaceIndex) ip.IPRoute {
+	prefix := route.GetPrefixIPNet()
+	rv := ip.IPRoute{
 		StatsIndex: 0,
-		Prefix:     types.ToVppPrefix(dst),
+		Prefix:     types.ToVppPrefix(prefix),
 		NPaths:     1,
 		Paths: []fib_types.FibPath{
 			{
@@ -97,12 +92,13 @@ func route(dst *net.IPNet, via interface_types.InterfaceIndex, nh *net.IPNet) ip
 				Weight:    1,
 				Type:      fib_types.FIB_API_PATH_TYPE_NORMAL,
 				Flags:     fib_types.FIB_API_PATH_FLAG_NONE,
-				Proto:     types.IsV6toFibProto(dst.IP.To4() == nil),
+				Proto:     types.IsV6toFibProto(prefix.IP.To4() == nil),
 			},
 		},
 	}
+	nh := route.GetNextHopIP()
 	if nh != nil {
-		route.Paths[0].Nh.Address = types.ToVppAddress(nh.IP).Un
+		rv.Paths[0].Nh.Address = types.ToVppAddress(nh).Un
 	}
-	return route
+	return rv
 }
