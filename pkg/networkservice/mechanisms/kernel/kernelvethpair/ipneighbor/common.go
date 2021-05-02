@@ -42,11 +42,11 @@ import (
 
 func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient, isAdd bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		srcNet := conn.GetContext().GetIpContext().GetSrcIPNet()
-		dstNet := conn.GetContext().GetIpContext().GetDstIPNet()
+		srcNets := conn.GetContext().GetIpContext().GetSrcIPNets()
+		dstNets := conn.GetContext().GetIpContext().GetDstIPNets()
 		if isClient {
-			srcNet = conn.GetContext().GetIpContext().GetDstIPNet()
-			dstNet = conn.GetContext().GetIpContext().GetSrcIPNet()
+			srcNets = conn.GetContext().GetIpContext().GetDstIPNets()
+			dstNets = conn.GetContext().GetIpContext().GetSrcIPNets()
 		}
 		swIfIndex, ok := ifindex.Load(ctx, isClient)
 		if !ok {
@@ -59,11 +59,14 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if l == nil || l.Attrs() == nil || l.Attrs().HardwareAddr == nil {
 			panic(fmt.Sprintf("unable to construct ip neighborL %+v", l))
 		}
-		if srcNet != nil {
-			if err := addDelVPP(ctx, vppConn, isAdd, swIfIndex, srcNet, l); err != nil {
-				return err
+		for _, srcNet := range srcNets {
+			if srcNet != nil {
+				if err := addDelVPP(ctx, vppConn, isAdd, swIfIndex, srcNet, l); err != nil {
+					return err
+				}
 			}
 		}
+
 		peerLink, ok := peer.Load(ctx, isClient)
 		if !ok {
 			return nil
@@ -71,9 +74,11 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if peerLink == nil || peerLink.Attrs() == nil || peerLink.Attrs().HardwareAddr == nil {
 			panic(fmt.Sprintf("unable to construct peer ip neighborL %+v", peerLink))
 		}
-		if dstNet != nil {
-			if err := addDelKernel(ctx, isAdd, mechanism, l, peerLink, dstNet); err != nil {
-				return err
+		for _, dstNet := range dstNets {
+			if dstNet != nil {
+				if err := addDelKernel(ctx, isAdd, mechanism, l, peerLink, dstNet); err != nil {
+					return err
+				}
 			}
 		}
 	}

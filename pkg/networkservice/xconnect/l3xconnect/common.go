@@ -18,10 +18,12 @@ package l3xconnect
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/govpp/binapi/fib_types"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/l3xc"
 	"github.com/pkg/errors"
 
@@ -43,54 +45,22 @@ func create(ctx context.Context, vppConn api.Connection, conn *networkservice.Co
 		return nil
 	}
 
-	now := time.Now()
-	l3xcUpdate := &l3xc.L3xcUpdate{
-		L3xc: l3xc.L3xc{
-			SwIfIndex: clientIfIndex,
-			NPaths:    1,
-			Paths: []fib_types.FibPath{
-				{
-					SwIfIndex: uint32(serverIfIndex),
-				},
-			},
-		},
-	}
-	if srcIPNet := conn.GetContext().GetIpContext().GetSrcIPNet(); srcIPNet != nil {
-		l3xcUpdate.L3xc.Paths[0].Nh.Address = types.ToVppAddress(srcIPNet.IP).Un
-	}
-	if _, err := l3xc.NewServiceClient(vppConn).L3xcUpdate(ctx, l3xcUpdate); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("SwIfIndex", l3xcUpdate.L3xc.SwIfIndex).
-		WithField("Paths[0].SwIfIndex", l3xcUpdate.L3xc.Paths[0].SwIfIndex).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "L3xcUpdate").Debug("completed")
+	clientNextHops := conn.GetContext().GetIpContext().GetSrcIPNets()
+	serverNextHops := conn.GetContext().GetIpContext().GetDstIPNets()
 
-	now = time.Now()
-	// TODO - handle delete case
-	l3xcUpdate = &l3xc.L3xcUpdate{
-		L3xc: l3xc.L3xc{
-			SwIfIndex: serverIfIndex,
-			NPaths:    1,
-			Paths: []fib_types.FibPath{
-				{
-					SwIfIndex: uint32(clientIfIndex),
-				},
-			},
-		},
+	for _, update := range l3xcUpdates(clientIfIndex, serverIfIndex, clientNextHops, serverNextHops) {
+		now := time.Now()
+		if _, err := l3xc.NewServiceClient(vppConn).L3xcUpdate(ctx, update); err != nil {
+			return errors.WithStack(err)
+		}
+		log.FromContext(ctx).
+			WithField("SwIfIndex", update.L3xc.SwIfIndex).
+			WithField("IsIP6", update.L3xc.IsIP6).
+			WithField("Paths[0].SwIfIndex", update.L3xc.Paths[0].SwIfIndex).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "L3xcUpdate").Debug("completed")
 	}
-	if dstIPNet := conn.GetContext().GetIpContext().GetDstIPNet(); dstIPNet != nil {
-		l3xcUpdate.L3xc.Paths[0].Nh.Address = types.ToVppAddress(dstIPNet.IP).Un
-	}
-	if _, err := l3xc.NewServiceClient(vppConn).L3xcUpdate(ctx, l3xcUpdate); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("SwIfIndex", serverIfIndex).
-		WithField("Paths[0].SwIfIndex", clientIfIndex).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "L3xcUpdate").Debug("completed")
+
 	return nil
 }
 
@@ -103,27 +73,70 @@ func del(ctx context.Context, vppConn api.Connection) error {
 	if !ok {
 		return nil
 	}
-
-	now := time.Now()
-	if _, err := l3xc.NewServiceClient(vppConn).L3xcDel(ctx, &l3xc.L3xcDel{
-		SwIfIndex: clientIfIndex,
-	}); err != nil {
-		return errors.WithStack(err)
+	for _, ifIndex := range []interface_types.InterfaceIndex{clientIfIndex, serverIfIndex} {
+		for _, isIP6 := range []bool{true, false} {
+			now := time.Now()
+			if _, err := l3xc.NewServiceClient(vppConn).L3xcDel(ctx, &l3xc.L3xcDel{
+				SwIfIndex: ifIndex,
+				IsIP6:     isIP6,
+			}); err != nil {
+				return errors.WithStack(err)
+			}
+			log.FromContext(ctx).
+				WithField("SwIfIndex", ifIndex).
+				WithField("IsIP6", isIP6).
+				WithField("duration", time.Since(now)).
+				WithField("vppapi", "L3xcDel").Debug("completed")
+		}
 	}
-	log.FromContext(ctx).
-		WithField("SwIfIndex", clientIfIndex).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "L3xcDel").Debug("completed")
-
-	now = time.Now()
-	if _, err := l3xc.NewServiceClient(vppConn).L3xcDel(ctx, &l3xc.L3xcDel{
-		SwIfIndex: serverIfIndex,
-	}); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("SwIfIndex", serverIfIndex).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "L3xcDel").Debug("completed")
 	return nil
+}
+
+func l3xcUpdates(clientSwIfIndex, serverSwIfIndex interface_types.InterfaceIndex, clientNextHops, serverNextHops []*net.IPNet) []*l3xc.L3xcUpdate {
+	return []*l3xc.L3xcUpdate{
+		l3xcUpdate(clientSwIfIndex, serverSwIfIndex, clientNextHops, false),
+		l3xcUpdate(clientSwIfIndex, serverSwIfIndex, clientNextHops, true),
+		l3xcUpdate(serverSwIfIndex, clientSwIfIndex, serverNextHops, false),
+		l3xcUpdate(serverSwIfIndex, clientSwIfIndex, serverNextHops, true),
+	}
+}
+
+func l3xcUpdate(fromSwIfIndex, toIfIndex interface_types.InterfaceIndex, nextHops []*net.IPNet, isIP6 bool) *l3xc.L3xcUpdate {
+	rv := &l3xc.L3xcUpdate{
+		L3xc: l3xc.L3xc{
+			SwIfIndex: fromSwIfIndex,
+			IsIP6:     isIP6,
+			NPaths:    1,
+			Paths: []fib_types.FibPath{
+				{
+					SwIfIndex: uint32(toIfIndex),
+				},
+			},
+		},
+	}
+	for _, nh := range nextHops {
+		if nh == nil {
+			continue
+		}
+		if isIP6 && nh.IP.To4() != nil {
+			continue
+		}
+		rv.L3xc.NPaths++
+		rv.L3xc.Paths = append(rv.L3xc.Paths, fib_types.FibPath{
+			SwIfIndex: uint32(toIfIndex),
+			Nh: fib_types.FibPathNh{
+				Address: types.ToVppAddress(nh.IP).Un,
+			},
+		})
+		break
+	}
+	if rv.L3xc.NPaths == 0 {
+		rv.L3xc.NPaths = 1
+		rv.L3xc.Paths = []fib_types.FibPath{
+			{
+				SwIfIndex: uint32(toIfIndex),
+			},
+		}
+	}
+	return rv
 }

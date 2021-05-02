@@ -20,36 +20,20 @@ package routes
 
 import (
 	"context"
-	"net"
 	"time"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		from := conn.GetContext().GetIpContext().GetSrcIPNet()
-		to := conn.GetContext().GetIpContext().GetDstIPNet()
-		if isClient {
-			from = conn.GetContext().GetIpContext().GetDstIPNet()
-			to = conn.GetContext().GetIpContext().GetSrcIPNet()
-		}
-		routes := conn.GetContext().GetIpContext().GetSrcRoutes()
-		if isClient {
-			routes = conn.GetContext().GetIpContext().GetDstRoutes()
-		}
-
-		if to == nil && from == nil && len(routes) == 0 {
-			return nil
-		}
-
 		handle, err := mechutils.ToNetlinkHandle(mechanism)
 		if err != nil {
 			return errors.WithStack(err)
@@ -60,17 +44,23 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		if to != nil && !to.Contains(from.IP) {
-			if err := routeAdd(ctx, handle, l, netlink.SCOPE_LINK, to, nil); err != nil {
+
+		var linkRoutes []*networkservice.Route
+		var routes []*networkservice.Route
+		if isClient {
+			linkRoutes = conn.GetContext().GetIpContext().GetSrcIPRoutes()
+			routes = conn.GetContext().GetIpContext().GetDstRoutesWithExplicitNextHop()
+		} else {
+			linkRoutes = conn.GetContext().GetIpContext().GetDstIPRoutes()
+			routes = conn.GetContext().GetIpContext().GetSrcRoutesWithExplicitNextHop()
+		}
+		for _, route := range linkRoutes {
+			if err := routeAdd(ctx, handle, l, netlink.SCOPE_LINK, route); err != nil {
 				return err
 			}
 		}
 		for _, route := range routes {
-			if route.GetPrefixIPNet() == nil || to.Contains(route.GetPrefixIPNet().IP) {
-				log.FromContext(ctx).Debugf("Skipping adding route %+v because it prefix %s is contained in %s", route, route.GetPrefixIPNet(), to)
-				continue
-			}
-			if err := routeAdd(ctx, handle, l, netlink.SCOPE_UNIVERSE, route.GetPrefixIPNet(), to); err != nil {
+			if err := routeAdd(ctx, handle, l, netlink.SCOPE_LINK, route); err != nil {
 				return err
 			}
 		}
@@ -78,25 +68,29 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 	return nil
 }
 
-func routeAdd(ctx context.Context, handle *netlink.Handle, l netlink.Link, scope netlink.Scope, prefix, gw *net.IPNet) error {
-	route := &netlink.Route{
+func routeAdd(ctx context.Context, handle *netlink.Handle, l netlink.Link, scope netlink.Scope, route *networkservice.Route) error {
+	if route.GetPrefixIPNet() == nil {
+		return errors.New("kernelRoute prefix must not be nil")
+	}
+	kernelRoute := &netlink.Route{
 		LinkIndex: l.Attrs().Index,
 		Scope:     scope,
-		Dst:       prefix,
+		Dst:       route.GetPrefixIPNet(),
 	}
+	gw := route.GetNextHopIP()
 	if gw != nil {
-		route.Gw = gw.IP
+		kernelRoute.Gw = gw
 	}
 	now := time.Now()
-	if err := handle.RouteReplace(route); err != nil {
+	if err := handle.RouteReplace(kernelRoute); err != nil {
 		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
 		WithField("link.Name", l.Attrs().Name).
-		WithField("route.Dst", route.Dst).
-		WithField("route.Gw", route.Gw).
-		WithField("route.Scope", route.Scope).
+		WithField("Dst", kernelRoute.Dst).
+		WithField("Gw", kernelRoute.Gw).
+		WithField("Scope", kernelRoute.Scope).
 		WithField("duration", time.Since(now)).
-		WithField("netlink", "RouteAdd").Debug("completed")
+		WithField("netlink", "RouteReplace").Debug("completed")
 	return nil
 }

@@ -36,11 +36,11 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// Note: These are switched from normal because if we are the client, we need to assign the IP
 		// in the Endpoints NetNS for the Dst.  If we are the *server* we need to assign the IP for the
 		// clients NetNS (ie the source).
-		ipNet := conn.GetContext().GetIpContext().GetSrcIPNet()
+		ipNets := conn.GetContext().GetIpContext().GetSrcIPNets()
 		if isClient {
-			ipNet = conn.GetContext().GetIpContext().GetDstIPNet()
+			ipNets = conn.GetContext().GetIpContext().GetDstIPNets()
 		}
-		if ipNet == nil {
+		if ipNets == nil {
 			return nil
 		}
 
@@ -55,17 +55,19 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			return errors.WithStack(err)
 		}
 
-		now := time.Now()
-		if err := handle.AddrReplace(l, &netlink.Addr{
-			IPNet: ipNet,
-		}); err != nil {
-			return err
+		for _, ipNet := range ipNets {
+			now := time.Now()
+			if err := handle.AddrReplace(l, &netlink.Addr{
+				IPNet: ipNet,
+			}); err != nil {
+				return err
+			}
+			log.FromContext(ctx).
+				WithField("link.Name", l.Attrs().Name).
+				WithField("Addr", ipNet.String()).
+				WithField("duration", time.Since(now)).
+				WithField("netlink", "AddrAdd").Debug("completed")
 		}
-		log.FromContext(ctx).
-			WithField("link.Name", l.Attrs().Name).
-			WithField("Addr", ipNet.String()).
-			WithField("duration", time.Since(now)).
-			WithField("netlink", "AddrAdd").Debug("completed")
 	}
 	return nil
 }
