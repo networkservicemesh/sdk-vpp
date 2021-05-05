@@ -14,6 +14,7 @@ require (
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+	golang.org/x/sys v0.0.0-20200610111108-226ff32320da
 	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 )

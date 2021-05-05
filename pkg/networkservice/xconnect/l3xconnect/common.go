@@ -106,12 +106,6 @@ func l3xcUpdate(fromSwIfIndex, toIfIndex interface_types.InterfaceIndex, nextHop
 		L3xc: l3xc.L3xc{
 			SwIfIndex: fromSwIfIndex,
 			IsIP6:     isIP6,
-			NPaths:    1,
-			Paths: []fib_types.FibPath{
-				{
-					SwIfIndex: uint32(toIfIndex),
-				},
-			},
 		},
 	}
 	for _, nh := range nextHops {
@@ -121,9 +115,14 @@ func l3xcUpdate(fromSwIfIndex, toIfIndex interface_types.InterfaceIndex, nextHop
 		if isIP6 && nh.IP.To4() != nil {
 			continue
 		}
+		proto := fib_types.FIB_API_PATH_NH_PROTO_IP4
+		if isIP6 {
+			proto = fib_types.FIB_API_PATH_NH_PROTO_IP6
+		}
 		rv.L3xc.NPaths++
 		rv.L3xc.Paths = append(rv.L3xc.Paths, fib_types.FibPath{
 			SwIfIndex: uint32(toIfIndex),
+			Proto:     proto,
 			Nh: fib_types.FibPathNh{
 				Address: types.ToVppAddress(nh.IP).Un,
 			},
@@ -132,9 +131,14 @@ func l3xcUpdate(fromSwIfIndex, toIfIndex interface_types.InterfaceIndex, nextHop
 	}
 	if rv.L3xc.NPaths == 0 {
 		rv.L3xc.NPaths = 1
+		proto := fib_types.FIB_API_PATH_NH_PROTO_IP4
+		if isIP6 {
+			proto = fib_types.FIB_API_PATH_NH_PROTO_IP6
+		}
 		rv.L3xc.Paths = []fib_types.FibPath{
 			{
 				SwIfIndex: uint32(toIfIndex),
+				Proto:     proto,
 			},
 		}
 	}
