@@ -70,7 +70,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				addr.Flags |= unix.IFA_F_NODAD
 			}
 			if err := handle.AddrReplace(l, addr); err != nil {
-				return err
+				return errors.Wrapf(err, "attempting to add ip address %s to %s with flags %d", addr.IPNet, l.Attrs().Name, addr.Flags)
 			}
 			log.FromContext(ctx).
 				WithField("link.Name", l.Attrs().Name).
