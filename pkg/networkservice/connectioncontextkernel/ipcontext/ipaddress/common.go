@@ -66,11 +66,12 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			// before anything *works* (even though the interface is up).  This causes
 			// cryptic error messages.  To avoid, we use the flag to disable DAD for
 			// any IPv6 addresses.
-			if ipNet != nil && ipNet.IP.To4() == nil {
+			// Further, it seems that this is only needed for veth type, not if we have a tapv2 interface
+			if l.Type() == "veth" && ipNet != nil && ipNet.IP.To4() == nil {
 				addr.Flags |= unix.IFA_F_NODAD
 			}
 			if err := handle.AddrReplace(l, addr); err != nil {
-				return errors.Wrapf(err, "attempting to add ip address %s to %s with flags %d", addr.IPNet, l.Attrs().Name, addr.Flags)
+				return errors.Wrapf(err, "attempting to add ip address %s to %s (type: %s) with flags 0x%x", addr.IPNet, l.Attrs().Name, l.Type(), addr.Flags)
 			}
 			log.FromContext(ctx).
 				WithField("link.Name", l.Attrs().Name).
