@@ -27,6 +27,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
@@ -57,9 +58,18 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		for _, ipNet := range ipNets {
 			now := time.Now()
-			if err := handle.AddrReplace(l, &netlink.Addr{
+			addr := &netlink.Addr{
 				IPNet: ipNet,
-			}); err != nil {
+			}
+			// Turns out IPv6 uses Duplicate Address Detection (DAD) which
+			// we don't need here and which can cause it to take more than a second
+			// before anything *works* (even though the interface is up).  This causes
+			// cryptic error messages.  To avoid, we use the flag to disable DAD for
+			// any IPv6 addresses.
+			if ipNet != nil && ipNet.IP.To4() == nil {
+				addr.Flags |= unix.IFA_F_NODAD
+			}
+			if err := handle.AddrReplace(l, addr); err != nil {
 				return err
 			}
 			log.FromContext(ctx).

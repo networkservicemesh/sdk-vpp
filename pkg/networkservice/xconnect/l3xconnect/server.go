@@ -39,6 +39,9 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (v *l3XconnectServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if request.GetConnection().GetPayload() != payload.IP {
+		return next.Server(ctx).Request(ctx, request)
+	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
