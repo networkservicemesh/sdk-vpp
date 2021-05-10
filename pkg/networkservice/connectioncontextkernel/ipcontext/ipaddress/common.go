@@ -63,6 +63,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		ch := make(chan netlink.AddrUpdate)
 		done := make(chan struct{})
+		defer close(done)
 		if err := netlink.AddrSubscribeAt(nsHandle, ch, done); err != nil {
 			return errors.Wrapf(err, "failed to subscribe for interface address updates")
 		}
@@ -77,8 +78,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			// we don't need here and which can cause it to take more than a second
 			// before anything *works* (even though the interface is up).  This causes
 			// cryptic error messages.  To avoid, we use the flag to disable DAD for
-			// any IPv6 addresses.
-			// Further, it seems that this is only needed for veth type, not if we have a tapv2 interface
+			// any IPv6 addresses. Further, it seems that this is only needed for veth type, not if we have a tapv2
 			if l.Type() == "veth" && ipNet != nil && ipNet.IP.To4() == nil {
 				addr.Flags |= unix.IFA_F_NODAD
 			}
