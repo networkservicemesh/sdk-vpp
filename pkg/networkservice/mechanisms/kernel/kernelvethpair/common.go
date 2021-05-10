@@ -76,6 +76,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		defer func() { _ = nsHandle.Close() }()
 		handle, err := mechutils.ToNetlinkHandle(mechanism)
 		if err != nil {
 			return errors.WithStack(err)

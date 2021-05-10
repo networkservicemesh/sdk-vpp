@@ -20,6 +20,8 @@ package ipaddress
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"time"
 
@@ -56,8 +58,15 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		disableIPv6Filename := fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/disable_ipv6", l.Attrs().Name)
+		if err = mechutils.RunInNetNS(mechanism, func() error {
+			return ioutil.WriteFile(disableIPv6Filename, []byte("0"), 0600)
+		}); err != nil {
+			return errors.Wrapf(err, "failed to set %s = 0", disableIPv6Filename)
+		}
 
 		nsHandle, err := mechutils.ToNSHandle(mechanism)
+		defer func() { _ = nsHandle.Close() }()
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve nsHandle for %+v", mechanism)
 		}
@@ -67,7 +76,6 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err := netlink.AddrSubscribeAt(nsHandle, ch, done); err != nil {
 			return errors.Wrapf(err, "failed to subscribe for interface address updates")
 		}
-
 		for _, ipNet := range ipNets {
 			now := time.Now()
 			addr := &netlink.Addr{
@@ -79,7 +87,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			// before anything *works* (even though the interface is up).  This causes
 			// cryptic error messages.  To avoid, we use the flag to disable DAD for
 			// any IPv6 addresses. Further, it seems that this is only needed for veth type, not if we have a tapv2
-			if l.Type() == "veth" && ipNet != nil && ipNet.IP.To4() == nil {
+			if ipNet != nil && ipNet.IP.To4() == nil {
 				addr.Flags |= unix.IFA_F_NODAD
 			}
 			if err := handle.AddrReplace(l, addr); err != nil {
