@@ -20,6 +20,7 @@ package ipaddress
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -56,10 +57,21 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			return errors.WithStack(err)
 		}
 
+		nsHandle, err := mechutils.ToNSHandle(mechanism)
+		if err != nil {
+			return errors.Wrapf(err, "failed to retrieve nsHandle for %+v", mechanism)
+		}
+		ch := make(chan netlink.AddrUpdate)
+		done := make(chan struct{})
+		if err := netlink.AddrSubscribeAt(nsHandle, ch, done); err != nil {
+			return errors.Wrapf(err, "failed to subscribe for interface address updates")
+		}
+
 		for _, ipNet := range ipNets {
 			now := time.Now()
 			addr := &netlink.Addr{
 				IPNet: ipNet,
+				Flags: unix.IFA_F_PERMANENT,
 			}
 			// Turns out IPv6 uses Duplicate Address Detection (DAD) which
 			// we don't need here and which can cause it to take more than a second
@@ -79,6 +91,38 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "AddrAdd").Debug("completed")
 		}
+		return waitForIPNets(ctx, ch, l, ipNets)
 	}
 	return nil
+}
+
+func waitForIPNets(ctx context.Context, ch chan netlink.AddrUpdate, l netlink.Link, ipNets []*net.IPNet) error {
+	now := time.Now()
+	for {
+		j := -1
+		select {
+		case <-ctx.Done():
+			return errors.Wrapf(ctx.Err(), "timeout waiting for update to add ip addresses %s to %s (type: %s)", ipNets, l.Attrs().Name, l.Type())
+		case update := <-ch:
+			if update.LinkIndex == l.Attrs().Index {
+				for i := range ipNets {
+					if update.LinkAddress.IP.Equal(ipNets[i].IP) && update.Flags&unix.IFA_F_TENTATIVE == 0 {
+						j = i
+						log.FromContext(ctx).
+							WithField("AddrUpdate.LinkAddress", update.LinkAddress).
+							WithField("link.Name", l.Attrs().Name).
+							WithField("duration", time.Since(now)).
+							Debug("complete")
+						break
+					}
+				}
+			}
+		}
+		if j != -1 {
+			ipNets = append(ipNets[:j], ipNets[j+1:]...)
+		}
+		if len(ipNets) == 0 {
+			return nil
+		}
+	}
 }
