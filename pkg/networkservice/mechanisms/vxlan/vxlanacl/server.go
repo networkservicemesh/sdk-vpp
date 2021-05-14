@@ -41,6 +41,10 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (v *vxlanACLServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		return nil, err
+	}
 	if mechanism := vxlan.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil {
 		if _, ok := v.IPMap.LoadOrStore(mechanism.DstIP().String(), struct{}{}); !ok {
 			if err := create(ctx, v.vppConn, mechanism.DstIP(), aclTag); err != nil {
@@ -48,7 +52,7 @@ func (v *vxlanACLServer) Request(ctx context.Context, request *networkservice.Ne
 			}
 		}
 	}
-	return next.Server(ctx).Request(ctx, request)
+	return conn, nil
 }
 
 func (v *vxlanACLServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
