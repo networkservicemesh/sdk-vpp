@@ -24,6 +24,8 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/vxlanacl"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
@@ -49,6 +51,7 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 		&vxlanClient{
 			vppConn: vppConn,
 		},
+		vxlanacl.NewClient(vppConn),
 		mtu.NewClient(vppConn, tunnelIP),
 		vni.NewClient(tunnelIP),
 	)

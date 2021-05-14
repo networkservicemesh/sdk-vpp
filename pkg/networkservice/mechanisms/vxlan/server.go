@@ -25,6 +25,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/vxlanacl"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
@@ -45,6 +47,7 @@ func NewServer(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 	return chain.NewNetworkServiceServer(
 		vni.NewServer(tunnelIP),
 		mtu.NewServer(vppConn, tunnelIP),
+		vxlanacl.NewServer(vppConn),
 		&vxlanServer{
 			vppConn: vppConn,
 		},
