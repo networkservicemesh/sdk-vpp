@@ -71,8 +71,6 @@ func (r *routesClient) Request(ctx context.Context, request *networkservice.Netw
 }
 
 func (r *routesClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	if err := addDel(ctx, conn, r.vppConn, metadata.IsClient(r), false); err != nil {
-		return nil, err
-	}
+	_ = addDel(ctx, conn, r.vppConn, metadata.IsClient(r), false)
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
