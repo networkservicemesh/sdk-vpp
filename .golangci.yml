@@ -181,3 +181,7 @@ issues:
       linters:
         - gocyclo
       text: "func `addDel` is high"
+    - path: pkg/networkservice/mechanisms/vxlan/common.go
+      linters:
+        - funlen
+      text: "Function 'create'"

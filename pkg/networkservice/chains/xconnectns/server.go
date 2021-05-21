@@ -64,7 +64,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+func NewServer(ctx context.Context, name string, aclRules map[string]string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		recvfd.NewServer(),
@@ -78,6 +78,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		connectioncontextkernel.NewServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
+		//acl.NewServer(vppConn, aclRules),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn),
 			kernel.MECHANISM: kernel.NewServer(vppConn),

@@ -20,24 +20,21 @@ package vxlan
 
 import (
 	"context"
+
 	"net"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/vxlanacl"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/mtu"
-
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/vxlanacl"
 )
 
 type vxlanServer struct {

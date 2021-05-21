@@ -35,6 +35,13 @@ import (
 
 func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isAdd, isClient bool) error {
 	if mechanism := vxlanMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		port := mechanism.DstPort()
+		if isClient {
+			port = mechanism.SrcPort()
+		}
+		if port != vxlanDefaultPort {
+			return errors.Errorf("vxlan only supports port %d not port %d", vxlanDefaultPort, port)
+		}
 		_, ok := ifindex.Load(ctx, isClient)
 		if isAdd && ok {
 			return nil

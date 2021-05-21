@@ -5,11 +5,14 @@ go 1.16
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210202134006-4c1cccf48cd1
 	github.com/edwarnicke/govpp v0.0.0-20210225052125-79125273957c
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/networkservicemesh/api v0.0.0-20210509180413-5753c9f30588
-	github.com/networkservicemesh/sdk v0.0.0-20210520015414-4870002d793c
+	github.com/networkservicemesh/api v0.0.0-20210527182901-ea452d7e044c
+	github.com/networkservicemesh/sdk v0.0.0-20210531072719-eaf26022ad56
 	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.7.0
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.1.0

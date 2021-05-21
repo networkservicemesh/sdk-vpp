@@ -14,13 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vxlanacl
+package pinhole
 
 import (
 	"sync"
 )
 
-//go:generate go-syncmap -output tunnel_ip_map.gen.go -type IPMap<string,struct{}>
+//go:generate go-syncmap -output tunnel_ip_map.gen.go -type IPPortMap<ipPortKey,struct{}>
 
-// IPMap - sync.Map key of net.IP and value of struct{}
-type IPMap sync.Map
+// IPPortMap - sync.Map with key ipPortKey value of struct{}
+type IPPortMap sync.Map
