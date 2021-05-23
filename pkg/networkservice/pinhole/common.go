@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vxlanacl
+package pinhole
 
 import (
 	"context"
@@ -36,11 +36,14 @@ import (
 )
 
 const (
-	aclTag = "nsm-mechanism-vxlan"
+	aclTag = "nsm-pinhole"
 )
 
-func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, tag string) error {
-	swIfIndex, err := vxlanSwIfIndex(ctx, vppConn, tunnelIP)
+func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, port uint16, tag string) error {
+	if tunnelIP == nil || port == 0 {
+		return nil
+	}
+	swIfIndex, err := tunnelIPSwIfIndex(ctx, vppConn, tunnelIP)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -54,13 +57,13 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, tag st
 		SwIfIndex: swIfIndex,
 	}
 
-	interfaceACLList.Acls, err = addToVxlanACLToACLListIfNeeded(ctx, vppConn, tunnelIP, tag, false, ingressACLs)
+	interfaceACLList.Acls, err = addToACLToACLListIfNeeded(ctx, vppConn, tunnelIP, port, tag, false, ingressACLs)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	interfaceACLList.NInput = uint8(len(interfaceACLList.Acls))
 
-	egressACLIndeces, err := addToVxlanACLToACLListIfNeeded(ctx, vppConn, tunnelIP, tag, true, egressACLs)
+	egressACLIndeces, err := addToACLToACLListIfNeeded(ctx, vppConn, tunnelIP, port, tag, true, egressACLs)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -84,7 +87,7 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, tag st
 	return nil
 }
 
-func addToVxlanACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, tag string, egress bool, aclDetails []*acl.ACLDetails) ([]uint32, error) {
+func addToACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, port uint16, tag string, egress bool, aclDetails []*acl.ACLDetails) ([]uint32, error) {
 	var foundACL *acl.ACLDetails
 	var ACLIndeces []uint32
 	for _, aclDetail := range aclDetails {
@@ -96,7 +99,7 @@ func addToVxlanACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection,
 
 	if foundACL == nil && len(aclDetails) > 0 {
 		now := time.Now()
-		rsp, err := acl.NewServiceClient(vppConn).ACLAddReplace(ctx, vxlanACL(tunnelIP, tag, egress))
+		rsp, err := acl.NewServiceClient(vppConn).ACLAddReplace(ctx, createACLAddReplace(tunnelIP, port, tag, egress))
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -170,7 +173,7 @@ func interfaceACLIndeces(ctx context.Context, vppConn api.Connection, swIfIndex 
 	return ingressACLIndeces, egressACLIndeces, nil
 }
 
-func vxlanSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (interface_types.InterfaceIndex, error) {
+func tunnelIPSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (interface_types.InterfaceIndex, error) {
 	now := time.Now()
 	swIfDumpClient, swIfDumpErr := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
 	if swIfDumpErr != nil {
@@ -207,7 +210,7 @@ func vxlanSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net.IP
 	return 0, errors.Errorf("unable to find tunnelIP (%s) on any vpp interface", tunnelIP)
 }
 
-func vxlanACL(tunnelIP net.IP, tag string, egress bool) *acl.ACLAddReplace {
+func createACLAddReplace(tunnelIP net.IP, port uint16, tag string, egress bool) *acl.ACLAddReplace {
 	defaultNet := &net.IPNet{
 		IP:   net.IPv4zero,
 		Mask: net.CIDRMask(0, 32),
@@ -226,7 +229,7 @@ func vxlanACL(tunnelIP net.IP, tag string, egress bool) *acl.ACLAddReplace {
 			Mask: net.CIDRMask(128, 128),
 		}
 	}
-	aclAddDelete := &acl.ACLAddReplace{
+	aclAddReplace := &acl.ACLAddReplace{
 		ACLIndex: ^uint32(0),
 		Tag:      tag,
 		Count:    1,
@@ -238,14 +241,14 @@ func vxlanACL(tunnelIP net.IP, tag string, egress bool) *acl.ACLAddReplace {
 				DstPrefix:              types.ToVppPrefix(tunnelNet),
 				SrcportOrIcmptypeFirst: 0,
 				SrcportOrIcmptypeLast:  65535,
-				DstportOrIcmpcodeFirst: 4789,
-				DstportOrIcmpcodeLast:  4789,
+				DstportOrIcmpcodeFirst: port,
+				DstportOrIcmpcodeLast:  port,
 			},
 		},
 	}
 	if egress {
-		aclAddDelete.R[0].SrcPrefix = types.ToVppPrefix(tunnelNet)
-		aclAddDelete.R[0].DstPrefix = types.ToVppPrefix(defaultNet)
+		aclAddReplace.R[0].SrcPrefix = types.ToVppPrefix(tunnelNet)
+		aclAddReplace.R[0].DstPrefix = types.ToVppPrefix(defaultNet)
 	}
-	return aclAddDelete
+	return aclAddReplace
 }

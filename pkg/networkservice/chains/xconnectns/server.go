@@ -30,6 +30,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 
@@ -78,6 +79,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		connectioncontextkernel.NewServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
+		pinhole.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn),
 			kernel.MECHANISM: kernel.NewServer(vppConn),
@@ -95,6 +97,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 						stats.NewClient(ctx),
 						mtu.NewClient(vppConn),
 						tag.NewClient(ctx, vppConn),
+						pinhole.NewClient(vppConn),
 						// mechanisms
 						memif.NewClient(vppConn),
 						kernel.NewClient(vppConn),

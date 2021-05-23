@@ -14,41 +14,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vxlanacl
+package pinhole
 
 import (
 	"context"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vxlan"
 )
 
-type vxlanACLClient struct {
+type pinholeClient struct {
 	vppConn api.Connection
-	IPMap
+	IPPortMap
 }
 
 // NewClient - returns a new client that will set an ACL permitting vxlan packets through if and only if there's an ACL on the interface
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
-	return &vxlanACLClient{
+	return &pinholeClient{
 		vppConn: vppConn,
 	}
 }
 
-func (v *vxlanACLClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+func (v *pinholeClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
-	if mechanism := vxlan.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if _, ok := v.IPMap.LoadOrStore(mechanism.SrcIP().String(), struct{}{}); !ok {
-			if err := create(ctx, v.vppConn, mechanism.SrcIP(), aclTag); err != nil {
+	if key := fromMechanism(conn.GetMechanism(), metadata.IsClient(v)); key != nil {
+		if _, ok := v.IPPortMap.LoadOrStore(*key, struct{}{}); !ok {
+			if err := create(ctx, v.vppConn, key.IP(), key.Port(), aclTag); err != nil {
 				return nil, err
 			}
 		}
@@ -56,6 +56,6 @@ func (v *vxlanACLClient) Request(ctx context.Context, request *networkservice.Ne
 	return conn, nil
 }
 
-func (v *vxlanACLClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (v *pinholeClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	return next.Client(ctx).Close(ctx, conn)
 }
