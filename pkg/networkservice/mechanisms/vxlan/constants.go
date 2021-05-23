@@ -22,5 +22,6 @@ import (
 
 const (
 	// MECHANISM string
-	MECHANISM = vxlan.MECHANISM
+	MECHANISM        = vxlan.MECHANISM
+	vxlanDefaultPort = 4789
 )

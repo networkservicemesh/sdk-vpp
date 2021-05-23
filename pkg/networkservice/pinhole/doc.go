@@ -14,5 +14,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vxlanacl provides networkservice.NetworkService{Client,Server} chain elements for ensuring vxlan packets get through any ACLs
-package vxlanacl
+// Package pinhole provides networkservice.NetworkService{Client,Server} chain elements for ensuring remote mechanism packets get through any ACLs
+package pinhole
