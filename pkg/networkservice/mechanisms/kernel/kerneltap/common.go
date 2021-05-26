@@ -31,6 +31,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
+	kernellink "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -92,7 +93,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
 
-		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
 			return err
 		}
