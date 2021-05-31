@@ -24,19 +24,20 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/mtu"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/vxlanacl"
 
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
@@ -50,7 +51,6 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 		&vxlanClient{
 			vppConn: vppConn,
 		},
-		vxlanacl.NewClient(vppConn),
 		mtu.NewClient(vppConn, tunnelIP),
 		vni.NewClient(tunnelIP),
 	)
