@@ -18,13 +18,15 @@ package acl
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/govpp/binapi/acl"
 	"github.com/edwarnicke/govpp/binapi/acl_types"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/pkg/errors"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
@@ -33,7 +35,16 @@ const (
 	aclTag = "nsm-acl-from-config"
 )
 
-func create(ctx context.Context, vppConn api.Connection, tag string, swIfIndex interface_types.InterfaceIndex, aRules []acl_types.ACLRule) ([]uint32, error) {
+func create(ctx context.Context, vppConn api.Connection, tag string, isClient bool, aRules []acl_types.ACLRule) ([]uint32, error) {
+	logger := log.FromContext(ctx).WithField("acl_server", "create")
+
+	swIfIndex, ok := ifindex.Load(ctx, isClient)
+	if !ok {
+		logger.Info("swIfIndex not found")
+		return nil, errors.New("swIfIndex not found")
+	}
+	logger.Infof(fmt.Sprintf("swIfIndex=%v", swIfIndex))
+
 	interfaceACLList := &acl.ACLInterfaceSetACLList{
 		SwIfIndex: swIfIndex,
 	}
@@ -41,14 +52,14 @@ func create(ctx context.Context, vppConn api.Connection, tag string, swIfIndex i
 	var err error
 	interfaceACLList.Acls, err = addACLToACLList(ctx, vppConn, tag, false, aRules)
 	if err != nil {
-		log.FromContext(ctx).Info("ACL_SERVER: error adding acl to acl list ingress")
+		logger.Info("error adding acl to acl list ingress")
 		return nil, errors.WithStack(err)
 	}
 	interfaceACLList.NInput = uint8(len(interfaceACLList.Acls))
 
 	egressACLIndeces, err := addACLToACLList(ctx, vppConn, tag, true, aRules)
 	if err != nil {
-		log.FromContext(ctx).Info("ACL_SERVER: error adding acl to acl list egress")
+		logger.Info("error adding acl to acl list egress")
 		return nil, errors.WithStack(err)
 	}
 	interfaceACLList.Acls = append(interfaceACLList.Acls, egressACLIndeces...)
@@ -56,7 +67,7 @@ func create(ctx context.Context, vppConn api.Connection, tag string, swIfIndex i
 
 	_, err = acl.NewServiceClient(vppConn).ACLInterfaceSetACLList(ctx, interfaceACLList)
 	if err != nil {
-		log.FromContext(ctx).Info("ACL_SERVER: error setting acl list for interface")
+		logger.Info("error setting acl list for interface")
 		return nil, errors.WithStack(err)
 	}
 	return interfaceACLList.Acls, nil
@@ -87,7 +98,7 @@ func aclAdd(tag string, egress bool, aRules []acl_types.ACLRule) *acl.ACLAddRepl
 		R:        aRules,
 	}
 	if egress {
-		for _, a := range aRules {
+		for _, a := range aclAddReplace.R {
 			a.SrcPrefix, a.DstPrefix = a.DstPrefix, a.SrcPrefix
 		}
 	}

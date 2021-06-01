@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,11 +24,10 @@ import (
 	"github.com/edwarnicke/govpp/binapi/acl"
 	"github.com/edwarnicke/govpp/binapi/acl_types"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -57,14 +56,10 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 	}
 
 	if request.GetConnection().GetMechanism().Type == memif.MECHANISM && len(a.aclRules) > 0 {
-		swIfIndex, ok := ifindex.Load(ctx, metadata.IsClient(a))
-		if !ok {
-			log.FromContext(ctx).Infof("ACL_SERVER: sw if index for client not found")
-		}
-
 		var indices []uint32
-		if indices, err = create(ctx, a.vppConn, aclTag, swIfIndex, a.aclRules); err != nil {
-			return nil, err
+		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
+			_, _ = a.Close(ctx, conn)
+			return nil, errors.WithStack(err)
 		}
 		a.aclIndices = indices
 	}
