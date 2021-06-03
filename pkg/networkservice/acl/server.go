@@ -19,6 +19,7 @@ package acl
 
 import (
 	"context"
+	"sync"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/govpp/binapi/acl"
@@ -27,8 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -38,6 +37,7 @@ type aclServer struct {
 	vppConn    api.Connection
 	aclRules   []acl_types.ACLRule
 	aclIndices []uint32
+	mut        sync.Mutex
 }
 
 // NewServer creates a NetworkServiceServer chain element to set the ACL on a vpp interface
@@ -55,25 +55,30 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 		return nil, err
 	}
 
-	if request.GetConnection().GetMechanism().Type == memif.MECHANISM && len(a.aclRules) > 0 {
+	if len(a.aclRules) > 0 {
 		var indices []uint32
 		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
 			_, _ = a.Close(ctx, conn)
 			return nil, errors.WithStack(err)
 		}
+
+		a.mut.Lock()
 		a.aclIndices = indices
+		a.mut.Unlock()
 	}
 
 	return conn, nil
 }
 
 func (a *aclServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	a.mut.Lock()
 	for ind := range a.aclIndices {
 		_, err := acl.NewServiceClient(a.vppConn).ACLDel(ctx, &acl.ACLDel{ACLIndex: uint32(ind)})
 		if err != nil {
 			log.FromContext(ctx).Infof("ACL_SERVER: error deleting acls")
 		}
 	}
+	a.mut.Unlock()
 
 	return next.Server(ctx).Close(ctx, conn)
 }
