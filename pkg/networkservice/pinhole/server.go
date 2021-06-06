@@ -18,6 +18,7 @@ package pinhole
 
 import (
 	"context"
+	"fmt"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -47,7 +48,7 @@ func (v *pinholeServer) Request(ctx context.Context, request *networkservice.Net
 	}
 	if key := fromMechanism(conn.GetMechanism(), metadata.IsClient(v)); key != nil {
 		if _, ok := v.IPPortMap.LoadOrStore(*key, struct{}{}); !ok {
-			if err := create(ctx, v.vppConn, key.IP(), key.Port(), aclTag); err != nil {
+			if err := create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err != nil {
 				return nil, err
 			}
 		}
