@@ -103,12 +103,16 @@ func RunInNetNS(mechanism *kernel.Mechanism, f func() error) error {
 func ToInterfaceName(conn *networkservice.Connection, isClient bool) string {
 	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
 	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
-	// if we are on the client side, we want to name based on the connection id from the NSE that is Next
-	// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
+	// if we are on the client side, we want to name based on the connection id from the NSE that is Current +2
+	// if we are not the client, we want to name for the connection of of the client addressing us, which is Current -2
+	path := conn.GetPath()
+	currentIndex := path.GetIndex()
+
 	namingConn := conn.Clone()
-	namingConn.Id = namingConn.GetPrevPathSegment().GetId()
 	if isClient {
-		namingConn.Id = namingConn.GetNextPathSegment().GetId()
+		namingConn.Id = path.GetPathSegments()[currentIndex+2].GetId()
+	} else {
+		namingConn.Id = path.GetPathSegments()[currentIndex-2].GetId()
 	}
 	return kernel.ToMechanism(conn.GetMechanism()).GetInterfaceName(namingConn)
 }
@@ -118,14 +122,16 @@ func ToInterfaceName(conn *networkservice.Connection, isClient bool) string {
 func ToAlias(conn *networkservice.Connection, isClient bool) string {
 	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
 	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
-	// if we are on the client side, we want to name based on the connection id from the NSE that is Next
-	// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
-	namingConn := conn.Clone()
-	namingConn.Id = namingConn.GetPrevPathSegment().GetId()
-	alias := fmt.Sprintf("server-%s", namingConn.GetId())
+	// if we are on the client side, we want to name based on the connection id from the NSE that is Current +2
+	// if we are not the client, we want to name for the connection of of the client addressing us, which is Current -2
+	path := conn.GetPath()
+	currentIndex := path.GetIndex()
+
+	var alias string
 	if isClient {
-		namingConn.Id = namingConn.GetNextPathSegment().GetId()
-		alias = fmt.Sprintf("client-%s", namingConn.GetId())
+		alias = fmt.Sprintf("client-%s", path.GetPathSegments()[currentIndex+2].GetId())
+	} else {
+		alias = fmt.Sprintf("server-%s", path.GetPathSegments()[currentIndex-2].GetId())
 	}
 	return alias
 }
