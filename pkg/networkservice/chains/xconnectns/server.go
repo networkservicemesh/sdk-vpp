@@ -24,21 +24,15 @@ import (
 	"net/url"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
@@ -46,12 +40,16 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -87,26 +85,22 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		}),
 		connect.NewServer(
 			ctx,
-			func(ctx context.Context, cc grpc.ClientConnInterface) networkservice.NetworkServiceClient {
-				return client.NewClient(ctx,
-					cc,
-					client.WithName(name),
-					client.WithAdditionalFunctionality(
-						mechanismtranslation.NewClient(),
-						connectioncontextkernel.NewClient(),
-						stats.NewClient(ctx),
-						mtu.NewClient(vppConn),
-						tag.NewClient(ctx, vppConn),
-						pinhole.NewClient(vppConn),
-						// mechanisms
-						memif.NewClient(vppConn),
-						kernel.NewClient(vppConn),
-						vxlan.NewClient(vppConn, tunnelIP),
-						recvfd.NewClient(),
-						sendfd.NewClient(),
-					),
-				)
-			},
+			client.NewClientFactory(
+				client.WithName(name),
+				client.WithAdditionalFunctionality(
+					mechanismtranslation.NewClient(),
+					connectioncontextkernel.NewClient(),
+					stats.NewClient(ctx),
+					mtu.NewClient(vppConn),
+					tag.NewClient(ctx, vppConn),
+					pinhole.NewClient(vppConn),
+					// mechanisms
+					memif.NewClient(vppConn),
+					kernel.NewClient(vppConn),
+					vxlan.NewClient(vppConn, tunnelIP),
+					recvfd.NewClient(),
+					sendfd.NewClient()),
+			),
 			connect.WithDialOptions(clientDialOptions...),
 		),
 	}
