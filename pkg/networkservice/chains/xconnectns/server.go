@@ -71,7 +71,9 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
-		heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+		heal.NewServer(ctx,
+			heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+			heal.WithRestoreEnabled(false)),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
