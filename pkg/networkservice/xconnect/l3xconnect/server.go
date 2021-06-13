@@ -58,11 +58,9 @@ func (v *l3XconnectServer) Close(ctx context.Context, conn *networkservice.Conne
 	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
+	_ = del(ctx, v.vppConn)
 	rv, err := next.Server(ctx).Close(ctx, conn)
 	if err != nil {
-		return nil, err
-	}
-	if err := del(ctx, v.vppConn); err != nil {
 		return nil, err
 	}
 	return rv, nil

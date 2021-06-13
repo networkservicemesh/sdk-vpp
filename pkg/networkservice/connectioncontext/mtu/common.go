@@ -23,6 +23,7 @@ import (
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
@@ -33,7 +34,7 @@ const (
 	jumboFrameSize = 9000
 )
 
-func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func setVPPL2MTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	now := time.Now()
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok || conn.GetContext().GetMTU() == 0 {
@@ -45,6 +46,13 @@ func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api
 	}
 	_, err := interfaces.NewServiceClient(vppConn).HwInterfaceSetMtu(ctx, setMTU)
 	if err != nil {
+		err = errors.WithStack(err)
+		log.FromContext(ctx).
+			WithField("SwIfIndex", setMTU.SwIfIndex).
+			WithField("MTU", setMTU.Mtu).
+			WithField("duration", time.Since(now)).
+			WithField("error", err).
+			WithField("vppapi", "HwInterfaceSetMtu").Debug("error")
 		return err
 	}
 	log.FromContext(ctx).
@@ -52,6 +60,40 @@ func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api
 		WithField("MTU", setMTU.Mtu).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "HwInterfaceSetMtu").Debug("completed")
+	return nil
+}
+
+func setVPPL3MTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	now := time.Now()
+	swIfIndex, ok := ifindex.Load(ctx, isClient)
+	if !ok || conn.GetContext().GetMTU() == 0 {
+		return nil
+	}
+	setMTU := &interfaces.SwInterfaceSetMtu{
+		SwIfIndex: swIfIndex,
+		Mtu: []uint32{
+			conn.GetContext().GetMTU(),
+			conn.GetContext().GetMTU(),
+			conn.GetContext().GetMTU(),
+			conn.GetContext().GetMTU(),
+		},
+	}
+	_, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetMtu(ctx, setMTU)
+	if err != nil {
+		err = errors.WithStack(err)
+		log.FromContext(ctx).
+			WithField("SwIfIndex", setMTU.SwIfIndex).
+			WithField("MTU", setMTU.Mtu).
+			WithField("duration", time.Since(now)).
+			WithField("error", err).
+			WithField("vppapi", "SwInterfaceSetMtu").Debug("error")
+		return err
+	}
+	log.FromContext(ctx).
+		WithField("SwIfIndex", setMTU.SwIfIndex).
+		WithField("MTU", setMTU.Mtu).
+		WithField("duration", time.Since(now)).
+		WithField("vppapi", "SwInterfaceSetMtu").Debug("completed")
 	return nil
 }
 
