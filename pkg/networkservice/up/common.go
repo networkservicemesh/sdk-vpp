@@ -36,11 +36,17 @@ type Connection interface {
 	api.ChannelProvider
 }
 
-func up(ctx context.Context, vppConn api.Connection, apiChannel api.Channel, isClient bool) error {
+func up(ctx context.Context, vppConn Connection, isClient bool) error {
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return nil
 	}
+
+	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer apiChannel.Close()
 
 	now := time.Now()
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetFlags(ctx, &interfaces.SwInterfaceSetFlags{
@@ -110,27 +116,22 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 	}
 }
 
-func initFunc(ctx context.Context, vppConn Connection) (api.Channel, error) {
-	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
+func initFunc(ctx context.Context, vppConn api.Connection) error {
 	now := time.Now()
-	if _, err = interfaces.NewServiceClient(vppConn).WantInterfaceEvents(ctx, &interfaces.WantInterfaceEvents{
+	_, err := interfaces.NewServiceClient(vppConn).WantInterfaceEvents(ctx, &interfaces.WantInterfaceEvents{
 		EnableDisable: 1,
 		PID:           uint32(os.Getpid()),
-	}); err != nil {
-		apiChannel.Close()
-		return nil, errors.WithStack(err)
+	})
+	// If we've already registered, then we are done here.  api.INVALID_REGISTRATION  is returned when we attempt to
+	// register for the second time.
+	if vppAPIError, ok := err.(api.VPPApiError); ok && vppAPIError == api.INVALID_REGISTRATION {
+		return nil
+	}
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "WantInterfaceEvents").Info("completed")
-
-	go func() {
-		<-ctx.Done()
-		apiChannel.Close()
-	}()
-	return apiChannel, nil
+	return nil
 }

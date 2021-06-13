@@ -22,6 +22,7 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
@@ -64,9 +65,17 @@ func (m *mtuServer) Request(ctx context.Context, request *networkservice.Network
 	if err != nil {
 		return nil, err
 	}
-	if err := setVPPMTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-		_, _ = m.Close(ctx, conn)
-		return nil, err
+	if conn.GetPayload() == payload.Ethernet {
+		if err := setVPPL2MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+			_, _ = m.Close(ctx, conn)
+			return nil, err
+		}
+	}
+	if conn.GetPayload() == payload.IP {
+		if err := setVPPL3MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+			_, _ = m.Close(ctx, conn)
+			return nil, err
+		}
 	}
 	return conn, nil
 }

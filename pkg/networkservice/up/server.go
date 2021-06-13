@@ -20,16 +20,14 @@ import (
 	"context"
 	"sync"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 )
 
 type upServer struct {
-	ctx        context.Context
-	vppConn    Connection
-	apiChannel api.Channel
+	ctx     context.Context
+	vppConn Connection
 	sync.Once
 	initErr error
 }
@@ -51,11 +49,11 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 		return nil, err
 	}
 
-	if err := up(ctx, u.vppConn, u.apiChannel, true); err != nil {
+	if err := up(ctx, u.vppConn, true); err != nil {
 		_, _ = u.Close(ctx, conn)
 		return nil, err
 	}
-	if err := up(ctx, u.vppConn, u.apiChannel, false); err != nil {
+	if err := up(ctx, u.vppConn, false); err != nil {
 		_, _ = u.Close(ctx, conn)
 		return nil, err
 	}
@@ -68,7 +66,7 @@ func (u *upServer) Close(ctx context.Context, conn *networkservice.Connection) (
 
 func (u *upServer) init(ctx context.Context) error {
 	u.Do(func() {
-		u.apiChannel, u.initErr = initFunc(ctx, u.vppConn)
+		u.initErr = initFunc(ctx, u.vppConn)
 	})
 	return u.initErr
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -21,17 +21,16 @@ import (
 	"context"
 	"sync"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"google.golang.org/grpc"
 )
 
 type upClient struct {
-	ctx        context.Context
-	vppConn    Connection
-	apiChannel api.Channel
+	ctx     context.Context
+	vppConn Connection
 	sync.Once
 	initErr error
 }
@@ -54,7 +53,7 @@ func (u *upClient) Request(ctx context.Context, request *networkservice.NetworkS
 		return nil, err
 	}
 
-	if err := up(ctx, u.vppConn, u.apiChannel, true); err != nil {
+	if err := up(ctx, u.vppConn, metadata.IsClient(u)); err != nil {
 		_, _ = u.Close(ctx, conn, opts...)
 		return nil, err
 	}
@@ -67,7 +66,7 @@ func (u *upClient) Close(ctx context.Context, conn *networkservice.Connection, o
 
 func (u *upClient) init(ctx context.Context) error {
 	u.Do(func() {
-		u.apiChannel, u.initErr = initFunc(ctx, u.vppConn)
+		u.initErr = initFunc(ctx, u.vppConn)
 	})
 	return u.initErr
 }

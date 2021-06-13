@@ -57,11 +57,9 @@ func (v *l2XconnectServer) Close(ctx context.Context, conn *networkservice.Conne
 	if conn.GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Close(ctx, conn)
 	}
+	_ = addDel(ctx, v.vppConn, false)
 	rv, err := next.Server(ctx).Close(ctx, conn)
 	if err != nil {
-		return nil, err
-	}
-	if err := addDel(ctx, v.vppConn, false); err != nil {
 		return nil, err
 	}
 	return rv, nil
