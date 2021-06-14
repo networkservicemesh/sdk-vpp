@@ -51,9 +51,6 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (m *memifServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	rv, err := next.Server(ctx).Close(ctx, conn)
-	if delErr := del(ctx, conn, m.vppConn, metadata.IsClient(m)); delErr != nil {
-		return nil, delErr
-	}
-	return rv, err
+	_ = del(ctx, conn, m.vppConn, metadata.IsClient(m))
+	return next.Server(ctx).Close(ctx, conn)
 }

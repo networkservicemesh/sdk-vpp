@@ -80,12 +80,6 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (m *memifClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := del(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = del(ctx, conn, m.vppConn, metadata.IsClient(m))
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }
