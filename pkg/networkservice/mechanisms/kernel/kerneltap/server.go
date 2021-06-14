@@ -53,8 +53,6 @@ func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if err := del(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
-		return nil, err
-	}
+	_ = del(ctx, conn, k.vppConn, metadata.IsClient(k))
 	return next.Server(ctx).Close(ctx, conn)
 }

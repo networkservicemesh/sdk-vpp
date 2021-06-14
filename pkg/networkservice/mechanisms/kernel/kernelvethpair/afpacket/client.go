@@ -54,12 +54,6 @@ func (a *afPacketClient) Request(ctx context.Context, request *networkservice.Ne
 }
 
 func (a *afPacketClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := del(ctx, conn, a.vppConn, metadata.IsClient(a)); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = del(ctx, conn, a.vppConn, metadata.IsClient(a))
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }

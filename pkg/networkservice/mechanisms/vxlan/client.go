@@ -82,12 +82,6 @@ func (v *vxlanClient) Close(ctx context.Context, conn *networkservice.Connection
 	if conn.GetPayload() != payload.Ethernet {
 		return next.Client(ctx).Close(ctx, conn, opts...)
 	}
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := addDel(ctx, conn, v.vppConn, false, metadata.IsClient(v)); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = addDel(ctx, conn, v.vppConn, false, metadata.IsClient(v))
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }
