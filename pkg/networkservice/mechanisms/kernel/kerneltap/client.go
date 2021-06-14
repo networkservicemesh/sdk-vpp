@@ -61,12 +61,6 @@ func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := del(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }

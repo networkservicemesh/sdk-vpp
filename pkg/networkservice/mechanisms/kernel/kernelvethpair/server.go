@@ -59,8 +59,6 @@ func (k *kernelVethPairServer) Request(ctx context.Context, request *networkserv
 }
 
 func (k *kernelVethPairServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if err := del(ctx, conn, metadata.IsClient(k)); err != nil {
-		return nil, err
-	}
+	_ = del(ctx, conn, metadata.IsClient(k))
 	return next.Server(ctx).Close(ctx, conn)
 }

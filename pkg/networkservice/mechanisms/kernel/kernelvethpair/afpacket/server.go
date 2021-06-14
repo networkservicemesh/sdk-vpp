@@ -52,8 +52,6 @@ func (a *afPacketServer) Request(ctx context.Context, request *networkservice.Ne
 }
 
 func (a *afPacketServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if err := del(ctx, conn, a.vppConn, false); err != nil {
-		return nil, err
-	}
+	_ = del(ctx, conn, a.vppConn, false)
 	return next.Server(ctx).Close(ctx, conn)
 }

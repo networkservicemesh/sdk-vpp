@@ -65,12 +65,6 @@ func (k *kernelVethPairClient) Request(ctx context.Context, request *networkserv
 }
 
 func (k *kernelVethPairClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil {
-		return nil, err
-	}
-	if err := del(ctx, conn, metadata.IsClient(k)); err != nil {
-		return nil, err
-	}
-	return rv, nil
+	_ = del(ctx, conn, metadata.IsClient(k))
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }
