@@ -45,6 +45,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
@@ -80,9 +81,10 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:  memif.NewServer(vppConn),
-			kernel.MECHANISM: kernel.NewServer(vppConn),
-			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
+			memif.MECHANISM:     memif.NewServer(vppConn),
+			kernel.MECHANISM:    kernel.NewServer(vppConn),
+			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP),
+			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
 		pinhole.NewServer(vppConn),
 		connect.NewServer(
@@ -93,12 +95,14 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					mechanismtranslation.NewClient(),
 					connectioncontextkernel.NewClient(),
 					stats.NewClient(ctx),
+					up.NewClient(ctx, vppConn),
 					mtu.NewClient(vppConn),
 					tag.NewClient(ctx, vppConn),
 					// mechanisms
 					memif.NewClient(vppConn),
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP),
+					wireguard.NewClient(vppConn, tunnelIP),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
 					sendfd.NewClient()),
