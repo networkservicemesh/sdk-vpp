@@ -79,12 +79,12 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		connectioncontextkernel.NewServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
-		pinhole.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:  memif.NewServer(vppConn),
 			kernel.MECHANISM: kernel.NewServer(vppConn),
 			vxlan.MECHANISM:  vxlan.NewServer(vppConn, tunnelIP),
 		}),
+		pinhole.NewServer(vppConn),
 		connect.NewServer(
 			ctx,
 			client.NewClientFactory(
@@ -95,11 +95,11 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					stats.NewClient(ctx),
 					mtu.NewClient(vppConn),
 					tag.NewClient(ctx, vppConn),
-					pinhole.NewClient(vppConn),
 					// mechanisms
 					memif.NewClient(vppConn),
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP),
+					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
 					sendfd.NewClient()),
 			),

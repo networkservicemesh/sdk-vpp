@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210202134006-4c1cccf48cd1
-	github.com/edwarnicke/govpp v0.0.0-20210225052125-79125273957c
+	github.com/edwarnicke/govpp v0.0.0-20210613224216-90cfa3213b00
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/networkservicemesh/api v0.0.0-20210609080649-aa4a0cc6c9ea
