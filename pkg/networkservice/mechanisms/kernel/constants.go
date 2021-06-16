@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -22,6 +22,5 @@ import (
 
 const (
 	// MECHANISM string
-	MECHANISM    = kernel.MECHANISM
-	vnetFilename = "/dev/vhost-net"
+	MECHANISM = kernel.MECHANISM
 )
