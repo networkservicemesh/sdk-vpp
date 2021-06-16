@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,20 +19,13 @@
 package kernel
 
 import (
-	"os"
-
 	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kerneltap"
 )
 
 // NewClient - returns a new Client chain element implementing the kernel mechanism with vpp
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
-	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewClient(vppConn)
-	}
 	return kernelvethpair.NewClient(vppConn)
 }
