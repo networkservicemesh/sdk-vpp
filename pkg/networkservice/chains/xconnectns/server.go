@@ -74,7 +74,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		clienturl.NewServer(clientURL),
 		heal.NewServer(ctx,
 			heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
-			heal.WithRestoreEnabled(false)),
+			heal.WithOnRestore(heal.OnRestoreIgnore)),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
