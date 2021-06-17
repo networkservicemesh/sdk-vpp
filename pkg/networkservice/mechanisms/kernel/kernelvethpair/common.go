@@ -41,10 +41,17 @@ import (
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		// TODO - short circuit if already done
+		if _, ok := link.Load(ctx, isClient); ok {
+			if _, ok := peer.Load(ctx, isClient); ok {
+				return nil
+			}
+		}
 		alias := mechutils.ToAlias(conn, isClient)
-		if _, err := netlink.LinkByName(linuxIfaceName(alias)); err == nil {
-			return nil
+		if peerLink, err := netlink.LinkByName(linuxIfaceName(alias)); err == nil {
+			err := netlink.LinkDel(peerLink)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 		}
 
 		la := netlink.NewLinkAttrs()
