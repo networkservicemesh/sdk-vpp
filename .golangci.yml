@@ -34,6 +34,8 @@ linters-settings:
     suggest-new: true
   dupl:
     threshold: 150
+  funlen:
+    lines: 70
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -168,7 +170,7 @@ issues:
     - path: pkg/networkservice/mechanisms/kernel/kernelvethpair/common.go
       linters:
         - funlen
-      text: "Function 'create'"
+        - gocyclo
     - path: pkg/networkservice/mechanisms/kernel/kerneltap/common.go
       linters:
         - funlen
@@ -184,4 +186,4 @@ issues:
     - path: pkg/networkservice/mechanisms/vxlan/common.go
       linters:
         - funlen
-      text: "Function 'create'"
+      text: "Function 'addDel'"
