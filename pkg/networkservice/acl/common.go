@@ -98,8 +98,15 @@ func aclAdd(tag string, egress bool, aRules []acl_types.ACLRule) *acl.ACLAddRepl
 		R:        aRules,
 	}
 	if egress {
-		for _, a := range aclAddReplace.R {
-			a.SrcPrefix, a.DstPrefix = a.DstPrefix, a.SrcPrefix
+		for i := range aclAddReplace.R {
+			aclAddReplace.R[i].SrcPrefix, aclAddReplace.R[i].DstPrefix =
+				aclAddReplace.R[i].DstPrefix, aclAddReplace.R[i].SrcPrefix
+
+			aclAddReplace.R[i].SrcportOrIcmptypeFirst, aclAddReplace.R[i].DstportOrIcmpcodeFirst =
+				aclAddReplace.R[i].DstportOrIcmpcodeFirst, aclAddReplace.R[i].SrcportOrIcmptypeFirst
+
+			aclAddReplace.R[i].SrcportOrIcmptypeLast, aclAddReplace.R[i].DstportOrIcmpcodeLast =
+				aclAddReplace.R[i].DstportOrIcmpcodeLast, aclAddReplace.R[i].SrcportOrIcmptypeLast
 		}
 	}
 	return aclAddReplace

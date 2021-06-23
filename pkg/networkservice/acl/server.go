@@ -22,7 +22,6 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/govpp/binapi/acl"
-	"github.com/edwarnicke/govpp/binapi/acl_types"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 
@@ -34,12 +33,12 @@ import (
 
 type aclServer struct {
 	vppConn    api.Connection
-	aclRules   []acl_types.ACLRule
+	aclRules   map[string]string
 	aclIndices aclIndicesMap
 }
 
 // NewServer creates a NetworkServiceServer chain element to set the ACL on a vpp interface
-func NewServer(vppConn api.Connection, aclrules []acl_types.ACLRule) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, aclrules map[string]string) networkservice.NetworkServiceServer {
 	return &aclServer{
 		vppConn:  vppConn,
 		aclRules: aclrules,
@@ -52,9 +51,9 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 		return nil, err
 	}
 
-	if len(a.aclRules) > 0 {
+	if parsedRules := parseACLRulesMap(ctx, a.aclRules); len(parsedRules) > 0 {
 		var indices []uint32
-		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
+		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), parsedRules); err != nil {
 			_, _ = a.Close(ctx, conn)
 			return nil, errors.WithStack(err)
 		}
