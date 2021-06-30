@@ -18,6 +18,7 @@ package acl
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -47,6 +48,7 @@ const (
 
 func parseACLRulesMap(ctx context.Context, rules map[string]string) (aclRules []acl_types.ACLRule) {
 	logger := log.FromContext(ctx).WithField("acl", "parser")
+
 	for _, r := range rules {
 		rule := &acl_types.ACLRule{}
 
@@ -58,23 +60,29 @@ func parseACLRulesMap(ctx context.Context, rules map[string]string) (aclRules []
 		}
 
 		if err := addProtocol(parsed, rule); err != nil {
-			logger.WithField("acl", "parser").Errorf("Error parsing protocol: %v", err.Error())
+			logger.Errorf("Error parsing protocol: %v", err.Error())
 			continue
 		}
 
-		addPrefixes(parsed, rule)
+		if err := addPrefixes(parsed, rule); err != nil {
+			logger.Errorf("Error parsing prefixes: %v", err.Error())
+			continue
+		}
 
 		if err := addSrcPortOrIcmpType(parsed, rule); err != nil {
-			logger.WithField("acl", "parser").Errorf("Error parsing srcPortOrIcmpType: %v", err.Error())
+			logger.Errorf("Error parsing srcPortOrIcmpType: %v", err.Error())
 			continue
 		}
 
 		if err := addDstPortOrIcmpCode(parsed, rule); err != nil {
-			logger.WithField("acl", "parser").Errorf("Error parsing dstPortOrIcmpType: %v", err.Error())
+			logger.Errorf("Error parsing dstPortOrIcmpType: %v", err.Error())
 			continue
 		}
 
-		addTCPFlags(parsed, rule)
+		if err := addTCPFlags(parsed, rule); err != nil {
+			logger.Errorf("Error parsing tcp flags: %v", err.Error())
+			continue
+		}
 
 		aclRules = append(aclRules, *rule)
 	}
@@ -103,30 +111,30 @@ func addAction(parsed map[string]string, rule *acl_types.ACLRule) error {
 	return nil
 }
 
-func addPrefixes(parsed map[string]string, rule *acl_types.ACLRule) {
+func addPrefixes(parsed map[string]string, rule *acl_types.ACLRule) error {
 	dst, dstOk := parsed[dstPrefix]
 	if !dstOk {
-		rule.DstPrefix = ip_types.Prefix{}
-	} else {
-		dstpref, err := ip_types.ParsePrefix(dst)
-		if err != nil {
-			rule.DstPrefix = ip_types.Prefix{}
-		} else {
-			rule.DstPrefix = dstpref
-		}
+		return errors.New("dst prefix is missing")
+	}
+	dstpref, err := ip_types.ParsePrefix(dst)
+	if err != nil {
+		return err
 	}
 
 	src, srcOk := parsed[srcPrefix]
 	if !srcOk {
-		rule.SrcPrefix = ip_types.Prefix{}
-	} else {
-		srcpref, err := ip_types.ParsePrefix(src)
-		if err != nil {
-			rule.SrcPrefix = ip_types.Prefix{}
-		} else {
-			rule.SrcPrefix = srcpref
-		}
+		return errors.New("src prefix is missing")
 	}
+
+	srcpref, err := ip_types.ParsePrefix(src)
+	if err != nil {
+		return err
+	}
+
+	rule.DstPrefix = dstpref
+	rule.SrcPrefix = srcpref
+
+	return nil
 }
 
 var protocolMap = map[string]ip_types.IPProto{
@@ -207,27 +215,29 @@ func addDstPortOrIcmpCode(parsed map[string]string, rule *acl_types.ACLRule) err
 	return nil
 }
 
-func addTCPFlags(parsed map[string]string, rule *acl_types.ACLRule) {
+func addTCPFlags(parsed map[string]string, rule *acl_types.ACLRule) error {
 	tcpFlagsMask, ok := parsed[tcpFlagsMask]
 	if !ok {
-		return
+		return errors.New("tcp flags mask is missing")
 	}
 	tcpFlagsVal, ok := parsed[tcpFlagsValue]
 	if !ok {
-		return
+		return errors.New("tcp flags value is missing")
 	}
 
 	mask, err := strconv.Atoi(tcpFlagsMask)
 	if err != nil {
-		return
+		return err
 	}
 	val, err := strconv.Atoi(tcpFlagsVal)
 	if err != nil {
-		return
+		return err
 	}
 
 	rule.TCPFlagsMask = uint8(mask)
 	rule.TCPFlagsValue = uint8(val)
+
+	return nil
 }
 
 // parseKVStringToMap parses the input string "ke1${kvsep}val1${sep}key2${kvsep}val2${sep}..." to map
@@ -252,12 +262,12 @@ func parseKV(kv, kvsep string) (key, val string) {
 func findNumberPairByKeys(parsed map[string]string, key1, key2 string) (fisrtval, lastval uint16, err error) {
 	first, ok := parsed[key1]
 	if !ok {
-		return 0, 0, errors.New("icmp code first is missing")
+		return 0, 0, errors.New(fmt.Sprintf("%v is missing", key1))
 	}
 
 	last, ok := parsed[key2]
 	if !ok {
-		return 0, 0, errors.New("icmp code last is missing")
+		return 0, 0, errors.New(fmt.Sprintf("%v is missing", key2))
 	}
 
 	numFirst, err := strconv.Atoi(first)
