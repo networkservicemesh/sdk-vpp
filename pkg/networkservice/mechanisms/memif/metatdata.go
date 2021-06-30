@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,7 +30,7 @@ func store(ctx context.Context, isClient bool, socket *memif.MemifSocketFilename
 	metadata.Map(ctx, isClient).Store(key{}, socket)
 }
 
-func dElete(ctx context.Context, isClient bool) {
+func delete(ctx context.Context, isClient bool) {
 	metadata.Map(ctx, isClient).Delete(key{})
 }
 
