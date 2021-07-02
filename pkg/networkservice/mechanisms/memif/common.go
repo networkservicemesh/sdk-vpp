@@ -154,19 +154,6 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		// Direct memif if applicable
-		if memifSocketAddDel, ok := load(ctx, true); ok && !isClient {
-			_, ok := ifindex.Load(ctx, !isClient)
-			if ok {
-				if err := del(ctx, conn, vppConn, !isClient); err != nil {
-					return err
-				}
-				mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: memifSocketAddDel.SocketFilename}).String())
-				dElete(ctx, !isClient)
-				ifindex.Delete(ctx, !isClient)
-				return nil
-			}
-		}
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
 			return nil

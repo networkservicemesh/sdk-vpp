@@ -18,24 +18,37 @@ package memif
 
 import (
 	"context"
+	"net/url"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type memifServer struct {
-	vppConn api.Connection
+	vppConn            api.Connection
+	directMemifEnabled bool
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
-	return &memifServer{
-		vppConn: vppConn,
+func NewServer(vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
+	m := &memifServer{
+		vppConn:            vppConn,
+		directMemifEnabled: false,
 	}
+
+	for _, opt := range options {
+		opt(m)
+	}
+
+	return m
 }
 
 func (m *memifServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
@@ -43,6 +56,24 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 	if err != nil {
 		return nil, err
 	}
+
+	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		// Direct memif if applicable
+		if memifSocketAddDel, ok := load(ctx, true); ok && m.directMemifEnabled {
+			_, ok := ifindex.Load(ctx, true)
+			if ok {
+				if err := del(ctx, conn, m.vppConn, true); err != nil {
+					_, _ = m.Close(ctx, conn)
+					return nil, err
+				}
+				mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: memifSocketAddDel.SocketFilename}).String())
+				delete(ctx, true)
+				ifindex.Delete(ctx, true)
+				return conn, nil
+			}
+		}
+	}
+
 	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		_, _ = m.Close(ctx, conn)
 		return nil, err
