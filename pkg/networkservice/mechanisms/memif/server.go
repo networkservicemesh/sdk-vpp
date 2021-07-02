@@ -41,7 +41,7 @@ type memifServer struct {
 func NewServer(vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
 	m := &memifServer{
 		vppConn:            vppConn,
-		directMemifEnabled: true,
+		directMemifEnabled: false,
 	}
 
 	for _, opt := range options {

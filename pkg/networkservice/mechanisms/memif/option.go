@@ -19,9 +19,9 @@ package memif
 // Option is an option for the connect server
 type Option func(s *memifServer)
 
-// WithDirectMemifDisabled turn off direct memif logic
-func WithDirectMemifDisabled() Option {
+// WithDirectMemif turn off direct memif logic
+func WithDirectMemif() Option {
 	return func(s *memifServer) {
-		s.directMemifEnabled = false
+		s.directMemifEnabled = true
 	}
 }

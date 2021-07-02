@@ -81,7 +81,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM:     memif.NewServer(vppConn),
+			memif.MECHANISM:     memif.NewServer(vppConn, memif.WithDirectMemif()),
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
