@@ -19,6 +19,7 @@ jobs:
           - cmd-forwarder-vpp
           - cmd-nsc-vpp
           - cmd-nse-icmp-responder-vpp
+          - cmd-nse-firewall-vpp
     name: Update ${{ matrix.repository }}
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.actor == 'nsmbot' || github.event_name == 'push' }}
