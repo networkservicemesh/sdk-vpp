@@ -8,7 +8,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/networkservicemesh/api v1.0.1-0.20210707174502-3bce416a9f33
-	github.com/networkservicemesh/sdk v0.5.1-0.20210707175101-e25782cc5071
+	github.com/networkservicemesh/sdk v0.5.1-0.20210707190851-573e61d08ba3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
