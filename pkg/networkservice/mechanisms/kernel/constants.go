@@ -22,5 +22,6 @@ import (
 
 const (
 	// MECHANISM string
-	MECHANISM = kernel.MECHANISM
+	MECHANISM    = kernel.MECHANISM
+	vnetFilename = "/dev/vhost-net"
 )
