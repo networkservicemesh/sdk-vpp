@@ -30,7 +30,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
-func setMTU(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
+func setMTU(ctx context.Context, conn *networkservice.Connection) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// Note: These are switched from normal because if we are the client, we need to assign the IP
 		// in the Endpoints NetNS for the Dst.  If we are the *server* we need to assign the IP for the
@@ -46,9 +46,9 @@ func setMTU(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		defer handle.Delete()
 
-		l, err := handle.LinkByName(mechutils.ToInterfaceName(conn, isClient))
+		l, err := handle.LinkByName(mechanism.GetInterfaceName(conn))
 		if err != nil {
-			return errors.Wrapf(err, "error attempting to retrieve link %q", mechutils.ToInterfaceName(conn, isClient))
+			return errors.Wrapf(err, "error attempting to retrieve link %q", mechanism.GetInterfaceName(conn))
 		}
 
 		now := time.Now()

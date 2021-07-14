@@ -40,7 +40,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		defer handle.Delete()
 
-		l, err := handle.LinkByName(mechutils.ToInterfaceName(conn, isClient))
+		l, err := handle.LinkByName(mechanism.GetInterfaceName(conn))
 		if err != nil {
 			return errors.WithStack(err)
 		}

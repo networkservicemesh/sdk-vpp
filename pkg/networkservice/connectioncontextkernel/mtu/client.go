@@ -26,8 +26,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"google.golang.org/grpc"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
 type mtuClient struct{}
@@ -64,7 +62,7 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 	if err != nil {
 		return nil, err
 	}
-	if err := setMTU(ctx, conn, metadata.IsClient(m)); err != nil {
+	if err := setMTU(ctx, conn); err != nil {
 		log.FromContext(ctx).Debugf("about to Close due to error: %+v", err)
 		_, _ = m.Close(ctx, conn, opts...)
 		return nil, err
