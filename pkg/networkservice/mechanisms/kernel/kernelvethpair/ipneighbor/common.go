@@ -124,7 +124,7 @@ func addDelKernel(ctx context.Context, isAdd bool, mechanism *kernel.Mechanism, 
 		HardwareAddr: peerLink.Attrs().HardwareAddr,
 	}
 	if isAdd {
-		if err = handle.NeighAdd(neigh); err != nil {
+		if err = handle.NeighSet(neigh); err != nil {
 			return errors.WithStack(err)
 		}
 		log.FromContext(ctx).
