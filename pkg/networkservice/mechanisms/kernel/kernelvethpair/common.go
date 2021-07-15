@@ -117,7 +117,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("link.Name", name).
 			WithField("netlink", "LinkByName").Debug("completed")
 
-		name = mechanism.GetInterfaceName(conn)
+		name = mechanism.GetInterfaceName()
 		// Set the LinkName
 		now = time.Now()
 		if err = handle.LinkSetName(l, name); err != nil {

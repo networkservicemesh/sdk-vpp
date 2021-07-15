@@ -46,9 +46,9 @@ func setMTU(ctx context.Context, conn *networkservice.Connection) error {
 		}
 		defer handle.Delete()
 
-		l, err := handle.LinkByName(mechanism.GetInterfaceName(conn))
+		l, err := handle.LinkByName(mechanism.GetInterfaceName())
 		if err != nil {
-			return errors.Wrapf(err, "error attempting to retrieve link %q", mechanism.GetInterfaceName(conn))
+			return errors.Wrapf(err, "error attempting to retrieve link %q", mechanism.GetInterfaceName())
 		}
 
 		now := time.Now()
