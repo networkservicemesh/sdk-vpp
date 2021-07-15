@@ -42,7 +42,22 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	if ipNets == nil {
 		return nil
 	}
+
+	curIPs, ok := load(ctx, isClient)
 	for _, ipNet := range ipNets {
+		// Сheck if the interface already has ipNet
+		if isAdd && ok {
+			has := false
+			for _, addr := range curIPs {
+				if addr.IP.Equal(ipNet.IP) {
+					has = true
+					break
+				}
+			}
+			if has {
+				continue
+			}
+		}
 		now := time.Now()
 		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceAddDelAddress(ctx, &interfaces.SwInterfaceAddDelAddress{
 			SwIfIndex: swIfIndex,
@@ -58,5 +73,11 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "SwInterfaceAddDelAddress").Debug("completed")
 	}
+	if isAdd {
+		store(ctx, isClient, ipNets)
+	} else {
+		delete(ctx, isClient)
+	}
+
 	return nil
 }
