@@ -55,7 +55,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			TxRingSz:         1024,
 			RxRingSz:         1024,
 			HostIfNameSet:    true,
-			HostIfName:       mechanism.GetInterfaceName(conn),
+			HostIfName:       mechanism.GetInterfaceName(),
 			HostNamespaceSet: true,
 			HostNamespace:    nsFilename,
 			TapFlags:         tapv2.TAP_API_FLAG_TUN,
