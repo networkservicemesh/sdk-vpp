@@ -26,11 +26,12 @@ import (
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/tapv2"
+	"github.com/pkg/errors"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
@@ -139,12 +140,17 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		if !ok {
 			return nil
 		}
+		now := time.Now()
 		_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
 			SwIfIndex: swIfIndex,
 		})
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "unable to delete connection with SwIfIndex %v", swIfIndex)
 		}
+		log.FromContext(ctx).
+			WithField("SwIfIndex", swIfIndex).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "TapDeleteV2").Debug("completed")
 		return nil
 	}
 	return nil

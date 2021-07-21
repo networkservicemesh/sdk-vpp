@@ -23,9 +23,12 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -61,6 +64,9 @@ func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_ = del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	err := del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	if err != nil {
+		log.FromContext(ctx).Error(err)
+	}
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
