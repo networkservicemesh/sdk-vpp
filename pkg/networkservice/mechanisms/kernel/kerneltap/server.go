@@ -23,8 +23,10 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
@@ -53,6 +55,9 @@ func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_ = del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	err := del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	if err != nil {
+		log.FromContext(ctx).Error(err)
+	}
 	return next.Server(ctx).Close(ctx, conn)
 }
