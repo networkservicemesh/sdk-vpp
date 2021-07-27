@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,13 +24,10 @@ package mechutils
 import (
 	"fmt"
 	"net/url"
-	"runtime"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
-	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 )
 
 // ToNSFilename - mechanism to NetNS filename
@@ -44,58 +43,6 @@ func ToNSFilename(mechanism *kernel.Mechanism) (string, error) {
 		return "", errors.Errorf("NetNSURL.Path canot be empty %q", u.Path)
 	}
 	return u.Path, nil
-}
-
-// ToNSHandle - mechanism to netns.NSHandle
-func ToNSHandle(mechanism *kernel.Mechanism) (netns.NsHandle, error) {
-	filename, err := ToNSFilename(mechanism)
-	if err != nil {
-		return 0, err
-	}
-	return netns.GetFromPath(filename)
-}
-
-// ToNetlinkHandle - mechanism to netlink.Handle for the NetNS specified in mechanism
-func ToNetlinkHandle(mechanism *kernel.Mechanism) (*netlink.Handle, error) {
-	curNSHandle, err := netns.Get()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	nsHandle, err := ToNSHandle(mechanism)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	defer func() { _ = nsHandle.Close() }()
-
-	handle, err := netlink.NewHandleAtFrom(nsHandle, curNSHandle)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return handle, nil
-}
-
-// RunInNetNS - runs f in the netns of the mechanism
-// Note: runtime.LockOSThread() is running for the lifetime of f
-// so f should be very quick to run
-func RunInNetNS(mechanism *kernel.Mechanism, f func() error) error {
-	originalNSHandle, err := netns.Get()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer func() { _ = originalNSHandle.Close() }()
-	nsHandle, err := ToNSHandle(mechanism)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer func() { _ = nsHandle.Close() }()
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	if err = netns.Set(nsHandle); err != nil {
-		return errors.WithStack(err)
-	}
-	defer func() { _ = netns.Set(originalNSHandle) }()
-	return f()
 }
 
 // ToAlias - create interface alias/tag from conn for client or server side for forwarder.

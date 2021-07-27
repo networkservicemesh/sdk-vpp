@@ -29,13 +29,13 @@ import (
 	"github.com/edwarnicke/govpp/binapi/ip_neighbor"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+	kernellink "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
@@ -112,7 +112,7 @@ func addDelVPP(ctx context.Context, vppConn api.Connection, isAdd bool, swIfInde
 
 func addDelKernel(ctx context.Context, isAdd bool, mechanism *kernel.Mechanism, l, peerLink netlink.Link, dstNet *net.IPNet) error {
 	now := time.Now()
-	handle, err := mechutils.ToNetlinkHandle(mechanism)
+	handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 	if err != nil {
 		return errors.WithStack(err)
 	}

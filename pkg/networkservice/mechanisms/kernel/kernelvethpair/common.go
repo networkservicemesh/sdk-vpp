@@ -26,6 +26,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 
+	kernellink "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/tools/nshandle"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
@@ -79,12 +81,12 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 
 		// Construct the nsHandle and netlink handle for the target namespace for this kernel interface
-		nsHandle, err := mechutils.ToNSHandle(mechanism)
+		nsHandle, err := nshandle.FromURL(mechanism.GetNetNSURL())
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		defer func() { _ = nsHandle.Close() }()
-		handle, err := mechutils.ToNetlinkHandle(mechanism)
+		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
 			return errors.WithStack(err)
 		}

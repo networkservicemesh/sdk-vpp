@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +42,9 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
