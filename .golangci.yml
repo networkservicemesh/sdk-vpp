@@ -187,3 +187,7 @@ issues:
       linters:
         - funlen
       text: "Function 'addDel'"
+    - path: pkg/networkservice/chains/xconnectns/server.go
+      linters:
+        - funlen
+      text: "Function 'NewServer'"
