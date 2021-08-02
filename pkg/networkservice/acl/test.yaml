@@ -1,0 +1,49 @@
+allow icmp:
+  ispermit: 1
+  srcprefix:
+    address:
+      af: 0
+      un:
+        xxx_uniondata:
+          - 172
+          - 16
+          - 1
+          - 100
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+    len: 31
+  dstprefix:
+    address:
+      af: 0
+      un:
+        xxx_uniondata:
+        - 172
+        - 16
+        - 1
+        - 101
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+    len: 31
+  proto: 1
+  srcportoricmptypelast: 65535
+  dstportoricmpcodelast: 65535
