@@ -21,10 +21,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"google.golang.org/grpc"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type l2XConnectServer struct {
@@ -42,15 +45,25 @@ func (v *l2XConnectServer) Request(ctx context.Context, request *networkservice.
 	if request.GetConnection().GetPayload() != payload.Ethernet {
 		return next.Client(ctx).Request(ctx, request, opts...)
 	}
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := addDel(ctx, v.vppConn, true); err != nil {
-		_, _ = v.Close(ctx, conn, opts...)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := v.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

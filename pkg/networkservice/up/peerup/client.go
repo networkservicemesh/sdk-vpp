@@ -22,13 +22,14 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	wireguardMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/wireguard"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type peerupClient struct {
@@ -46,6 +47,8 @@ func NewClient(ctx context.Context, vppConn Connection) networkservice.NetworkSe
 }
 
 func (u *peerupClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
@@ -53,10 +56,17 @@ func (u *peerupClient) Request(ctx context.Context, request *networkservice.Netw
 
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if err := waitForPeerUp(ctx, u.vppConn, mechanism.DstPublicKey(), metadata.IsClient(u)); err != nil {
-			_, _ = u.Close(ctx, conn, opts...)
+			closeCtx, cancelClose := postponeCtxFunc()
+			defer cancelClose()
+
+			if _, closeErr := u.Close(closeCtx, conn, opts...); closeErr != nil {
+				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+			}
+
 			return nil, err
 		}
 	}
+
 	return conn, nil
 }
 

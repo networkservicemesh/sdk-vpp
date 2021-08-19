@@ -22,6 +22,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/grpc"
 
@@ -29,10 +30,10 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	wireguardMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/wireguard"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard/peer"
@@ -82,15 +83,25 @@ func (w *wireguardClient) Request(ctx context.Context, request *networkservice.N
 		SetSrcPort(wireguardDefaultPort)
 
 	request.MechanismPreferences = append(request.MechanismPreferences, mechanism)
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
-	_, err = createInterface(ctx, conn, w.vppConn, &w.pubKeys, privateKey, metadata.IsClient(w))
-	if err != nil {
-		_, _ = w.Close(ctx, conn, opts...)
+
+	if _, err = createInterface(ctx, conn, w.vppConn, &w.pubKeys, privateKey, metadata.IsClient(w)); err != nil {
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := w.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

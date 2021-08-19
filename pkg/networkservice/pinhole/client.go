@@ -22,12 +22,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type pinholeClient struct {
@@ -43,17 +44,28 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 }
 
 func (v *pinholeClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	if key := fromMechanism(conn.GetMechanism(), metadata.IsClient(v)); key != nil {
 		if _, ok := v.IPPortMap.LoadOrStore(*key, struct{}{}); !ok {
 			if err := create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err != nil {
+				closeCtx, cancelClose := postponeCtxFunc()
+				defer cancelClose()
+
+				if _, closeErr := v.Close(closeCtx, conn, opts...); closeErr != nil {
+					err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+				}
+
 				return nil, err
 			}
 		}
 	}
+
 	return conn, nil
 }
 

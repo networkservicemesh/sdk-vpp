@@ -23,11 +23,14 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"google.golang.org/grpc"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type ipneighborClient struct {
@@ -45,14 +48,25 @@ func (i *ipneighborClient) Request(ctx context.Context, request *networkservice.
 	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Client(ctx).Request(ctx, request, opts...)
 	}
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), true); err != nil {
-		_, _ = i.Close(ctx, conn, opts...)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := i.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

@@ -22,11 +22,12 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type pinholeServer struct {
@@ -42,17 +43,28 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (v *pinholeServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
 	if key := fromMechanism(conn.GetMechanism(), metadata.IsClient(v)); key != nil {
 		if _, ok := v.IPPortMap.LoadOrStore(*key, struct{}{}); !ok {
 			if err := create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err != nil {
+				closeCtx, cancelClose := postponeCtxFunc()
+				defer cancelClose()
+
+				if _, closeErr := v.Close(closeCtx, conn); closeErr != nil {
+					err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+				}
+
 				return nil, err
 			}
 		}
 	}
+
 	return conn, nil
 }
 
