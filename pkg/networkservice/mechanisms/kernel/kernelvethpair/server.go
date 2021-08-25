@@ -23,16 +23,15 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/ipneighbor"
-
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/afpacket"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/ipneighbor"
 )
 
 type kernelVethPairServer struct{}
@@ -50,11 +49,19 @@ func (k *kernelVethPairServer) Request(ctx context.Context, request *networkserv
 	if err := create(ctx, request.GetConnection(), false); err != nil {
 		return nil, err
 	}
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = del(ctx, request.GetConnection(), metadata.IsClient(k))
+		delCtx, cancelDel := postponeCtxFunc()
+		defer cancelDel()
+
+		_ = del(delCtx, request.GetConnection(), metadata.IsClient(k))
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 
