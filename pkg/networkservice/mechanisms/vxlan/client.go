@@ -24,21 +24,19 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan/mtu"
-
-	"google.golang.org/grpc"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
 type vxlanClient struct {
@@ -60,21 +58,32 @@ func (v *vxlanClient) Request(ctx context.Context, request *networkservice.Netwo
 	if request.GetConnection().GetPayload() != payload.Ethernet {
 		return next.Client(ctx).Request(ctx, request, opts...)
 	}
+
 	mechanism := &networkservice.Mechanism{
 		Cls:        cls.REMOTE,
 		Type:       MECHANISM,
 		Parameters: make(map[string]string),
 	}
 	request.MechanismPreferences = append(request.MechanismPreferences, mechanism)
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := addDel(ctx, conn, v.vppConn, true, metadata.IsClient(v)); err != nil {
-		_, _ = v.Close(ctx, conn, opts...)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := v.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

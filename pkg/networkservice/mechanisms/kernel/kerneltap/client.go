@@ -23,15 +23,15 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
-
-	"google.golang.org/grpc"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type kernelTapClient struct {
@@ -52,14 +52,25 @@ func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.N
 		Parameters: make(map[string]string),
 	}
 	request.MechanismPreferences = append(request.MechanismPreferences, mechanism)
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := create(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
-		_, _ = k.Close(ctx, conn, opts...)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := k.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

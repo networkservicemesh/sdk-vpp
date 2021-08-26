@@ -21,8 +21,11 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type upServer struct {
@@ -44,20 +47,38 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 	if err := u.init(ctx); err != nil {
 		return nil, err
 	}
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := up(ctx, u.vppConn, true); err != nil {
-		_, _ = u.Close(ctx, conn)
+		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
 		return nil, err
 	}
+
 	if err := up(ctx, u.vppConn, false); err != nil {
-		_, _ = u.Close(ctx, conn)
+		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
 		return nil, err
 	}
+
 	return conn, nil
+}
+
+func (u *upServer) closeOnFailure(postponeCtxFunc func() (context.Context, context.CancelFunc), conn *networkservice.Connection) error {
+	closeCtx, cancelClose := postponeCtxFunc()
+	defer cancelClose()
+
+	_, err := u.Close(closeCtx, conn)
+
+	return err
 }
 
 func (u *upServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

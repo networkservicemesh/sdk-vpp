@@ -24,12 +24,14 @@ import (
 	"path/filepath"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 const (
@@ -46,36 +48,59 @@ func New() networkservice.NetworkServiceClient {
 }
 
 func (m *memifProxyClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	mechanism := memifMech.ToMechanism(conn.GetMechanism())
 	if mechanism == nil {
 		return conn, nil
 	}
+
 	// If we are already running a proxy... just keep running it
 	if _, ok := load(ctx, true); ok {
 		return conn, nil
 	}
-	err = os.MkdirAll(filepath.Dir(listenSocketFilename(conn)), 0700)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to mkdir %s", filepath.Dir(listenSocketFilename(conn)))
-	}
-	listener, err := newProxyListener(mechanism, listenSocketFilename(conn))
-	if err != nil {
+
+	if err = os.MkdirAll(filepath.Dir(listenSocketFilename(conn)), 0700); err != nil {
+		err = errors.Wrapf(err, "unable to mkdir %s", filepath.Dir(listenSocketFilename(conn)))
+		if closeErr := m.closeOnFailure(postponeCtxFunc, conn, opts); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
 		return nil, err
 	}
+
+	listener, err := newProxyListener(mechanism, listenSocketFilename(conn))
+	if err != nil {
+		if closeErr := m.closeOnFailure(postponeCtxFunc, conn, opts); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+		return nil, err
+	}
+
 	store(ctx, metadata.IsClient(m), listener)
+
 	return conn, nil
+}
+
+func (m *memifProxyClient) closeOnFailure(postponeCtxFunc func() (context.Context, context.CancelFunc), conn *networkservice.Connection, opts []grpc.CallOption) error {
+	closeCtx, cancelClose := postponeCtxFunc()
+	defer cancelClose()
+
+	_, err := m.Close(closeCtx, conn, opts...)
+
+	return err
 }
 
 func (m *memifProxyClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	rv, err := next.Client(ctx).Close(ctx, conn)
 	if listener, ok := loadAndDelete(ctx, metadata.IsClient(m)); ok {
 		_ = listener.Close()
-		_ = os.RemoveAll(filepath.Dir(listenSocketFilename(conn)))
 	}
+	_ = os.RemoveAll(filepath.Dir(listenSocketFilename(conn)))
 	return rv, err
 }
 

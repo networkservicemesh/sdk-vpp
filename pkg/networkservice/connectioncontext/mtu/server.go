@@ -21,10 +21,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type mtuServer struct {
@@ -61,23 +64,42 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 
 func (m *mtuServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	setConnContextMTU(request)
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
 	if conn.GetPayload() == payload.Ethernet {
 		if err := setVPPL2MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			_, _ = m.Close(ctx, conn)
+			if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+			}
 			return nil, err
 		}
 	}
+
 	if conn.GetPayload() == payload.IP {
 		if err := setVPPL3MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			_, _ = m.Close(ctx, conn)
+			if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+			}
 			return nil, err
 		}
 	}
+
 	return conn, nil
+}
+
+func (m *mtuServer) closeOnFailure(postponeCtxFunc func() (context.Context, context.CancelFunc), conn *networkservice.Connection) error {
+	closeCtx, cancelClose := postponeCtxFunc()
+	defer cancelClose()
+
+	_, err := m.Close(closeCtx, conn)
+
+	return err
 }
 
 func (m *mtuServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

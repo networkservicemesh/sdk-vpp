@@ -23,12 +23,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type kernelTapServer struct {
@@ -43,14 +44,24 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := create(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
-		_, _ = k.Close(ctx, conn)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := k.Close(closeCtx, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

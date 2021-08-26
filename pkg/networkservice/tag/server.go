@@ -21,8 +21,11 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type tagServer struct {
@@ -39,14 +42,24 @@ func NewServer(ctx context.Context, vppConn api.Connection) networkservice.Netwo
 }
 
 func (t *tagServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := create(ctx, conn, t.vppConn, true); err != nil {
-		_, _ = t.Close(ctx, conn)
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := t.Close(closeCtx, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

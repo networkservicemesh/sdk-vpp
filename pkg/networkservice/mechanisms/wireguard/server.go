@@ -22,6 +22,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -30,6 +31,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard/peer"
@@ -61,19 +63,30 @@ func (w *wireguardServer) Request(ctx context.Context, request *networkservice.N
 		mechanism.SetDstIP(w.tunnelIP)
 		mechanism.SetDstPort(wireguardDefaultPort)
 	}
+
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		privateKey, _ := wgtypes.GeneratePrivateKey()
 		pubKey, err := createInterface(ctx, conn, w.vppConn, &w.pubKeys, privateKey, metadata.IsClient(w))
 		if err != nil {
-			_, _ = w.Close(ctx, conn)
+			closeCtx, cancelClose := postponeCtxFunc()
+			defer cancelClose()
+
+			if _, closeErr := w.Close(closeCtx, conn); closeErr != nil {
+				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+			}
+
 			return nil, err
 		}
 		mechanism.SetDstPublicKey(pubKey)
 	}
+
 	return conn, nil
 }
 

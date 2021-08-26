@@ -21,11 +21,13 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type wireguardPeerClient struct {
@@ -40,15 +42,24 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 }
 
 func (w *wireguardPeerClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
-	err = createPeer(ctx, conn, w.vppConn, metadata.IsClient(w))
-	if err != nil {
-		_, _ = w.Close(ctx, conn, opts...)
+
+	if err = createPeer(ctx, conn, w.vppConn, metadata.IsClient(w)); err != nil {
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := w.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+
 		return nil, err
 	}
+
 	return conn, nil
 }
 

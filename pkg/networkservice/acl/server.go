@@ -30,6 +30,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type aclServer struct {
@@ -47,6 +48,8 @@ func NewServer(vppConn api.Connection, aclrules []acl_types.ACLRule) networkserv
 }
 
 func (a *aclServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
@@ -55,7 +58,13 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 	if len(a.aclRules) > 0 {
 		var indices []uint32
 		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
-			_, _ = a.Close(ctx, conn)
+			closeCtx, cancelClose := postponeCtxFunc()
+			defer cancelClose()
+
+			if _, closeErr := a.Close(closeCtx, conn); closeErr != nil {
+				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+			}
+
 			return nil, errors.WithStack(err)
 		}
 
