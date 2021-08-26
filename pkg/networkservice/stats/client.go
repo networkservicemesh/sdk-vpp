@@ -50,10 +50,12 @@ func (s *statsClient) Request(ctx context.Context, request *networkservice.Netwo
 	if initErr != nil {
 		log.FromContext(ctx).Errorf("%v", initErr)
 	}
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil || initErr != nil {
-		return nil, err
+		return conn, err
 	}
+
 	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
 	return conn, nil
 }

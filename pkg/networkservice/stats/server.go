@@ -48,6 +48,7 @@ func (s *statsServer) Request(ctx context.Context, request *networkservice.Netwo
 	if initErr != nil {
 		log.FromContext(ctx).Errorf("%v", initErr)
 	}
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil || initErr != nil {
 		return conn, err
