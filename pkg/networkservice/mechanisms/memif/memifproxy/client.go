@@ -20,6 +20,7 @@ package memifproxy
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -49,6 +50,12 @@ func New() networkservice.NetworkServiceClient {
 
 func (m *memifProxyClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
+	if mechanism := memifMech.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil {
+		if listener, ok := load(ctx, metadata.IsClient(m)); ok {
+			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: listener.socketFilename}).String())
+		}
+	}
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
@@ -96,6 +103,12 @@ func (m *memifProxyClient) closeOnFailure(postponeCtxFunc func() (context.Contex
 }
 
 func (m *memifProxyClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if listener, ok := load(ctx, metadata.IsClient(m)); ok {
+			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: listener.socketFilename}).String())
+		}
+	}
+
 	rv, err := next.Client(ctx).Close(ctx, conn)
 	if listener, ok := loadAndDelete(ctx, metadata.IsClient(m)); ok {
 		_ = listener.Close()
