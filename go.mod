@@ -19,3 +19,8 @@ require (
 	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 )
+
+replace (
+	github.com/networkservicemesh/api => github.com/Bolodya1997/api v0.0.0-20210903062657-e396b4c0ac87
+	github.com/networkservicemesh/sdk-sriov => github.com/Bolodya1997/sdk-sriov v0.0.0-20210903080230-21873d0b88aa
+)
