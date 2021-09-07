@@ -18,7 +18,6 @@ package memif
 
 import (
 	"context"
-	"net/url"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -26,11 +25,10 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type memifServer struct {
@@ -55,36 +53,28 @@ func NewServer(vppConn api.Connection, options ...Option) networkservice.Network
 func (m *memifServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
+	// if direct memif we need pass mechanism to client further in request chain
+	if mechanism := memifMech.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && m.directMemifEnabled {
+		storeDirectMemifInfo(ctx, directMemifInfo{})
+	}
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		// Direct memif if applicable
-		if memifSocketAddDel, ok := load(ctx, true); ok && m.directMemifEnabled {
-			_, ok := ifindex.Load(ctx, true)
-			if ok {
-				if err := del(ctx, conn, m.vppConn, true); err != nil {
-					if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
-						err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
-					}
-					return nil, err
-				}
-				mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: memifSocketAddDel.SocketFilename}).String())
-				delete(ctx, true)
-				ifindex.Delete(ctx, true)
-				return conn, nil
-			}
-		}
-	}
-
-	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+	// if direct memif case - just set memif socket name in connection.Mechanism
+	// if not direct memif case - create memif as always
+	dirMemifInfo, ok := loadDirectMemifInfo(ctx)
+	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil && m.directMemifEnabled && ok && len(dirMemifInfo.socketURL) > 0 {
+		mechanism.SetSocketFileURL(dirMemifInfo.socketURL)
+	} else if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
 		return nil, err
 	}
+
 	return conn, nil
 }
 

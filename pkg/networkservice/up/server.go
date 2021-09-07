@@ -24,7 +24,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
@@ -59,6 +61,7 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
+		log.FromContext(ctx).Errorf("SOME UGLY ERROR: %v", err.Error())
 		return nil, err
 	}
 
@@ -66,6 +69,7 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
+		log.FromContext(ctx).Errorf("SOME UGLY ERROR: %v", err.Error())
 		return nil, err
 	}
 

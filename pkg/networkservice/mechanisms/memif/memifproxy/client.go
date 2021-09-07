@@ -69,6 +69,7 @@ func (m *memifProxyClient) Request(ctx context.Context, request *networkservice.
 
 	// If we are already running a proxy... just keep running it
 	if _, ok := load(ctx, true); ok {
+		mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: listenSocketFilename(conn)}).String())
 		return conn, nil
 	}
 

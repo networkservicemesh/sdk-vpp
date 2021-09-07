@@ -28,15 +28,18 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/switchcase"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
 )
 
 type memifClient struct {
@@ -45,11 +48,19 @@ type memifClient struct {
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+	m := &memifClient{
+		vppConn: vppConn,
+	}
+
 	return chain.NewNetworkServiceClient(
-		&memifClient{
-			vppConn: vppConn,
-		},
-		memifproxy.New(),
+		m,
+		switchcase.NewClient(&switchcase.ClientCase{
+			Condition: func(ctx context.Context, conn *networkservice.Connection) bool {
+				_, ok := loadDirectMemifInfo(ctx)
+				return !ok
+			},
+			Client: memifproxy.New(),
+		}),
 	)
 }
 
@@ -78,7 +89,11 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 		return nil, err
 	}
 
-	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+	// if direct memif enabled save socket filename to metadata
+	_, ok := loadDirectMemifInfo(ctx)
+	if mechanism := memif.ToMechanism(conn.GetMechanism()); mechanism != nil && ok {
+		storeDirectMemifInfo(ctx, directMemifInfo{socketURL: mechanism.GetSocketFileURL()})
+	} else if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
