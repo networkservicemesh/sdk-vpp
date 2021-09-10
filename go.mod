@@ -6,10 +6,10 @@ require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
 	github.com/edwarnicke/govpp v0.0.0-20210928024809-7b7ae743b62d
 	github.com/golang/protobuf v1.4.3
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.0.1-0.20210907194827-9a36433d7d6e
-	github.com/networkservicemesh/sdk v0.5.1-0.20211012205451-4807755c335d
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20211012205730-4144088fedac
+	github.com/networkservicemesh/sdk v0.5.1-0.20211013215105-e4c4722a5125
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20211013215511-d34038567c92
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
