@@ -32,6 +32,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up/peerup"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type upClient struct {
@@ -39,15 +40,25 @@ type upClient struct {
 	vppConn Connection
 	sync.Once
 	initErr error
+
+	loadIfIndex ifIndexFunc
 }
 
 // NewClient provides a NetworkServiceClient chain elements that 'up's the swIfIndex
-func NewClient(ctx context.Context, vppConn Connection) networkservice.NetworkServiceClient {
+func NewClient(ctx context.Context, vppConn Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &options{
+		loadIfIndex: ifindex.Load,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	return chain.NewNetworkServiceClient(
 		peerup.NewClient(ctx, vppConn),
 		&upClient{
-			ctx:     ctx,
-			vppConn: vppConn,
+			ctx:         ctx,
+			vppConn:     vppConn,
+			loadIfIndex: o.loadIfIndex,
 		},
 	)
 }
@@ -64,7 +75,7 @@ func (u *upClient) Request(ctx context.Context, request *networkservice.NetworkS
 		return nil, err
 	}
 
-	if err := up(ctx, u.vppConn, metadata.IsClient(u)); err != nil {
+	if err := up(ctx, u.vppConn, u.loadIfIndex, metadata.IsClient(u)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 

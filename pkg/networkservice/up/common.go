@@ -26,8 +26,6 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 // Connection - simply combines tha api.Connection and api.ChannelProvider interfaces
@@ -36,8 +34,8 @@ type Connection interface {
 	api.ChannelProvider
 }
 
-func up(ctx context.Context, vppConn Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
+func up(ctx context.Context, vppConn Connection, loadIfIndex ifIndexFunc, isClient bool) error {
+	swIfIndex, ok := loadIfIndex(ctx, isClient)
 	if !ok {
 		return nil
 	}
