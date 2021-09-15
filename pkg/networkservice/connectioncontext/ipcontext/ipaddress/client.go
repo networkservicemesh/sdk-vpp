@@ -31,10 +31,14 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type ipaddressClient struct {
 	vppConn api.Connection
+
+	loadIfIndex ifIndexFunc
 }
 
 // NewClient creates a NetworkServiceClient chain element to set the ip address on a vpp interface
@@ -59,9 +63,17 @@ type ipaddressClient struct {
 //                              |                           |
 //                              +---------------------------+
 //
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &options{
+		loadIfIndex: ifindex.Load,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	return &ipaddressClient{
-		vppConn: vppConn,
+		vppConn:     vppConn,
+		loadIfIndex: o.loadIfIndex,
 	}
 }
 
@@ -73,7 +85,7 @@ func (i *ipaddressClient) Request(ctx context.Context, request *networkservice.N
 		return nil, err
 	}
 
-	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), true); err != nil {
+	if err := addDel(ctx, conn, i.vppConn, i.loadIfIndex, metadata.IsClient(i), true); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
