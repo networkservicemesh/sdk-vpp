@@ -93,7 +93,10 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 	_, ok := loadDirectMemifInfo(ctx)
 	if mechanism := memif.ToMechanism(conn.GetMechanism()); mechanism != nil && ok {
 		storeDirectMemifInfo(ctx, directMemifInfo{socketURL: mechanism.GetSocketFileURL()})
-	} else if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		return conn, nil
+	}
+
+	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 

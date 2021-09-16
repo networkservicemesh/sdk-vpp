@@ -25,7 +25,7 @@ import (
 )
 
 type key struct{}
-type key2 struct{}
+type directMemifKey struct{}
 
 func store(ctx context.Context, isClient bool, socket *memif.MemifSocketFilenameAddDel) {
 	metadata.Map(ctx, isClient).Store(key{}, socket)
@@ -41,11 +41,11 @@ func load(ctx context.Context, isClient bool) (value *memif.MemifSocketFilenameA
 }
 
 func storeDirectMemifInfo(ctx context.Context, val directMemifInfo) {
-	metadata.Map(ctx, true).Store(key2{}, val)
+	metadata.Map(ctx, true).Store(directMemifKey{}, val)
 }
 
 func loadDirectMemifInfo(ctx context.Context) (value directMemifInfo, ok bool) {
-	rawValue, ok := metadata.Map(ctx, true).Load(key2{})
+	rawValue, ok := metadata.Map(ctx, true).Load(directMemifKey{})
 	if !ok {
 		return
 	}

@@ -66,9 +66,12 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 	// if direct memif case - just set memif socket name in connection.Mechanism
 	// if not direct memif case - create memif as always
 	dirMemifInfo, ok := loadDirectMemifInfo(ctx)
-	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil && m.directMemifEnabled && ok && len(dirMemifInfo.socketURL) > 0 {
+	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil && ok && len(dirMemifInfo.socketURL) > 0 {
 		mechanism.SetSocketFileURL(dirMemifInfo.socketURL)
-	} else if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		return conn, nil
+	}
+
+	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
