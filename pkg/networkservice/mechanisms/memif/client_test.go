@@ -27,10 +27,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
 func Test_MemifClient_ShouldAppendMechanismIfMemifMechanismMissed(t *testing.T) {
-	c := memif.NewClient(nil)
+	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil))
 
 	req := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: []*networkservice.Mechanism{},
@@ -52,7 +55,7 @@ func Test_MemifClient_ShouldAppendMechanismIfMemifMechanismMissed(t *testing.T) 
 }
 
 func Test_MemifClient_ShouldNotDuplicateMechanisms(t *testing.T) {
-	c := memif.NewClient(nil)
+	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil))
 
 	req := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: []*networkservice.Mechanism{
