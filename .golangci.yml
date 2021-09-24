@@ -1,7 +1,7 @@
 ---
 run:
   # concurrency: 6
-  timeout: 1m
+  timeout: 1.5m
   issues-exit-code: 1
   tests: true
 linters-settings:

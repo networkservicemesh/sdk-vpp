@@ -138,6 +138,7 @@ func aclDetails(ctx context.Context, vppConn api.Connection, aclIndeces []uint32
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		defer func() { _ = aclDumpClient.Close() }()
 		aclDetails, err := aclDumpClient.Recv()
 		if err != nil {
 			return nil, errors.WithStack(err)
