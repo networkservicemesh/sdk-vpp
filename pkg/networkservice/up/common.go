@@ -83,6 +83,8 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	defer func() { _ = dc.Close() }()
+
 	details, err := dc.Recv()
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving SwInterfaceDetails for swIfIndex %d", swIfIndex)
@@ -92,10 +94,12 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 		WithField("details.Flags", details.Flags).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceDump").Debug("completed")
+
 	isUp := details.Flags & interface_types.IF_STATUS_API_FLAG_LINK_UP
 	if isUp != 0 {
 		return nil
 	}
+
 	now = time.Now()
 	for {
 		select {

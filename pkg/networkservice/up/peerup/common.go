@@ -56,12 +56,15 @@ func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isCli
 	defer func() { _ = subscription.Unsubscribe() }()
 
 	now := time.Now()
+
 	dp, err := wireguard.NewServiceClient(vppConn).WireguardPeersDump(ctx, &wireguard.WireguardPeersDump{
 		PeerIndex: peerIndex,
 	})
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	defer func() { _ = dp.Close() }()
+
 	details, err := dp.Recv()
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving WireguardPeersDetails")

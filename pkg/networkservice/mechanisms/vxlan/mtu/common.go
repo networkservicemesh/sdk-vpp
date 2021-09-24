@@ -39,6 +39,8 @@ func setMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 	if err != nil {
 		return 0, errors.Wrapf(err, "error attempting to get interface dump client to determine MTU for tunnelIP %q", tunnelIP)
 	}
+	defer func() { _ = client.Close() }()
+
 	for {
 		details, err := client.Recv()
 		if err == io.EOF {
@@ -47,6 +49,7 @@ func setMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 		if err != nil {
 			return 0, errors.Wrapf(err, "error attempting to get interface details to determine MTU for tunnelIP %q", tunnelIP)
 		}
+
 		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(ctx, &ip.IPAddressDump{
 			SwIfIndex: details.SwIfIndex,
 			IsIPv6:    tunnelIP.To4() == nil,
@@ -54,6 +57,7 @@ func setMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 		if err != nil {
 			return 0, errors.Wrapf(err, "error attempting to get ip address for vpp interface %q determine MTU for tunnelIP %q", details.InterfaceName, tunnelIP)
 		}
+		defer func() { _ = ipAddressClient.Close() }()
 
 		for {
 			ipAddressDetails, err := ipAddressClient.Recv()
