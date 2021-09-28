@@ -44,13 +44,20 @@ type vxlanClient struct {
 }
 
 // NewClient - returns a new client for the vxlan remote mechanism
-func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, tunnelIP net.IP, options ...Option) networkservice.NetworkServiceClient {
+	opts := &vxlanOptions{
+		vxlanPort: vxlanDefaultPort,
+	}
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	return chain.NewNetworkServiceClient(
 		&vxlanClient{
 			vppConn: vppConn,
 		},
 		mtu.NewClient(vppConn, tunnelIP),
-		vni.NewClient(tunnelIP),
+		vni.NewClient(tunnelIP, vni.WithTunnelPort(opts.vxlanPort)),
 	)
 }
 

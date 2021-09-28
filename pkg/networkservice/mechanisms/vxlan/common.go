@@ -39,9 +39,6 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if isClient {
 			port = mechanism.SrcPort()
 		}
-		if port != vxlanDefaultPort {
-			return errors.Errorf("vxlan only supports port %d not port %d", vxlanDefaultPort, port)
-		}
 		_, ok := ifindex.Load(ctx, isClient)
 		if isAdd && ok {
 			return nil
@@ -75,19 +72,21 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("vppapi", "AddNodeNext").Debug("completed")
 
 		now = time.Now()
-		vxlanAddDelTunnel := &vxlan.VxlanAddDelTunnel{
+		vxlanAddDelTunnel := &vxlan.VxlanAddDelTunnelV2{
 			IsAdd:          isAdd,
 			Instance:       ^uint32(0),
 			SrcAddress:     types.ToVppAddress(mechanism.SrcIP()),
 			DstAddress:     types.ToVppAddress(mechanism.DstIP()),
 			DecapNextIndex: addNextNodeRsp.NextIndex,
 			Vni:            mechanism.VNI(),
+			SrcPort:        port,
+			DstPort:        port,
 		}
 		if !isClient {
 			vxlanAddDelTunnel.SrcAddress = types.ToVppAddress(mechanism.DstIP())
 			vxlanAddDelTunnel.DstAddress = types.ToVppAddress(mechanism.SrcIP())
 		}
-		rsp, err := vxlan.NewServiceClient(vppConn).VxlanAddDelTunnel(ctx, vxlanAddDelTunnel)
+		rsp, err := vxlan.NewServiceClient(vppConn).VxlanAddDelTunnelV2(ctx, vxlanAddDelTunnel)
 		if err != nil {
 			return errors.WithStack(err)
 		}

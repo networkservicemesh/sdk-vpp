@@ -67,7 +67,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		recvfd.NewServer(),
@@ -86,7 +86,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM:     memif.NewServer(vppConn, memif.WithDirectMemif()),
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
-			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP),
+			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
 		pinhole.NewServer(vppConn),
@@ -104,7 +104,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					// mechanisms
 					memif.NewClient(vppConn),
 					kernel.NewClient(vppConn),
-					vxlan.NewClient(vppConn, tunnelIP),
+					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 					wireguard.NewClient(vppConn, tunnelIP),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
