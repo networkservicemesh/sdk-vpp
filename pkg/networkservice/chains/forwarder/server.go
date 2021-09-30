@@ -41,6 +41,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
@@ -50,6 +51,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
@@ -70,7 +72,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, dialTimeout time.Duration, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, dialTimeout time.Duration, domain2Device map[string]string, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
 		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
 		registryclient.WithDialOptions(clientDialOptions...),
@@ -87,6 +89,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
+		ethernetcontext.NewVFServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
@@ -114,6 +117,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 					wireguard.NewClient(vppConn, tunnelIP),
+					vlan.NewClient(vppConn, domain2Device),
 					filtermechanisms.NewClient(),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
