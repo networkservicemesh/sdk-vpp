@@ -42,9 +42,16 @@ type vxlanServer struct {
 }
 
 // NewServer - returns a new server for the vxlan remote mechanism
-func NewServer(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, tunnelIP net.IP, options ...Option) networkservice.NetworkServiceServer {
+	opts := &vxlanOptions{
+		vxlanPort: vxlanDefaultPort,
+	}
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	return chain.NewNetworkServiceServer(
-		vni.NewServer(tunnelIP),
+		vni.NewServer(tunnelIP, vni.WithTunnelPort(opts.vxlanPort)),
 		mtu.NewServer(vppConn, tunnelIP),
 		&vxlanServer{
 			vppConn: vppConn,
