@@ -66,12 +66,12 @@ func (p *proxyListener) accept() {
 	defer func() { _ = p.Close() }()
 	for {
 		in, err := p.listener.Accept()
-		if optErr, ok := err.(*net.OpError); ok && !optErr.Temporary() {
+		if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
 			// TODO - perhaps log this?
 			return
 		}
 		out, err := net.Dial(memifNetwork, p.socketFilename)
-		if optErr, ok := err.(*net.OpError); ok && !optErr.Temporary() {
+		if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
 			_ = in.Close()
 			// TODO - perhaps log this?
 			return
