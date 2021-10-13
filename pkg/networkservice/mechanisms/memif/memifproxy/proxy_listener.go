@@ -66,22 +66,16 @@ func (p *proxyListener) accept() {
 	defer func() { _ = p.Close() }()
 	for {
 		in, err := p.listener.Accept()
-		if err != nil {
-			if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
-				// TODO - perhaps log this?
-				return
-			}
+		if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
+			// TODO - perhaps log this?
+			return
 		}
-
 		out, err := net.Dial(memifNetwork, p.socketFilename)
-		if err != nil {
-			if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
-				_ = in.Close()
-				// TODO - perhaps log this?
-				return
-			}
+		if optErr, ok := err.(*net.OpError); !ok || !optErr.Temporary() {
+			_ = in.Close()
+			// TODO - perhaps log this?
+			return
 		}
-
 		proxyConn, err := newProxyConnection(in, out)
 		if err != nil {
 			_ = in.Close()
@@ -89,7 +83,6 @@ func (p *proxyListener) accept() {
 			// TODO - perhaps log this?
 			return
 		}
-
 		// TODO - clean up - while 99% of the time this won't be an issue because we will have exactly one thing
 		//        in this list... in principle it could leak memory
 		p.proxyConnections = append(p.proxyConnections, proxyConn)
