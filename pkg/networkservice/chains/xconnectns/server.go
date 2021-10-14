@@ -26,20 +26,17 @@ import (
 	"net/url"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
-	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
@@ -75,9 +72,6 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
-		heal.NewServer(ctx,
-			heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
-			heal.WithOnRestore(heal.OnRestoreIgnore)),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
@@ -91,9 +85,10 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		}),
 		pinhole.NewServer(vppConn),
 		connect.NewServer(
-			ctx,
-			client.NewClientFactory(
+			client.NewClient(ctx,
+				client.WithoutRefresh(),
 				client.WithName(name),
+				client.WithDialOptions(clientDialOptions...),
 				client.WithAdditionalFunctionality(
 					mechanismtranslation.NewClient(),
 					connectioncontextkernel.NewClient(),
@@ -110,7 +105,6 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					recvfd.NewClient(),
 					sendfd.NewClient()),
 			),
-			connect.WithDialOptions(clientDialOptions...),
 		),
 	}
 
