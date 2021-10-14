@@ -95,7 +95,7 @@ func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn 
 			return nil
 		}
 
-		swIfIndex, ok := ifindex.Load(ctx, isClient)
+		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 		if !ok {
 			return nil
 		}

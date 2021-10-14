@@ -28,6 +28,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
@@ -86,5 +87,8 @@ func (i *ipaddressServer) Request(ctx context.Context, request *networkservice.N
 }
 
 func (i *ipaddressServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), false); err != nil {
+		log.FromContext(ctx).Warnf(err.Error())
+	}
 	return next.Server(ctx).Close(ctx, conn)
 }

@@ -97,7 +97,11 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("Vni", vxlanAddDelTunnel.Vni).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "VxlanAddDelTunnel").Debug("completed")
-		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
+		if isAdd {
+			ifindex.Store(ctx, isClient, rsp.SwIfIndex)
+		} else {
+			ifindex.Delete(ctx, isClient)
+		}
 	}
 	return nil
 }
