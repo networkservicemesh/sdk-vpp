@@ -137,7 +137,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		swIfIndex, ok := ifindex.Load(ctx, isClient)
+		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 		if !ok {
 			return nil
 		}

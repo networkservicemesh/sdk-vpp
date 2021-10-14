@@ -89,7 +89,7 @@ func (i *ipaddressClient) Request(ctx context.Context, request *networkservice.N
 
 func (i *ipaddressClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), false); err != nil {
-		log.FromContext(ctx).Error(err)
+		log.FromContext(ctx).Warnf(err.Error())
 	}
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }

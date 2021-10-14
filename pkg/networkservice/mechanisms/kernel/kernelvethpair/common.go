@@ -208,7 +208,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 func del(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if peerLink, ok := peer.Load(ctx, isClient); ok {
+		if peerLink, ok := peer.LoadAndDelete(ctx, isClient); ok {
 			// Delete the peerLink which deletes all associated pair partners, routes, etc
 			now := time.Now()
 			if err := netlink.LinkDel(peerLink); err != nil {

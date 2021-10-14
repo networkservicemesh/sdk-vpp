@@ -133,7 +133,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 }
 
 func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
+	swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 	if !ok {
 		return nil
 	}
