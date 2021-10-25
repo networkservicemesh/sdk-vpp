@@ -14,14 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build linux
+
 package memif
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sync/atomic"
+	"runtime"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -33,42 +36,75 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netns"
+	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-var lastSocketID uint32
+// Connection is an api.Connection with IsExternal method
+type Connection interface {
+	IsExternal() bool
 
-func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn api.Connection, isClient bool) (socketID uint32, err error) {
-	// Extract the socket filename
-	u, err := url.Parse(mechanism.GetSocketFileURL())
+	api.Connection
+}
+
+var (
+	netNS    netns.NsHandle
+	netNSURL string
+)
+
+// nolint:gochecknoinits
+func init() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	fd, err := unix.Open("/proc/thread-self/ns/net", unix.O_RDONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return 0, errors.Wrapf(err, "not a valid url %q", mechanism.GetSocketFileURL())
+		panic("failed to open '/proc/thread-self/ns/net': " + err.Error())
 	}
-	if u.Scheme != memifMech.FileScheme {
-		return 0, errors.Errorf("socket file url must have scheme %q, actual %q", memifMech.FileScheme, u.Scheme)
+	path := fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), fd)
+
+	if netNS, err = netns.GetFromPath(path); err != nil {
+		panic("failed to get current net NS: " + err.Error())
 	}
 
-	// Create the socketID
-	socketID = atomic.AddUint32(&lastSocketID, 1) // TODO - work out a solution that works long term
-	now := time.Now()
-	memifSocketAddDel := &memif.MemifSocketFilenameAddDel{
-		IsAdd:          true,
-		SocketID:       socketID,
-		SocketFilename: u.Path,
+	netNSURL = (&url.URL{Scheme: memifMech.SocketFileScheme, Path: path}).String()
+}
+
+func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn Connection, isClient bool) (socketID uint32, err error) {
+	namespace, err := getNamespace(mechanism, vppConn)
+	if err != nil {
+		return 0, err
 	}
-	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDel(ctx, memifSocketAddDel); err != nil {
+
+	memifSocketAddDel := &memif.MemifSocketFilenameAddDelV2{
+		IsAdd:          true,
+		SocketID:       ^uint32(0),
+		SocketFilename: mechanism.GetSocketFilename(),
+		Namespace:      namespace,
+	}
+
+	now := time.Now()
+
+	reply, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel)
+	if err != nil {
 		return 0, errors.WithStack(err)
 	}
+	memifSocketAddDel.SocketID = reply.SocketID
+
 	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
+		WithField("SocketNamespace", memifSocketAddDel.Namespace).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifSocketFilenameAddDel").Debug("completed")
+
 	store(ctx, isClient, memifSocketAddDel)
-	return socketID, nil
+
+	return memifSocketAddDel.SocketID, nil
 }
 
 func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient bool) error {
@@ -76,17 +112,23 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 	if !ok {
 		return nil
 	}
+
 	memifSocketAddDel.IsAdd = false
+
 	now := time.Now()
-	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDel(ctx, memifSocketAddDel); err != nil {
+
+	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel); err != nil {
 		return errors.WithStack(err)
 	}
+
 	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
+		WithField("SocketNamespace", memifSocketAddDel.Namespace).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifSocketFilenameAddDel").Debug("completed")
+
 	return nil
 }
 
@@ -133,7 +175,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 }
 
 func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return nil
 	}
@@ -152,17 +194,14 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	return nil
 }
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn Connection, isClient bool) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
 			return nil
 		}
 		if !isClient {
-			if err := os.MkdirAll(filepath.Dir(socketFile(conn)), 0700); err != nil {
-				return errors.Wrapf(err, "failed to create memif socket directory %s", socketFile(conn))
-			}
-			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.FileScheme, Path: socketFile(conn)}).String())
+			mechanism.SetSocketFilename(socketFile(conn))
 		}
 		mode := memif.MEMIF_MODE_API_IP
 		if conn.GetPayload() == payload.Ethernet {
@@ -187,15 +226,39 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		if err := deleteMemifSocket(ctx, vppConn, isClient); err != nil {
 			return err
 		}
-		if !isClient {
-			if err := os.RemoveAll(filepath.Dir(socketFile(conn))); err != nil {
-				return errors.Wrapf(err, "failed to delete %s", filepath.Dir(socketFile(conn)))
-			}
-		}
 	}
 	return nil
 }
 
 func socketFile(conn *networkservice.Connection) string {
-	return filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
+	return "@" + filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
+}
+
+func getNamespace(mechanism *memifMech.Mechanism, vppConn Connection) (string, error) {
+	if mechanism.GetNetNSURL() == netNSURL {
+		return "", nil
+	}
+
+	u, err := url.Parse(mechanism.GetNetNSURL())
+	if err != nil {
+		return "", errors.Wrapf(err, "not a valid url %s", mechanism.GetNetNSURL())
+	}
+	if u.Scheme != memifMech.SocketFileScheme {
+		return "", errors.Errorf("socket file url must have scheme %s, actual %s", memifMech.SocketFileScheme, u.Scheme)
+	}
+
+	if vppConn.IsExternal() {
+		return u.Path, nil
+	}
+
+	targetNetNS, err := netns.GetFromPath(u.Path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = targetNetNS.Close() }()
+
+	if targetNetNS.Equal(netNS) {
+		return "", nil
+	}
+	return u.Path, nil
 }

@@ -16,51 +16,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !windows
+//+build linux
 
 package memif
 
 import (
 	"context"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/switchcase"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
 )
 
 type memifClient struct {
-	vppConn api.Connection
+	vppConn     Connection
+	changeNetNs bool
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
-	m := &memifClient{
-		vppConn: vppConn,
+func NewClient(vppConn Connection, options ...Option) networkservice.NetworkServiceClient {
+	opts := &memifOptions{}
+	for _, o := range options {
+		o(opts)
 	}
 
 	return chain.NewNetworkServiceClient(
-		m,
-		switchcase.NewClient(&switchcase.ClientCase{
-			Condition: func(ctx context.Context, conn *networkservice.Connection) bool {
-				_, ok := loadDirectMemifInfo(ctx)
-				return !ok
-			},
-			Client: memifproxy.New(),
-		}),
+		&memifClient{
+			vppConn:     vppConn,
+			changeNetNs: opts.changeNetNS,
+		},
 	)
 }
 
@@ -75,11 +68,11 @@ func mechanismsContain(list []*networkservice.Mechanism, t string) bool {
 
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	if !mechanismsContain(request.MechanismPreferences, memif.MECHANISM) {
-		request.MechanismPreferences = append(request.MechanismPreferences, &networkservice.Mechanism{
-			Cls:        cls.LOCAL,
-			Type:       memif.MECHANISM,
-			Parameters: make(map[string]string),
-		})
+		var u string
+		if !m.changeNetNs {
+			u = netNSURL
+		}
+		request.MechanismPreferences = append(request.MechanismPreferences, memif.New(u))
 	}
 
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
@@ -89,14 +82,16 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 		return nil, err
 	}
 
-	// if direct memif enabled save socket filename to metadata
-	_, ok := loadDirectMemifInfo(ctx)
-	if mechanism := memif.ToMechanism(conn.GetMechanism()); mechanism != nil && ok {
-		storeDirectMemifInfo(ctx, directMemifInfo{socketURL: mechanism.GetSocketFileURL()})
-		return conn, nil
+	// If direct memif case store mechanism to metadata and return.
+	if info, ok := memifproxy.LoadInfo(ctx); ok {
+		if mechanism := memif.ToMechanism(conn.GetMechanism()); mechanism != nil && ok {
+			info.NSURL = mechanism.GetNetNSURL()
+			info.SocketFile = mechanism.GetSocketFilename()
+			return conn, nil
+		}
 	}
 
-	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
