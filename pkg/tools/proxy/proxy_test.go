@@ -14,26 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memif
+package proxy
 
-type memifOptions struct {
-	directMemifEnabled bool
-	changeNetNS        bool
-}
+import "testing"
 
-// Option is an option for the connect server
-type Option func(o *memifOptions)
-
-// WithDirectMemif turn on direct memif logic
-func WithDirectMemif() Option {
-	return func(o *memifOptions) {
-		o.directMemifEnabled = true
-	}
-}
-
-// WithChangeNetNS sets if memif client/server should change net NS instead of using own one for creating socket
-func WithChangeNetNS() Option {
-	return func(o *memifOptions) {
-		o.changeNetNS = true
-	}
+func TestStart(t *testing.T) {
+	// FIXME: add tests
 }
