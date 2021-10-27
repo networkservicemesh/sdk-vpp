@@ -34,6 +34,10 @@ jobs:
       - name: Build
         run: go build -race  ./...
       - name: Test
+        if: matrix.os != 'windows-latest'
+        run: sudo -E PATH="$PATH" bash -c "go test -race ./..."
+      - name: Test
+        if: matrix.os == 'windows-latest'
         run: go test -race ./...
   golangci-lint:
     name: golangci-lint

@@ -120,9 +120,10 @@ func (p *proxyListener) accept(ctx context.Context) {
 
 	go func() {
 		<-ctx.Done()
-		_ = p.Close()
+		_ = p.listener.Close()
 	}()
 
+	defer func() { _ = p.Close() }()
 	for {
 		in, err := p.listener.Accept()
 		if err != nil {
