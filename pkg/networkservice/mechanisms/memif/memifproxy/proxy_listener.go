@@ -39,8 +39,8 @@ func newProxyListener(mechanism *memifMech.Mechanism, listenSocketFilename strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "not a valid url %q", mechanism.GetSocketFileURL())
 	}
-	if u.Scheme != memifMech.SocketFileScheme {
-		return nil, errors.Errorf("socket file url must have scheme %q, actual %q", memifMech.SocketFileScheme, u.Scheme)
+	if u.Scheme != memifMech.FileScheme {
+		return nil, errors.Errorf("socket file url must have scheme %q, actual %q", memifMech.FileScheme, u.Scheme)
 	}
 	p := &proxyListener{
 		socketFilename: u.Path,
@@ -58,7 +58,7 @@ func newProxyListener(mechanism *memifMech.Mechanism, listenSocketFilename strin
 		return nil, errors.Wrapf(err, "proxyListener unable to listen on %s", listenSocketFilename)
 	}
 	go p.accept()
-	mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: listenSocketFilename}).String())
+	mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.FileScheme, Path: listenSocketFilename}).String())
 	return p, nil
 }
 

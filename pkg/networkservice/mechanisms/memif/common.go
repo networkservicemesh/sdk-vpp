@@ -46,8 +46,8 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 	if err != nil {
 		return 0, errors.Wrapf(err, "not a valid url %q", mechanism.GetSocketFileURL())
 	}
-	if u.Scheme != memifMech.SocketFileScheme {
-		return 0, errors.Errorf("socket file url must have scheme %q, actual %q", memifMech.SocketFileScheme, u.Scheme)
+	if u.Scheme != memifMech.FileScheme {
+		return 0, errors.Errorf("socket file url must have scheme %q, actual %q", memifMech.FileScheme, u.Scheme)
 	}
 
 	// Create the socketID
@@ -162,7 +162,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			if err := os.MkdirAll(filepath.Dir(socketFile(conn)), 0700); err != nil {
 				return errors.Wrapf(err, "failed to create memif socket directory %s", socketFile(conn))
 			}
-			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.SocketFileScheme, Path: socketFile(conn)}).String())
+			mechanism.SetSocketFileURL((&url.URL{Scheme: memifMech.FileScheme, Path: socketFile(conn)}).String())
 		}
 		mode := memif.MEMIF_MODE_API_IP
 		if conn.GetPayload() == payload.Ethernet {
