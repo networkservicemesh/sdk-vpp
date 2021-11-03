@@ -19,12 +19,13 @@ package memif
 type memifOptions struct {
 	directMemifEnabled bool
 	changeNetNS        bool
+	isVPPExternal      bool
 }
 
 // Option is an option for the connect server
 type Option func(o *memifOptions)
 
-// WithDirectMemif turn on direct memif logic
+// WithDirectMemif turns on direct memif logic
 func WithDirectMemif() Option {
 	return func(o *memifOptions) {
 		o.directMemifEnabled = true
@@ -35,5 +36,12 @@ func WithDirectMemif() Option {
 func WithChangeNetNS() Option {
 	return func(o *memifOptions) {
 		o.changeNetNS = true
+	}
+}
+
+// WithExternalVPP sets if VPP is located in different net NS to the application
+func WithExternalVPP() Option {
+	return func(o *memifOptions) {
+		o.isVPPExternal = true
 	}
 }

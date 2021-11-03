@@ -43,16 +43,15 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-// Connection is an api.Connection with IsExternal method
-type Connection interface {
-	IsExternal() bool
+type vppConnection struct {
+	isExternal bool
 
 	api.Connection
 }
 
 var (
-	netNS    netns.NsHandle
-	netNSURL string
+	netNS     netns.NsHandle
+	netNSPath string
 )
 
 // nolint:gochecknoinits
@@ -64,16 +63,14 @@ func init() {
 	if err != nil {
 		panic("failed to open '/proc/thread-self/ns/net': " + err.Error())
 	}
-	path := fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), fd)
+	netNSPath = fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), fd)
 
-	if netNS, err = netns.GetFromPath(path); err != nil {
+	if netNS, err = netns.GetFromPath(netNSPath); err != nil {
 		panic("failed to get current net NS: " + err.Error())
 	}
-
-	netNSURL = (&url.URL{Scheme: memifMech.SocketFileScheme, Path: path}).String()
 }
 
-func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn Connection, isClient bool) (socketID uint32, err error) {
+func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn *vppConnection, isClient bool) (socketID uint32, err error) {
 	namespace, err := getNamespace(mechanism, vppConn)
 	if err != nil {
 		return 0, err
@@ -194,7 +191,7 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	return nil
 }
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn Connection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppConnection, isClient bool) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
@@ -234,20 +231,16 @@ func socketFile(conn *networkservice.Connection) string {
 	return "@" + filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
 }
 
-func getNamespace(mechanism *memifMech.Mechanism, vppConn Connection) (string, error) {
-	if mechanism.GetNetNSURL() == netNSURL {
-		return "", nil
-	}
-
+func getNamespace(mechanism *memifMech.Mechanism, vppConn *vppConnection) (string, error) {
 	u, err := url.Parse(mechanism.GetNetNSURL())
 	if err != nil {
 		return "", errors.Wrapf(err, "not a valid url %s", mechanism.GetNetNSURL())
 	}
-	if u.Scheme != memifMech.SocketFileScheme {
-		return "", errors.Errorf("socket file url must have scheme %s, actual %s", memifMech.SocketFileScheme, u.Scheme)
+	if u.Scheme != memifMech.FileScheme {
+		return "", errors.Errorf("socket file url must have scheme %s, actual %s", memifMech.FileScheme, u.Scheme)
 	}
 
-	if vppConn.IsExternal() {
+	if vppConn.isExternal {
 		return u.Path, nil
 	}
 

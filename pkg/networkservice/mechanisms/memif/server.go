@@ -20,12 +20,13 @@ package memif
 
 import (
 	"context"
+	"net/url"
 
+	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/null"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
@@ -37,12 +38,12 @@ import (
 )
 
 type memifServer struct {
-	vppConn     Connection
+	vppConn     *vppConnection
 	changeNetNS bool
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(chainCtx context.Context, vppConn Connection, options ...Option) networkservice.NetworkServiceServer {
+func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
 	opts := new(memifOptions)
 	for _, o := range options {
 		o(opts)
@@ -56,7 +57,10 @@ func NewServer(chainCtx context.Context, vppConn Connection, options ...Option) 
 	return chain.NewNetworkServiceServer(
 		memifProxyServer,
 		&memifServer{
-			vppConn:     vppConn,
+			vppConn: &vppConnection{
+				isExternal: opts.isVPPExternal,
+				Connection: vppConn,
+			},
 			changeNetNS: opts.changeNetNS,
 		},
 	)
@@ -66,7 +70,7 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	if mechanism := memif.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && !m.changeNetNS {
-		mechanism.GetParameters()[common.InodeURL] = netNSURL
+		mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: netNSPath}).String())
 	}
 
 	conn, err := next.Server(ctx).Request(ctx, request)

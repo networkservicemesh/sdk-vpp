@@ -23,6 +23,7 @@ package memif
 import (
 	"context"
 
+	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -38,12 +39,12 @@ import (
 )
 
 type memifClient struct {
-	vppConn     Connection
+	vppConn     *vppConnection
 	changeNetNs bool
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(vppConn Connection, options ...Option) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
 	opts := &memifOptions{}
 	for _, o := range options {
 		o(opts)
@@ -51,7 +52,10 @@ func NewClient(vppConn Connection, options ...Option) networkservice.NetworkServ
 
 	return chain.NewNetworkServiceClient(
 		&memifClient{
-			vppConn:     vppConn,
+			vppConn: &vppConnection{
+				isExternal: opts.isVPPExternal,
+				Connection: vppConn,
+			},
 			changeNetNs: opts.changeNetNS,
 		},
 	)
@@ -68,11 +72,11 @@ func mechanismsContain(list []*networkservice.Mechanism, t string) bool {
 
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	if !mechanismsContain(request.MechanismPreferences, memif.MECHANISM) {
-		var u string
-		if !m.changeNetNs {
-			u = netNSURL
+		mechanism := memif.ToMechanism(memif.NewAbstract(netNSPath))
+		if m.changeNetNs {
+			mechanism.SetNetNSURL("")
 		}
-		request.MechanismPreferences = append(request.MechanismPreferences, memif.New(u))
+		request.MechanismPreferences = append(request.MechanismPreferences, mechanism.Mechanism)
 	}
 
 	postponeCtxFunc := postpone.ContextWithValues(ctx)

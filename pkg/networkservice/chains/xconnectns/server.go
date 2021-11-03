@@ -55,8 +55,6 @@ import (
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
 type Connection interface {
-	IsExternal() bool
-
 	api.Connection
 	api.ChannelProvider
 }
@@ -82,7 +80,8 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM: memif.NewServer(ctx, vppConn,
 				memif.WithDirectMemif(),
-				memif.WithChangeNetNS()),
+				memif.WithChangeNetNS(),
+				memif.WithExternalVPP()),
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
@@ -102,7 +101,8 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					tag.NewClient(ctx, vppConn),
 					// mechanisms
 					memif.NewClient(vppConn,
-						memif.WithChangeNetNS()),
+						memif.WithChangeNetNS(),
+						memif.WithExternalVPP()),
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 					wireguard.NewClient(vppConn, tunnelIP),
