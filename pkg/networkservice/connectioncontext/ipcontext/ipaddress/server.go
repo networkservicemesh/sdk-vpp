@@ -30,10 +30,14 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type ipaddressServer struct {
 	vppConn api.Connection
+
+	loadIfIndex ifIndexFunc
 }
 
 // NewServer creates a NetworkServiceServer chain element to set the ip address on a vpp interface
@@ -58,9 +62,17 @@ type ipaddressServer struct {
 //                              |                           |
 //                              +---------------------------+
 //
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{
+		loadIfIndex: ifindex.Load,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	return &ipaddressServer{
-		vppConn: vppConn,
+		vppConn:     vppConn,
+		loadIfIndex: o.loadIfIndex,
 	}
 }
 
@@ -72,7 +84,7 @@ func (i *ipaddressServer) Request(ctx context.Context, request *networkservice.N
 		return nil, err
 	}
 
-	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), true); err != nil {
+	if err := addDel(ctx, conn, i.vppConn, i.loadIfIndex, metadata.IsClient(i), true); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -87,7 +99,7 @@ func (i *ipaddressServer) Request(ctx context.Context, request *networkservice.N
 }
 
 func (i *ipaddressServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if err := addDel(ctx, conn, i.vppConn, metadata.IsClient(i), false); err != nil {
+	if err := addDel(ctx, conn, i.vppConn, i.loadIfIndex, metadata.IsClient(i), false); err != nil {
 		log.FromContext(ctx).Warnf(err.Error())
 	}
 	return next.Server(ctx).Close(ctx, conn)

@@ -26,12 +26,11 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
-func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient, isAdd bool) error {
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
+func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, loadIfIndex ifIndexFunc, isClient, isAdd bool) error {
+	swIfIndex, ok := loadIfIndex(ctx, isClient)
 	if !ok {
 		return errors.New("no swIfIndex available")
 	}
