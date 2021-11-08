@@ -27,6 +27,8 @@ import (
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type upServer struct {
@@ -34,13 +36,23 @@ type upServer struct {
 	vppConn Connection
 	sync.Once
 	initErr error
+
+	loadIfIndex ifIndexFunc
 }
 
 // NewServer provides a NetworkServiceServer chain elements that 'up's the swIfIndex
-func NewServer(ctx context.Context, vppConn Connection) networkservice.NetworkServiceServer {
+func NewServer(ctx context.Context, vppConn Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{
+		loadIfIndex: ifindex.Load,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	return &upServer{
-		ctx:     ctx,
-		vppConn: vppConn,
+		ctx:         ctx,
+		vppConn:     vppConn,
+		loadIfIndex: o.loadIfIndex,
 	}
 }
 
@@ -56,14 +68,14 @@ func (u *upServer) Request(ctx context.Context, request *networkservice.NetworkS
 		return nil, err
 	}
 
-	if err := up(ctx, u.vppConn, true); err != nil {
+	if err := up(ctx, u.vppConn, u.loadIfIndex, true); err != nil {
 		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
 		return nil, err
 	}
 
-	if err := up(ctx, u.vppConn, false); err != nil {
+	if err := up(ctx, u.vppConn, u.loadIfIndex, false); err != nil {
 		if closeErr := u.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
