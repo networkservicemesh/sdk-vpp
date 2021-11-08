@@ -18,7 +18,7 @@
 
 // +build linux
 
-package xconnectns
+package forwarder
 
 import (
 	"context"
@@ -40,6 +40,11 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
+	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
+	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -65,10 +70,18 @@ type xconnectNSServer struct {
 
 // NewServer - returns an implementation of the xconnectns network service
 func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
+		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
+		registryclient.WithDialOptions(clientDialOptions...),
+	)
+	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
+
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		recvfd.NewServer(),
 		sendfd.NewServer(),
+		discover.NewServer(nsClient, nseClient),
+		roundrobin.NewServer(),
 		stats.NewServer(ctx),
 		// Statically set the url we use to the unix file socket for the NSMgr
 		clienturl.NewServer(clientURL),
