@@ -32,7 +32,6 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
@@ -83,8 +82,6 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		discover.NewServer(nsClient, nseClient),
 		roundrobin.NewServer(),
 		stats.NewServer(ctx),
-		// Statically set the url we use to the unix file socket for the NSMgr
-		clienturl.NewServer(clientURL),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
