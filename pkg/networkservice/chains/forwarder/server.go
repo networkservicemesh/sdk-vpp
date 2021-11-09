@@ -28,6 +28,7 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/filtermechanisms"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -111,6 +112,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 					wireguard.NewClient(vppConn, tunnelIP),
+					filtermechanisms.NewClient(),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
 					sendfd.NewClient()),
