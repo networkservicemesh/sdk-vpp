@@ -24,6 +24,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
