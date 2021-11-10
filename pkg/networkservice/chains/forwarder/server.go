@@ -69,7 +69,7 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
+func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, dialTimeout time.Duration, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
 		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
 		registryclient.WithDialOptions(clientDialOptions...),
@@ -100,6 +100,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 				client.WithoutRefresh(),
 				client.WithName(name),
 				client.WithDialOptions(clientDialOptions...),
+				client.WithDialTimeout(dialTimeout),
 				client.WithAdditionalFunctionality(
 					mechanismtranslation.NewClient(),
 					connectioncontextkernel.NewClient(),
