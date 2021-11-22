@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/mtu"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
@@ -44,6 +46,7 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
 		ipneighbor.NewClient(vppConn),
 		afpacket.NewClient(vppConn),
+		mtu.NewClient(),
 		&kernelVethPairClient{},
 	)
 }

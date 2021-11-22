@@ -24,6 +24,8 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/mtu"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
@@ -41,6 +43,7 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
 		ipneighbor.NewServer(vppConn),
 		afpacket.NewServer(vppConn),
+		mtu.NewServer(),
 		&kernelVethPairServer{},
 	)
 }
