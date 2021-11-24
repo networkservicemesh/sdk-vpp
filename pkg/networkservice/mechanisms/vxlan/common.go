@@ -65,6 +65,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			return errors.WithStack(err)
 		}
 		log.FromContext(ctx).
+			WithField("isAdd", isAdd).
 			WithField("NextIndex", addNextNodeRsp.NextIndex).
 			WithField("NodeName", addNextNode.NodeName).
 			WithField("NextName", addNextNode.NextName).
@@ -91,6 +92,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			return errors.WithStack(err)
 		}
 		log.FromContext(ctx).
+			WithField("isAdd", isAdd).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("SrcAddress", vxlanAddDelTunnel.SrcAddress).
 			WithField("DstAddress", vxlanAddDelTunnel.DstAddress).
@@ -103,5 +105,8 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			ifindex.Delete(ctx, isClient)
 		}
 	}
+
+	log.FromContext(ctx).WithField("vxlan", "addDel").Debugf("not vxlan mechanism")
+
 	return nil
 }
