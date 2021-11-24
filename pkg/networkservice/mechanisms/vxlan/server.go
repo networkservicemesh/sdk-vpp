@@ -22,6 +22,8 @@ import (
 	"context"
 	"net"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -89,6 +91,10 @@ func (v *vxlanServer) Close(ctx context.Context, conn *networkservice.Connection
 	if conn.GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Close(ctx, conn)
 	}
-	_ = addDel(ctx, conn, v.vppConn, false, false)
+
+	if err := addDel(ctx, conn, v.vppConn, false, false); err != nil {
+		log.FromContext(ctx).WithField("vxlan", "server").Errorf("error while deleting vxlan connection: %v", err.Error())
+	}
+
 	return next.Server(ctx).Close(ctx, conn)
 }
