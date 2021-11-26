@@ -23,6 +23,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/mtu"
 
@@ -49,18 +50,20 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (k *kernelVethPairServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := create(ctx, request.GetConnection(), false); err != nil {
-		return nil, err
-	}
-
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		delCtx, cancelDel := postponeCtxFunc()
-		defer cancelDel()
+		return nil, err
+	}
 
-		_ = del(delCtx, request.GetConnection(), metadata.IsClient(k))
+	if err := create(ctx, request.GetConnection(), false); err != nil {
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := k.Close(closeCtx, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
 
 		return nil, err
 	}
