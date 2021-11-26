@@ -55,7 +55,8 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 		return nil, err
 	}
 
-	if len(a.aclRules) > 0 {
+	_, loaded := a.aclIndices.Load(conn.GetId())
+	if !loaded && len(a.aclRules) > 0 {
 		var indices []uint32
 		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
 			closeCtx, cancelClose := postponeCtxFunc()
@@ -75,7 +76,7 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 }
 
 func (a *aclServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	indices, _ := a.aclIndices.Load(conn.GetId())
+	indices, _ := a.aclIndices.LoadAndDelete(conn.GetId())
 	for ind := range indices {
 		_, err := acl.NewServiceClient(a.vppConn).ACLDel(ctx, &acl.ACLDel{ACLIndex: uint32(ind)})
 		if err != nil {
