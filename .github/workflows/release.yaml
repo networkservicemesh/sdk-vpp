@@ -5,7 +5,7 @@ on:
     types:
       - completed
     workflows:
-      - 'ci'
+      - "ci"
 jobs:
   print-debug-info:
     name: Print debug info for Release workflow
@@ -48,6 +48,7 @@ jobs:
           - cmd-nsc-vpp
           - cmd-nse-icmp-responder-vpp
           - cmd-nse-vlan-vpp
+          - cmd-nse-firewall-vpp
     name: Update ${{ matrix.repository }}
     needs: create-release
     runs-on: ubuntu-latest
