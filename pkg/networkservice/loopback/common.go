@@ -30,7 +30,7 @@ import (
 )
 
 /* Create loopback interface and store it in metadata */
-func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *LoopMap, isClient bool) error {
+func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) error {
 	if _, ok := Load(ctx, isClient); !ok {
 		/* Check if we have already created loopback for a given NetworkService previously */
 		t.mut.Lock()
@@ -67,7 +67,7 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 	return reply.SwIfIndex, nil
 }
 
-func del(ctx context.Context, vppConn api.Connection, networkService string, t *LoopMap, isClient bool) error {
+func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) error {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
 		t.mut.Lock()
 		defer t.mut.Unlock()
