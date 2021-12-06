@@ -26,18 +26,17 @@ import (
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-/* Create loopback interface. Returns new swIfIndex if it doesn't exist otherwise swIfIndex from metadata */
-func createLoopback(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, t *LoopMap, isClient bool) error {
+/* Create loopback interface and store it in metadata */
+func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *LoopMap, isClient bool) error {
 	if _, ok := Load(ctx, isClient); !ok {
 		/* Check if we have already created loopback for a given NetworkService previously */
 		t.mut.Lock()
 		defer t.mut.Unlock()
 
-		info, ok := t.entries[conn.NetworkService]
+		info, ok := t.entries[networkService]
 		if !ok {
 			var err error
 			swIfIndex, err := createLoopbackVPP(ctx, vppConn)
@@ -47,7 +46,7 @@ func createLoopback(ctx context.Context, conn *networkservice.Connection, vppCon
 			info = &loopInfo{
 				swIfIndex: swIfIndex,
 			}
-			t.entries[conn.NetworkService] = info
+			t.entries[networkService] = info
 		}
 		info.count++
 		Store(ctx, isClient, info.swIfIndex)
@@ -68,15 +67,15 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 	return reply.SwIfIndex, nil
 }
 
-func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, t *LoopMap, isClient bool) error {
+func del(ctx context.Context, vppConn api.Connection, networkService string, t *LoopMap, isClient bool) error {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
 		t.mut.Lock()
 		defer t.mut.Unlock()
-		t.entries[conn.NetworkService].count--
+		t.entries[networkService].count--
 
 		/* If there are no more clients using the loopback - delete it */
-		if t.entries[conn.NetworkService].count == 0 {
-			delete(t.entries, conn.NetworkService)
+		if t.entries[networkService].count == 0 {
+			delete(t.entries, networkService)
 			if err := delVPP(ctx, vppConn, swIfIndex); err != nil {
 				return err
 			}

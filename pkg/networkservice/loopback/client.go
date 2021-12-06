@@ -52,12 +52,13 @@ func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkSer
 }
 
 func (l *loopbackClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	if err := createLoopback(ctx, request.GetConnection(), l.vppConn, l.loopbacks, metadata.IsClient(l)); err != nil {
+	networkService := request.GetConnection().NetworkService
+	if err := createLoopback(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); err != nil {
 		return nil, err
 	}
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
-		if e := del(ctx, conn, l.vppConn, l.loopbacks, metadata.IsClient(l)); e != nil {
+		if e := del(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); e != nil {
 			log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", e)
 		}
 	}
@@ -65,7 +66,7 @@ func (l *loopbackClient) Request(ctx context.Context, request *networkservice.Ne
 }
 
 func (l *loopbackClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	if err := del(ctx, conn, l.vppConn, l.loopbacks, metadata.IsClient(l)); err != nil {
+	if err := del(ctx, l.vppConn, conn.NetworkService, l.loopbacks, metadata.IsClient(l)); err != nil {
 		log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", err)
 	}
 	return next.Client(ctx).Close(ctx, conn, opts...)
