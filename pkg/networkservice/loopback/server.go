@@ -31,13 +31,13 @@ import (
 type loopbackServer struct {
 	vppConn api.Connection
 
-	loopbacks *LoopMap
+	loopbacks *Map
 }
 
 // NewServer creates a NetworkServiceServer chain element to create the loopback vpp-interface
 func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
 	o := &options{
-		loopbacks: CreateLoopbackMap(),
+		loopbacks: NewMap(),
 	}
 	for _, opt := range opts {
 		opt(o)

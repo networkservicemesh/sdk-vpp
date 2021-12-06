@@ -30,8 +30,8 @@ type loopInfo struct {
 	count uint32
 }
 
-// LoopMap stores loopback swIfIndex by NetworkServiceName
-type LoopMap struct {
+// Map stores loopback swIfIndex by NetworkServiceName
+type Map struct {
 	/* entries - is a map[NetworkServiceName]{swIfIndex, count} */
 	entries map[string]*loopInfo
 
@@ -39,22 +39,22 @@ type LoopMap struct {
 	mut sync.Mutex
 }
 
-// CreateLoopbackMap creates loopback map
-func CreateLoopbackMap() *LoopMap {
-	return &LoopMap{
+// NewMap creates loopback map
+func NewMap() *Map {
+	return &Map{
 		entries: make(map[string]*loopInfo),
 	}
 }
 
 type options struct {
-	loopbacks *LoopMap
+	loopbacks *Map
 }
 
 // Option is an option pattern for loopbackClient/Server
 type Option func(o *options)
 
-// WithSharedLoopbackMap - sets shared loopback map. It may be needed for sharing LoopMap between client and server
-func WithSharedLoopbackMap(l *LoopMap) Option {
+// WithSharedMap - sets shared loopback map. It may be needed for sharing Map between client and server
+func WithSharedMap(l *Map) Option {
 	return func(o *options) {
 		o.loopbacks = l
 	}
