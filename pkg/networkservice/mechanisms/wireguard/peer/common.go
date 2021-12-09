@@ -64,26 +64,23 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 			PublicKey:           pubKeyBin[:],
 			PersistentKeepalive: 10,
 		}
+		ipContext := conn.GetContext().GetIpContext()
 		if !isClient {
-			for _, ip := range conn.GetContext().GetIpContext().GetSrcIpAddrs() {
-				allowedIP, e := ip_types.ParsePrefix(ip)
-				if e != nil {
-					return errors.WithStack(e)
-				}
-				peer.AllowedIps = append(peer.AllowedIps, allowedIP)
+			allowedIPs, err := extractAllowedIPs(ipContext.GetSrcIpAddrs(), ipContext.GetDstRoutes())
+			if err != nil {
+				return errors.WithStack(e)
 			}
-			peer.NAllowedIps = uint8(len(conn.GetContext().GetIpContext().GetSrcIpAddrs()))
+			peer.AllowedIps = allowedIPs
+			peer.NAllowedIps = uint8(len(peer.AllowedIps))
 			peer.Port = mechanism.SrcPort()
 			peer.Endpoint = types.ToVppAddress(mechanism.SrcIP())
 		} else {
-			for _, ip := range conn.GetContext().GetIpContext().GetDstIpAddrs() {
-				allowedIP, e := ip_types.ParsePrefix(ip)
-				if e != nil {
-					return errors.WithStack(e)
-				}
-				peer.AllowedIps = append(peer.AllowedIps, allowedIP)
+			allowedIPs, err := extractAllowedIPs(ipContext.GetDstIpAddrs(), ipContext.GetSrcRoutes())
+			if err != nil {
+				return errors.WithStack(e)
 			}
-			peer.NAllowedIps = uint8(len(conn.GetContext().GetIpContext().GetDstIpAddrs()))
+			peer.AllowedIps = allowedIPs
+			peer.NAllowedIps = uint8(len(peer.AllowedIps))
 			peer.Port = mechanism.DstPort()
 			peer.Endpoint = types.ToVppAddress(mechanism.DstIP())
 		}
@@ -102,6 +99,25 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		Store(ctx, isClient, pubKeyStr, rspPeer.PeerIndex)
 	}
 	return nil
+}
+
+func extractAllowedIPs(ips []string, routes []*networkservice.Route) ([]ip_types.Prefix, error) {
+	var allowedIPs []ip_types.Prefix
+	for _, ip := range ips {
+		allowedIP, e := ip_types.ParsePrefix(ip)
+		if e != nil {
+			return nil, errors.WithStack(e)
+		}
+		allowedIPs = append(allowedIPs, allowedIP)
+	}
+	for _, route := range routes {
+		allowedIP, e := ip_types.ParsePrefix(route.Prefix)
+		if e != nil {
+			return nil, errors.WithStack(e)
+		}
+		allowedIPs = append(allowedIPs, allowedIP)
+	}
+	return allowedIPs, nil
 }
 
 func delPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
