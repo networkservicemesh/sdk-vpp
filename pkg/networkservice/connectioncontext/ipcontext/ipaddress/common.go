@@ -18,13 +18,19 @@ package ipaddress
 
 import (
 	"context"
+	"io"
+	"net"
 	"time"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/pkg/errors"
+
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/edwarnicke/govpp/binapi/ip"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
@@ -42,13 +48,19 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		return nil
 	}
 
-	curIPs, ok := load(ctx, isClient)
+	var curIPs []net.IP
+	if isAdd {
+		var err error
+		if curIPs, err = dumpIps(ctx, vppConn, swIfIndex); err != nil {
+			return err
+		}
+	}
 	for _, ipNet := range ipNets {
 		// Сheck if the interface already has ipNet
-		if isAdd && ok {
+		if isAdd {
 			has := false
 			for _, addr := range curIPs {
-				if addr.IP.Equal(ipNet.IP) {
+				if addr.Equal(ipNet.IP) {
 					has = true
 					break
 				}
@@ -72,11 +84,29 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "SwInterfaceAddDelAddress").Debug("completed")
 	}
-	if isAdd {
-		store(ctx, isClient, ipNets)
-	} else {
-		delete(ctx, isClient)
-	}
-
 	return nil
+}
+
+func dumpIps(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) ([]net.IP, error) {
+	var ips []net.IP
+	for _, isIPv6 := range []bool{false, true} {
+		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(ctx, &ip.IPAddressDump{
+			SwIfIndex: swIfIndex,
+			IsIPv6:    isIPv6,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for {
+			ipAddressDetails, err := ipAddressClient.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			ips = append(ips, types.FromVppAddressWithPrefix(ipAddressDetails.Prefix).IP)
+		}
+	}
+	return ips, nil
 }
