@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -52,10 +53,10 @@ type vppConnection struct {
 var (
 	netNS     netns.NsHandle
 	netNSPath string
+	once      sync.Once
 )
 
-// nolint:gochecknoinits
-func init() {
+func setupNetNS() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 

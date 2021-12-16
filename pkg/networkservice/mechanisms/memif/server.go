@@ -44,6 +44,8 @@ type memifServer struct {
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
 func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
+	once.Do(setupNetNS)
+
 	opts := new(memifOptions)
 	for _, o := range options {
 		o(opts)
