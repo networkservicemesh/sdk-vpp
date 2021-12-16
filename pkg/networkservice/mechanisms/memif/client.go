@@ -45,6 +45,8 @@ type memifClient struct {
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
 func NewClient(vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
+	once.Do(setupNetNS)
+
 	opts := &memifOptions{}
 	for _, o := range options {
 		o(opts)
