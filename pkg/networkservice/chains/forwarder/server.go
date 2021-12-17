@@ -79,6 +79,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 	)
 	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
 
+	netNsInfo := memif.NewNetNSInfo()
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		recvfd.NewServer(),
@@ -93,7 +94,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			memif.MECHANISM: memif.NewServer(ctx, vppConn,
+			memif.MECHANISM: memif.NewServer(ctx, vppConn, netNsInfo,
 				memif.WithDirectMemif(),
 				memif.WithChangeNetNS(),
 				memif.WithExternalVPP()),
@@ -116,9 +117,10 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 					mtu.NewClient(vppConn),
 					tag.NewClient(ctx, vppConn),
 					// mechanisms
-					memif.NewClient(vppConn,
+					memif.NewClient(vppConn, netNsInfo,
 						memif.WithChangeNetNS(),
-						memif.WithExternalVPP()),
+						memif.WithExternalVPP(),
+					),
 					kernel.NewClient(vppConn),
 					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
 					wireguard.NewClient(vppConn, tunnelIP),

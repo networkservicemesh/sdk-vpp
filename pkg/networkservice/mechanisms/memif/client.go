@@ -41,12 +41,11 @@ import (
 type memifClient struct {
 	vppConn     *vppConnection
 	changeNetNs bool
+	nsInfo      NetNSInfo
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
-	once.Do(setupNetNS)
-
+func NewClient(vppConn api.Connection, nsInfo NetNSInfo, options ...Option) networkservice.NetworkServiceClient {
 	opts := &memifOptions{}
 	for _, o := range options {
 		o(opts)
@@ -59,6 +58,7 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 				Connection: vppConn,
 			},
 			changeNetNs: opts.changeNetNS,
+			nsInfo:      nsInfo,
 		},
 	)
 }
@@ -74,7 +74,7 @@ func mechanismsContain(list []*networkservice.Mechanism, t string) bool {
 
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	if !mechanismsContain(request.MechanismPreferences, memif.MECHANISM) {
-		mechanism := memif.ToMechanism(memif.NewAbstract(netNSPath))
+		mechanism := memif.ToMechanism(memif.NewAbstract(m.nsInfo.netNSPath))
 		if m.changeNetNs {
 			mechanism.SetNetNSURL("")
 		}
@@ -97,7 +97,7 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 		}
 	}
 
-	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m), m.nsInfo.netNS); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 

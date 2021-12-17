@@ -40,12 +40,11 @@ import (
 type memifServer struct {
 	vppConn     *vppConnection
 	changeNetNS bool
+	nsInfo      NetNSInfo
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
-	once.Do(setupNetNS)
-
+func NewServer(chainCtx context.Context, vppConn api.Connection, nsInfo NetNSInfo, options ...Option) networkservice.NetworkServiceServer {
 	opts := new(memifOptions)
 	for _, o := range options {
 		o(opts)
@@ -64,6 +63,7 @@ func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Opti
 				Connection: vppConn,
 			},
 			changeNetNS: opts.changeNetNS,
+			nsInfo:      nsInfo,
 		},
 	)
 }
@@ -72,7 +72,7 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	if mechanism := memif.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && !m.changeNetNS {
-		mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: netNSPath}).String())
+		mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: m.nsInfo.netNSPath}).String())
 	}
 
 	conn, err := next.Server(ctx).Request(ctx, request)
@@ -85,7 +85,7 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, nil
 	}
 
-	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m), m.nsInfo.netNS); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 

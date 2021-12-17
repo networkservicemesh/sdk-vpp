@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -50,13 +49,14 @@ type vppConnection struct {
 	api.Connection
 }
 
-var (
+// NetNSInfo contains shared info for server and client
+type NetNSInfo struct {
 	netNS     netns.NsHandle
 	netNSPath string
-	once      sync.Once
-)
+}
 
-func setupNetNS() {
+// NewNetNSInfo should be called only once for single chain
+func NewNetNSInfo() NetNSInfo {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -64,15 +64,21 @@ func setupNetNS() {
 	if err != nil {
 		panic("failed to open '/proc/thread-self/ns/net': " + err.Error())
 	}
-	netNSPath = fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), fd)
+	netNSPath := fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), fd)
 
-	if netNS, err = netns.GetFromPath(netNSPath); err != nil {
+	netNS, err := netns.GetFromPath(netNSPath)
+	if err != nil {
 		panic("failed to get current net NS: " + err.Error())
+	}
+
+	return NetNSInfo{
+		netNSPath: netNSPath,
+		netNS:     netNS,
 	}
 }
 
-func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn *vppConnection, isClient bool) (socketID uint32, err error) {
-	namespace, err := getNamespace(mechanism, vppConn)
+func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn *vppConnection, isClient bool, netNS netns.NsHandle) (socketID uint32, err error) {
+	namespace, err := getNamespace(mechanism, vppConn, netNS)
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +198,7 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	return nil
 }
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppConnection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppConnection, isClient bool, netNS netns.NsHandle) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
@@ -205,7 +211,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppCo
 		if conn.GetPayload() == payload.Ethernet {
 			mode = memif.MEMIF_MODE_API_ETHERNET
 		}
-		socketID, err := createMemifSocket(ctx, mechanism, vppConn, isClient)
+		socketID, err := createMemifSocket(ctx, mechanism, vppConn, isClient, netNS)
 		if err != nil {
 			return err
 		}
@@ -232,7 +238,7 @@ func socketFile(conn *networkservice.Connection) string {
 	return "@" + filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
 }
 
-func getNamespace(mechanism *memifMech.Mechanism, vppConn *vppConnection) (string, error) {
+func getNamespace(mechanism *memifMech.Mechanism, vppConn *vppConnection, netNS netns.NsHandle) (string, error) {
 	u, err := url.Parse(mechanism.GetNetNSURL())
 	if err != nil {
 		return "", errors.Wrapf(err, "not a valid url %s", mechanism.GetNetNSURL())
