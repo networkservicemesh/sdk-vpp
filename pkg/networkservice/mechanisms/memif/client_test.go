@@ -33,7 +33,7 @@ import (
 )
 
 func Test_MemifClient_ShouldAppendMechanismIfMemifMechanismMissed(t *testing.T) {
-	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil))
+	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil, memif.NetNSInfo{}))
 
 	req := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: []*networkservice.Mechanism{},
@@ -55,7 +55,7 @@ func Test_MemifClient_ShouldAppendMechanismIfMemifMechanismMissed(t *testing.T) 
 }
 
 func Test_MemifClient_ShouldNotDuplicateMechanisms(t *testing.T) {
-	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil))
+	c := chain.NewNetworkServiceClient(metadata.NewClient(), memif.NewClient(nil, memif.NetNSInfo{}))
 
 	req := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: []*networkservice.Mechanism{
