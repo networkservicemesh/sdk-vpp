@@ -45,7 +45,7 @@ type memifClient struct {
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(vppConn api.Connection, nsInfo NetNSInfo, options ...Option) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
 	opts := &memifOptions{}
 	for _, o := range options {
 		o(opts)
@@ -58,7 +58,7 @@ func NewClient(vppConn api.Connection, nsInfo NetNSInfo, options ...Option) netw
 				Connection: vppConn,
 			},
 			changeNetNs: opts.changeNetNS,
-			nsInfo:      nsInfo,
+			nsInfo:      newNetNSInfo(),
 		},
 	)
 }
