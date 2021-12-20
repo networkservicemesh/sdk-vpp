@@ -56,7 +56,7 @@ type NetNSInfo struct {
 }
 
 // NewNetNSInfo should be called only once for single chain
-func NewNetNSInfo() NetNSInfo {
+func newNetNSInfo() NetNSInfo {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
