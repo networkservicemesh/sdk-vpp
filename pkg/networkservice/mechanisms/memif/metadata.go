@@ -25,34 +25,16 @@ import (
 )
 
 type key struct{}
-type directMemifKey struct{}
 
-func store(ctx context.Context, isClient bool, socket *memif.MemifSocketFilenameAddDel) {
+func store(ctx context.Context, isClient bool, socket *memif.MemifSocketFilenameAddDelV2) {
 	metadata.Map(ctx, isClient).Store(key{}, socket)
 }
 
-func load(ctx context.Context, isClient bool) (value *memif.MemifSocketFilenameAddDel, ok bool) {
+func load(ctx context.Context, isClient bool) (value *memif.MemifSocketFilenameAddDelV2, ok bool) {
 	rawValue, ok := metadata.Map(ctx, isClient).Load(key{})
 	if !ok {
 		return
 	}
-	value, ok = rawValue.(*memif.MemifSocketFilenameAddDel)
+	value, ok = rawValue.(*memif.MemifSocketFilenameAddDelV2)
 	return value, ok
-}
-
-func storeDirectMemifInfo(ctx context.Context, val directMemifInfo) {
-	metadata.Map(ctx, true).Store(directMemifKey{}, val)
-}
-
-func loadDirectMemifInfo(ctx context.Context) (value directMemifInfo, ok bool) {
-	rawValue, ok := metadata.Map(ctx, true).Load(directMemifKey{})
-	if !ok {
-		return
-	}
-	value, ok = rawValue.(directMemifInfo)
-	return value, ok
-}
-
-type directMemifInfo struct {
-	socketURL string
 }

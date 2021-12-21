@@ -14,48 +14,65 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build linux
+
 package memif
 
 import (
 	"context"
+	"net/url"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
-
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/null"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
 )
 
 type memifServer struct {
-	vppConn            api.Connection
-	directMemifEnabled bool
+	vppConn     *vppConnection
+	changeNetNS bool
+	nsInfo      NetNSInfo
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
-	m := &memifServer{
-		vppConn:            vppConn,
-		directMemifEnabled: false,
+func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
+	opts := new(memifOptions)
+	for _, o := range options {
+		o(opts)
 	}
 
-	for _, opt := range options {
-		opt(m)
+	memifProxyServer := null.NewServer()
+	if opts.directMemifEnabled {
+		memifProxyServer = memifproxy.NewServer(chainCtx)
 	}
 
-	return m
+	return chain.NewNetworkServiceServer(
+		memifProxyServer,
+		&memifServer{
+			vppConn: &vppConnection{
+				isExternal: opts.isVPPExternal,
+				Connection: vppConn,
+			},
+			changeNetNS: opts.changeNetNS,
+			nsInfo:      newNetNSInfo(),
+		},
+	)
 }
 
 func (m *memifServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
-	// if direct memif we need pass mechanism to client further in request chain
-	if mechanism := memifMech.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && m.directMemifEnabled {
-		storeDirectMemifInfo(ctx, directMemifInfo{})
+	if mechanism := memif.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && !m.changeNetNS {
+		mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: m.nsInfo.netNSPath}).String())
 	}
 
 	conn, err := next.Server(ctx).Request(ctx, request)
@@ -63,31 +80,23 @@ func (m *memifServer) Request(ctx context.Context, request *networkservice.Netwo
 		return nil, err
 	}
 
-	// if direct memif case - just set memif socket name in connection.Mechanism
-	// if not direct memif case - create memif as always
-	dirMemifInfo, ok := loadDirectMemifInfo(ctx)
-	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil && ok && len(dirMemifInfo.socketURL) > 0 {
-		mechanism.SetSocketFileURL(dirMemifInfo.socketURL)
+	// In direct memif case do nothing.
+	if info, ok := memifproxy.LoadInfo(ctx); ok && info.SocketFile != "" {
 		return conn, nil
 	}
 
-	if err := create(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-		if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m), m.nsInfo.netNS); err != nil {
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := m.Close(closeCtx, conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
+
 		return nil, err
 	}
 
 	return conn, nil
-}
-
-func (m *memifServer) closeOnFailure(postponeCtxFunc func() (context.Context, context.CancelFunc), conn *networkservice.Connection) error {
-	closeCtx, cancelClose := postponeCtxFunc()
-	defer cancelClose()
-
-	_, err := m.Close(closeCtx, conn)
-
-	return err
 }
 
 func (m *memifServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

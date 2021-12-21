@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2021 Doc.ai and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !windows
+// +build linux
 
 package memifproxy
 
@@ -26,30 +28,45 @@ import (
 
 type key struct{}
 
-// store sets the *proxyListener stored in per Connection.Id metadata.
-func store(ctx context.Context, isClient bool, listener *proxyListener) {
-	metadata.Map(ctx, isClient).Store(key{}, listener)
+func store(ctx context.Context, cancel context.CancelFunc) {
+	metadata.Map(ctx, false).Store(key{}, cancel)
 }
 
-// load returns the *proxyListener stored in per Connection.Id metadata, or nil if no
-// value is present.
-// The ok result indicates whether value was found in the per Connection.Id metadata.
-func load(ctx context.Context, isClient bool) (value *proxyListener, ok bool) {
-	rawValue, ok := metadata.Map(ctx, isClient).Load(key{})
+func load(ctx context.Context) (value context.CancelFunc, ok bool) {
+	rawValue, ok := metadata.Map(ctx, false).Load(key{})
 	if !ok {
 		return
 	}
-	value, ok = rawValue.(*proxyListener)
+	value, ok = rawValue.(context.CancelFunc)
 	return value, ok
 }
 
-// loadAndDelete deletes the *proxyListener stored in per Connection.Id metadata,
-// returning the previous value if any. The loaded result reports whether the key was present.
-func loadAndDelete(ctx context.Context, isClient bool) (value *proxyListener, ok bool) {
-	rawValue, ok := metadata.Map(ctx, isClient).LoadAndDelete(key{})
+func loadAndDelete(ctx context.Context) (value context.CancelFunc, ok bool) {
+	rawValue, ok := metadata.Map(ctx, false).LoadAndDelete(key{})
 	if !ok {
 		return
 	}
-	value, ok = rawValue.(*proxyListener)
+	value, ok = rawValue.(context.CancelFunc)
+	return value, ok
+}
+
+type infoKey struct{}
+
+// Info contains client NSURL and SocketFile needed for direct memif
+type Info struct {
+	NSURL, SocketFile string
+}
+
+func storeInfo(ctx context.Context, val *Info) {
+	metadata.Map(ctx, true).Store(infoKey{}, val)
+}
+
+// LoadInfo loads Info stored in context in metadata
+func LoadInfo(ctx context.Context) (value *Info, ok bool) {
+	rawValue, ok := metadata.Map(ctx, true).Load(infoKey{})
+	if !ok {
+		return
+	}
+	value, ok = rawValue.(*Info)
 	return value, ok
 }
