@@ -17,9 +17,8 @@
 package loopback
 
 import (
-	"sync"
-
 	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/edwarnicke/serialize"
 )
 
 type loopInfo struct {
@@ -35,8 +34,8 @@ type Map struct {
 	/* entries - is a map[NetworkServiceName]{swIfIndex, count} */
 	entries map[string]*loopInfo
 
-	/* mutex for entries */
-	mut sync.Mutex
+	/* executor */
+	exec serialize.Executor
 }
 
 // NewMap creates loopback map
