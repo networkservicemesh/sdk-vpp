@@ -5,6 +5,7 @@ go 1.16
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
 	github.com/edwarnicke/govpp v0.0.0-20211023203533-76f2c92be8d5
+	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.0.1-0.20211110183123-3038992da61a

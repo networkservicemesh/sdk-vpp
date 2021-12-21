@@ -30,28 +30,27 @@ import (
 )
 
 /* Create loopback interface and store it in metadata */
-func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) error {
+func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) (err error) {
 	if _, ok := Load(ctx, isClient); !ok {
-		/* Check if we have already created loopback for a given NetworkService previously */
-		t.mut.Lock()
-		defer t.mut.Unlock()
-
-		info, ok := t.entries[networkService]
-		if !ok {
-			var err error
-			swIfIndex, err := createLoopbackVPP(ctx, vppConn)
-			if err != nil {
-				return err
+		<-t.exec.AsyncExec(func() {
+			/* Check if we have already created loopback for a given NetworkService previously */
+			info, ok := t.entries[networkService]
+			if !ok {
+				var swIfIndex interface_types.InterfaceIndex
+				swIfIndex, err = createLoopbackVPP(ctx, vppConn)
+				if err != nil {
+					return
+				}
+				info = &loopInfo{
+					swIfIndex: swIfIndex,
+				}
+				t.entries[networkService] = info
 			}
-			info = &loopInfo{
-				swIfIndex: swIfIndex,
-			}
-			t.entries[networkService] = info
-		}
-		info.count++
-		Store(ctx, isClient, info.swIfIndex)
+			info.count++
+			Store(ctx, isClient, info.swIfIndex)
+		})
 	}
-	return nil
+	return
 }
 
 func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_types.InterfaceIndex, error) {
@@ -67,21 +66,20 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 	return reply.SwIfIndex, nil
 }
 
-func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) error {
+func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
-		t.mut.Lock()
-		defer t.mut.Unlock()
-		t.entries[networkService].count--
+		t.exec.AsyncExec(func() {
+			t.entries[networkService].count--
 
-		/* If there are no more clients using the loopback - delete it */
-		if t.entries[networkService].count == 0 {
-			delete(t.entries, networkService)
-			if err := delVPP(ctx, vppConn, swIfIndex); err != nil {
-				return err
+			/* If there are no more clients using the loopback - delete it */
+			if t.entries[networkService].count == 0 {
+				delete(t.entries, networkService)
+				if err := delVPP(ctx, vppConn, swIfIndex); err != nil {
+					log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", err)
+				}
 			}
-		}
+		})
 	}
-	return nil
 }
 
 func delVPP(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) error {

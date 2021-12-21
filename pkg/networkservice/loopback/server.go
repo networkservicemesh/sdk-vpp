@@ -25,7 +25,6 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 type loopbackServer struct {
@@ -56,16 +55,12 @@ func (l *loopbackServer) Request(ctx context.Context, request *networkservice.Ne
 	}
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		if e := del(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); e != nil {
-			log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", e)
-		}
+		del(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l))
 	}
 	return conn, err
 }
 
 func (l *loopbackServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	if err := del(ctx, l.vppConn, conn.NetworkService, l.loopbacks, metadata.IsClient(l)); err != nil {
-		log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", err)
-	}
+	del(ctx, l.vppConn, conn.NetworkService, l.loopbacks, metadata.IsClient(l))
 	return next.Server(ctx).Close(ctx, conn)
 }
