@@ -23,6 +23,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/thanhpk/randstr"
+	"github.com/vishvananda/netlink"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 
@@ -31,31 +35,41 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-
-	"github.com/pkg/errors"
-	"github.com/thanhpk/randstr"
-	"github.com/vishvananda/netlink"
-
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		// Construct the netlink handle for the target namespace for this kernel interface
+		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer handle.Delete()
+
 		if _, ok := link.Load(ctx, isClient); ok {
-			if _, ok := peer.Load(ctx, isClient); ok {
+			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
 				return nil
 			}
 		}
-		alias := mechutils.ToAlias(conn, isClient)
-		if peerLink, err := netlink.LinkByName(linuxIfaceName(alias)); err == nil {
-			err := netlink.LinkDel(peerLink)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
 
+		// Delete the kernel interface if there is one in the target namespace
+		if l, e := handle.LinkByName(mechanism.GetInterfaceName()); e == nil {
+			now := time.Now()
+			if e = handle.LinkDel(l); e != nil {
+				return errors.WithStack(e)
+			}
+			log.FromContext(ctx).
+				WithField("link.Name", l.Attrs().Name).
+				WithField("duration", time.Since(now)).
+				WithField("netlink", "LinkDel").Debug("completed")
+		}
+		ifindex.Delete(ctx, isClient)
+
+		alias := mechutils.ToAlias(conn, isClient)
 		la := netlink.NewLinkAttrs()
 		la.Name = randstr.Hex(7)
 
@@ -75,22 +89,17 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkAdd").Debug("completed")
 
-		err := ethtool.DisableVethChkSumOffload(veth)
+		err = ethtool.DisableVethChkSumOffload(veth)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		// Construct the nsHandle and netlink handle for the target namespace for this kernel interface
+		// Construct the nsHandle for the target namespace for this kernel interface
 		nsHandle, err := nshandle.FromURL(mechanism.GetNetNSURL())
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		defer func() { _ = nsHandle.Close() }()
-		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		defer handle.Delete()
 
 		// Set the link l to the correct netns
 		now = time.Now()
@@ -219,6 +228,8 @@ func del(ctx context.Context, conn *networkservice.Connection, isClient bool) er
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
 		}
+		// Delete link from metadata
+		link.Delete(ctx, isClient)
 	}
 	return nil
 }
