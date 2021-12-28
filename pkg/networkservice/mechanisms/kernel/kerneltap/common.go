@@ -43,7 +43,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		defer handle.Delete()
 

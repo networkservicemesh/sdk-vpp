@@ -56,14 +56,15 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			}
 		}
 
-		// Delete the kernel interface if there is one in the target namespace
-		if l, e := handle.LinkByName(mechanism.GetInterfaceName()); e == nil {
+		// Delete the previous kernel interface if there is one in the target namespace
+		var prevLink netlink.Link
+		if prevLink, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
 			now := time.Now()
-			if e = handle.LinkDel(l); e != nil {
-				return errors.WithStack(e)
+			if err = handle.LinkDel(prevLink); err != nil {
+				return errors.WithStack(err)
 			}
 			log.FromContext(ctx).
-				WithField("link.Name", l.Attrs().Name).
+				WithField("link.Name", prevLink.Attrs().Name).
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
 		}
