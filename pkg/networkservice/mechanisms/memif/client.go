@@ -22,6 +22,7 @@ package memif
 
 import (
 	"context"
+	"net/url"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -63,17 +64,8 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 	)
 }
 
-func mechanismsContain(list []*networkservice.Mechanism, t string) bool {
-	for _, m := range list {
-		if m.Type == t {
-			return true
-		}
-	}
-	return false
-}
-
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	if !mechanismsContain(request.MechanismPreferences, memif.MECHANISM) {
+	if !m.updateMechanismPreferences(request) {
 		mechanism := memif.ToMechanism(memif.NewAbstract(m.nsInfo.netNSPath))
 		if m.changeNetNs {
 			mechanism.SetNetNSURL("")
@@ -114,4 +106,19 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 func (m *memifClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	_ = del(ctx, conn, m.vppConn, metadata.IsClient(m))
 	return next.Client(ctx).Close(ctx, conn, opts...)
+}
+
+// updateMechanismPreferences returns true if MechanismPreferences has updated
+func (m *memifClient) updateMechanismPreferences(request *networkservice.NetworkServiceRequest) bool {
+	var updated = false
+	for _, p := range request.GetRequestMechanismPreferences() {
+		if mechanism := memif.ToMechanism(p); mechanism != nil {
+			mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: m.nsInfo.netNSPath}).String())
+			if m.changeNetNs {
+				mechanism.SetNetNSURL("")
+			}
+			updated = true
+		}
+	}
+	return updated
 }
