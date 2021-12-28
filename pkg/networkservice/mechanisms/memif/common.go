@@ -179,7 +179,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 }
 
 func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
+	swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 	if !ok {
 		return nil
 	}
@@ -202,8 +202,12 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppCo
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
-			return nil
+			if memifSocketAddDel, ok := load(ctx, isClient); ok && memifSocketAddDel.SocketFilename == mechanism.GetSocketFilename() {
+				return nil
+			}
 		}
+		_ = del(ctx, conn, vppConn, isClient)
+
 		if !isClient {
 			mechanism.SetSocketFilename(socketFile(conn))
 		}
