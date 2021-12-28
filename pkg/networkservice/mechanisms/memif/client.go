@@ -22,6 +22,7 @@ package memif
 
 import (
 	"context"
+	"net/url"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -112,7 +113,7 @@ func (m *memifClient) updateMechanismPreferences(request *networkservice.Network
 	var updated = false
 	for _, p := range request.GetRequestMechanismPreferences() {
 		if mechanism := memif.ToMechanism(p); mechanism != nil {
-			mechanism.SetNetNSURL(memif.ToMechanism(memif.NewAbstract(m.nsInfo.netNSPath)).GetNetNSURL())
+			mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: m.nsInfo.netNSPath}).String())
 			if m.changeNetNs {
 				mechanism.SetNetNSURL("")
 			}
