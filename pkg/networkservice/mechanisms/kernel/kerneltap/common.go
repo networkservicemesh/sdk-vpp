@@ -40,9 +40,20 @@ import (
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if _, ok := ifindex.Load(ctx, isClient); ok {
-			return nil
+		// Construct the netlink handle for the target namespace for this kernel interface
+		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
+		if err != nil {
+			return errors.WithStack(err)
 		}
+		defer handle.Delete()
+
+		if _, ok := ifindex.Load(ctx, isClient); ok {
+			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
+				return nil
+			}
+		}
+		// Delete the kernel interface if there is one in the target namespace
+		_ = del(ctx, conn, vppConn, isClient)
 
 		nsFilename, err := mechutils.ToNSFilename(mechanism)
 		if err != nil {
@@ -92,11 +103,6 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
-
-		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
-		if err != nil {
-			return err
-		}
 
 		now = time.Now()
 		l, err := handle.LinkByName(tapCreateV2.HostIfName)
