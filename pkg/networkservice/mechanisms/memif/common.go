@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -200,6 +200,9 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppConnection, isClient bool, netNS netns.NsHandle) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if !isClient {
+			mechanism.SetSocketFilename(socketFile(conn))
+		}
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
 			if memifSocketAddDel, ok := load(ctx, isClient); ok && memifSocketAddDel.SocketFilename == mechanism.GetSocketFilename() {
@@ -208,9 +211,6 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppCo
 		}
 		_ = del(ctx, conn, vppConn, isClient)
 
-		if !isClient {
-			mechanism.SetSocketFilename(socketFile(conn))
-		}
 		mode := memif.MEMIF_MODE_API_IP
 		if conn.GetPayload() == payload.Ethernet {
 			mode = memif.MEMIF_MODE_API_ETHERNET
