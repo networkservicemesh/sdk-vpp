@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -29,24 +29,20 @@ import (
 	"github.com/edwarnicke/govpp/binapi/ip_neighbor"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
-	kernellink "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
 func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient, isAdd bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		srcNets := conn.GetContext().GetIpContext().GetSrcIPNets()
-		dstNets := conn.GetContext().GetIpContext().GetDstIPNets()
 		if isClient {
 			srcNets = conn.GetContext().GetIpContext().GetDstIPNets()
-			dstNets = conn.GetContext().GetIpContext().GetSrcIPNets()
 		}
 		swIfIndex, ok := ifindex.Load(ctx, isClient)
 		if !ok {
@@ -62,21 +58,6 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		for _, srcNet := range srcNets {
 			if srcNet != nil {
 				if err := addDelVPP(ctx, vppConn, isAdd, swIfIndex, srcNet, l); err != nil {
-					return err
-				}
-			}
-		}
-
-		peerLink, ok := peer.Load(ctx, isClient)
-		if !ok {
-			return nil
-		}
-		if peerLink == nil || peerLink.Attrs() == nil || peerLink.Attrs().HardwareAddr == nil {
-			panic(fmt.Sprintf("unable to construct peer ip neighborL %+v", peerLink))
-		}
-		for _, dstNet := range dstNets {
-			if dstNet != nil {
-				if err := addDelKernel(ctx, isAdd, mechanism, l, peerLink, dstNet); err != nil {
 					return err
 				}
 			}
@@ -107,44 +88,5 @@ func addDelVPP(ctx context.Context, vppConn api.Connection, isAdd bool, swIfInde
 		WithField("ipaddress", ipNeighborAddDel.Neighbor.IPAddress).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "IPNeighborAddDel").Debug("completed")
-	return nil
-}
-
-func addDelKernel(ctx context.Context, isAdd bool, mechanism *kernel.Mechanism, l, peerLink netlink.Link, dstNet *net.IPNet) error {
-	now := time.Now()
-	handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer handle.Delete()
-	neigh := &netlink.Neigh{
-		LinkIndex:    l.Attrs().Index,
-		IP:           dstNet.IP,
-		State:        netlink.NUD_PERMANENT,
-		HardwareAddr: peerLink.Attrs().HardwareAddr,
-	}
-	if isAdd {
-		if err = handle.NeighSet(neigh); err != nil {
-			return errors.WithStack(err)
-		}
-		log.FromContext(ctx).
-			WithField("linkIndex", neigh.LinkIndex).
-			WithField("ip", neigh.IP).
-			WithField("state", neigh.State).
-			WithField("hardwareAddr", neigh.HardwareAddr).
-			WithField("duration", time.Since(now)).
-			WithField("netlink", "NeighAdd").Debug("completed")
-		return nil
-	}
-	if err = handle.NeighDel(neigh); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("linkIndex", neigh.LinkIndex).
-		WithField("ip", neigh.IP).
-		WithField("state", neigh.State).
-		WithField("hardwareAddr", neigh.HardwareAddr).
-		WithField("duration", time.Since(now)).
-		WithField("netlink", "NeighDel").Debug("completed")
 	return nil
 }
