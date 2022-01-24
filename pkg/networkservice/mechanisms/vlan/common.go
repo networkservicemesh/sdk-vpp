@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -33,6 +33,10 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
+const (
+	afPacketNamePrefix = "host-"
+)
+
 func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, deviceNames map[string]string) error {
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		_, ok := ifindex.Load(ctx, true)
@@ -43,7 +47,7 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 		via := conn.GetLabels()[viaLabel]
 		hostIFName, ok := deviceNames[via]
 		if !ok {
-			return errors.Errorf("no interface name for service domain %s", via)
+			return errors.Errorf("no interface name for label %s", via)
 		}
 
 		client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
@@ -66,6 +70,13 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 			if err != nil {
 				return errors.Wrapf(err, "error attempting to get interface details to set vlan subinterface on %q", hostIFName)
 			}
+
+			if (hostIFName != details.InterfaceName) && (afPacketNamePrefix+hostIFName != details.InterfaceName) {
+				log.FromContext(ctx).
+					WithField("InterfaceName", details.InterfaceName).
+					WithField("vppapi", "SwInterfaceDetails").Debug("skipped")
+				continue
+			}
 			now = time.Now()
 			swIfIndex := details.SwIfIndex
 			vlanID := mechanism.GetVlanID()
@@ -85,7 +96,9 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 				WithField("vppapi", "CreateVlanSubIf").Debug("completed")
 
 			ifindex.Store(ctx, true, rsp.SwIfIndex)
+			return nil
 		}
+		return errors.Errorf("no interface name found %s", hostIFName)
 	}
 	return nil
 }
