@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -31,9 +31,10 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/tools/peer"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/peer"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
