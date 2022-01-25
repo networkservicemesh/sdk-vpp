@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -45,7 +45,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		defer handle.Delete()
+		defer handle.Close()
 
 		if _, ok := ifindex.Load(ctx, isClient); ok {
 			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
