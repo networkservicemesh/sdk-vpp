@@ -48,7 +48,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		defer handle.Delete()
+		defer handle.Close()
 
 		if _, ok := link.Load(ctx, isClient); ok {
 			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
