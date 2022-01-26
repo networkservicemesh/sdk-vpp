@@ -1,6 +1,6 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +47,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
 	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
 	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
+	registrysendfd "github.com/networkservicemesh/sdk/pkg/registry/common/sendfd"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -74,7 +75,10 @@ type xconnectNSServer struct {
 // NewServer - returns an implementation of the xconnectns network service
 func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, dialTimeout time.Duration, domain2Device map[string]string, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
-		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
+		registryclient.WithNSEAdditionalFunctionality(
+			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
+			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
+		),
 		registryclient.WithDialOptions(clientDialOptions...),
 	)
 	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
