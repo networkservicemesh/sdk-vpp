@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,6 +20,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"git.fd.io/govpp.git/api"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -34,8 +35,9 @@ type mtuServer struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
 	mtu      uint32
-	initOnce sync.Once
-	err      error
+
+	inited    uint32
+	initMutex sync.Mutex
 }
 
 // NewServer - server chain element to manage wireguard MTU
@@ -77,8 +79,19 @@ func (m *mtuServer) Close(ctx context.Context, conn *networkservice.Connection) 
 }
 
 func (m *mtuServer) init(ctx context.Context) error {
-	m.initOnce.Do(func() {
-		m.mtu, m.err = setMTU(ctx, m.vppConn, m.tunnelIP)
-	})
-	return m.err
+	if atomic.LoadUint32(&m.inited) > 0 {
+		return nil
+	}
+	m.initMutex.Lock()
+	defer m.initMutex.Unlock()
+	if atomic.LoadUint32(&m.inited) > 0 {
+		return nil
+	}
+
+	var err error
+	m.mtu, err = getMTU(ctx, m.vppConn, m.tunnelIP)
+	if err == nil {
+		atomic.StoreUint32(&m.inited, 1)
+	}
+	return err
 }

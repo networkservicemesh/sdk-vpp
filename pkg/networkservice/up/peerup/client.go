@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,6 @@ package peerup
 
 import (
 	"context"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -35,7 +34,6 @@ import (
 type peerupClient struct {
 	ctx     context.Context
 	vppConn Connection
-	sync.Once
 }
 
 // NewClient provides a NetworkServiceClient chain elements that 'up's the peer

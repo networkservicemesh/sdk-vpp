@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -34,7 +34,7 @@ const (
 	overhead = 50
 )
 
-func setMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint32, error) {
+func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint32, error) {
 	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
 	if err != nil {
 		return 0, errors.Wrapf(err, "error attempting to get interface dump client to determine MTU for tunnelIP %q", tunnelIP)

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,6 +20,7 @@ package up
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -36,12 +37,12 @@ import (
 )
 
 type upClient struct {
-	ctx     context.Context
-	vppConn Connection
-	sync.Once
-	initErr error
-
+	ctx         context.Context
+	vppConn     Connection
 	loadIfIndex ifIndexFunc
+
+	inited    uint32
+	initMutex sync.Mutex
 }
 
 // NewClient provides a NetworkServiceClient chain elements that 'up's the swIfIndex
@@ -94,8 +95,18 @@ func (u *upClient) Close(ctx context.Context, conn *networkservice.Connection, o
 }
 
 func (u *upClient) init(ctx context.Context) error {
-	u.Do(func() {
-		u.initErr = initFunc(ctx, u.vppConn)
-	})
-	return u.initErr
+	if atomic.LoadUint32(&u.inited) > 0 {
+		return nil
+	}
+	u.initMutex.Lock()
+	defer u.initMutex.Unlock()
+	if atomic.LoadUint32(&u.inited) > 0 {
+		return nil
+	}
+
+	err := initFunc(ctx, u.vppConn)
+	if err == nil {
+		atomic.StoreUint32(&u.inited, 1)
+	}
+	return err
 }
