@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -49,7 +49,7 @@ func (t *tagServer) Request(ctx context.Context, request *networkservice.Network
 		return nil, err
 	}
 
-	if err := create(ctx, conn, t.vppConn, true); err != nil {
+	if err := create(ctx, conn, t.vppConn, false); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
