@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,6 @@ package memif
 type memifOptions struct {
 	directMemifEnabled bool
 	changeNetNS        bool
-	isVPPExternal      bool
 }
 
 // Option is an option for the connect server
@@ -36,12 +35,5 @@ func WithDirectMemif() Option {
 func WithChangeNetNS() Option {
 	return func(o *memifOptions) {
 		o.changeNetNS = true
-	}
-}
-
-// WithExternalVPP sets if VPP is located in different net NS to the application
-func WithExternalVPP() Option {
-	return func(o *memifOptions) {
-		o.isVPPExternal = true
 	}
 }

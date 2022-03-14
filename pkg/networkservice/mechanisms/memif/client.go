@@ -1,6 +1,6 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -40,7 +40,7 @@ import (
 )
 
 type memifClient struct {
-	vppConn     *vppConnection
+	vppConn     api.Connection
 	changeNetNs bool
 	nsInfo      NetNSInfo
 }
@@ -54,10 +54,7 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 
 	return chain.NewNetworkServiceClient(
 		&memifClient{
-			vppConn: &vppConnection{
-				isExternal: opts.isVPPExternal,
-				Connection: vppConn,
-			},
+			vppConn:     vppConn,
 			changeNetNs: opts.changeNetNS,
 			nsInfo:      newNetNSInfo(),
 		},
