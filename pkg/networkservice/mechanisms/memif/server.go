@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -38,7 +38,7 @@ import (
 )
 
 type memifServer struct {
-	vppConn     *vppConnection
+	vppConn     api.Connection
 	changeNetNS bool
 	nsInfo      NetNSInfo
 }
@@ -58,10 +58,7 @@ func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Opti
 	return chain.NewNetworkServiceServer(
 		memifProxyServer,
 		&memifServer{
-			vppConn: &vppConnection{
-				isExternal: opts.isVPPExternal,
-				Connection: vppConn,
-			},
+			vppConn:     vppConn,
 			changeNetNS: opts.changeNetNS,
 			nsInfo:      newNetNSInfo(),
 		},

@@ -43,12 +43,6 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-type vppConnection struct {
-	isExternal bool
-
-	api.Connection
-}
-
 // NetNSInfo contains shared info for server and client
 type NetNSInfo struct {
 	netNS     netns.NsHandle
@@ -77,8 +71,8 @@ func newNetNSInfo() NetNSInfo {
 	}
 }
 
-func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn *vppConnection, isClient bool, netNS netns.NsHandle) (socketID uint32, err error) {
-	namespace, err := getNamespace(mechanism, vppConn, netNS)
+func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn api.Connection, isClient bool, netNS netns.NsHandle) (socketID uint32, err error) {
+	socketFilename, err := getVppSocketFilename(mechanism, netNS)
 	if err != nil {
 		return 0, err
 	}
@@ -86,8 +80,7 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 	memifSocketAddDel := &memif.MemifSocketFilenameAddDelV2{
 		IsAdd:          true,
 		SocketID:       ^uint32(0),
-		SocketFilename: mechanism.GetSocketFilename(),
-		Namespace:      namespace,
+		SocketFilename: socketFilename,
 	}
 
 	now := time.Now()
@@ -101,7 +94,6 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
-		WithField("SocketNamespace", memifSocketAddDel.Namespace).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifSocketFilenameAddDel").Debug("completed")
@@ -128,7 +120,6 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 	log.FromContext(ctx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
-		WithField("SocketNamespace", memifSocketAddDel.Namespace).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifSocketFilenameAddDel").Debug("completed")
@@ -198,14 +189,18 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	return nil
 }
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn *vppConnection, isClient bool, netNS netns.NsHandle) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool, netNS netns.NsHandle) error {
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if !isClient {
 			mechanism.SetSocketFilename(socketFile(conn))
 		}
 		// This connection has already been created
 		if _, ok := ifindex.Load(ctx, isClient); ok {
-			if memifSocketAddDel, ok := load(ctx, isClient); ok && memifSocketAddDel.SocketFilename == mechanism.GetSocketFilename() {
+			socketFilename, err := getVppSocketFilename(mechanism, netNS)
+			if err != nil {
+				return err
+			}
+			if memifSocketAddDel, ok := load(ctx, isClient); ok && memifSocketAddDel.SocketFilename == socketFilename {
 				return nil
 			}
 		}
@@ -242,7 +237,7 @@ func socketFile(conn *networkservice.Connection) string {
 	return "@" + filepath.Join(os.TempDir(), "memif", conn.GetId(), "memif.socket")
 }
 
-func getNamespace(mechanism *memifMech.Mechanism, vppConn *vppConnection, netNS netns.NsHandle) (string, error) {
+func getVppSocketFilename(mechanism *memifMech.Mechanism, netNS netns.NsHandle) (string, error) {
 	u, err := url.Parse(mechanism.GetNetNSURL())
 	if err != nil {
 		return "", errors.Wrapf(err, "not a valid url %s", mechanism.GetNetNSURL())
@@ -251,18 +246,14 @@ func getNamespace(mechanism *memifMech.Mechanism, vppConn *vppConnection, netNS 
 		return "", errors.Errorf("socket file url must have scheme %s, actual %s", memifMech.FileScheme, u.Scheme)
 	}
 
-	if vppConn.isExternal {
-		return u.Path, nil
-	}
-
 	targetNetNS, err := netns.GetFromPath(u.Path)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = targetNetNS.Close() }()
 
-	if targetNetNS.Equal(netNS) {
-		return "", nil
+	if !targetNetNS.Equal(netNS) {
+		return "@netns:" + u.Path + mechanism.GetSocketFilename(), nil
 	}
-	return u.Path, nil
+	return mechanism.GetSocketFilename(), nil
 }
