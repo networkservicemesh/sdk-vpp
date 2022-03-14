@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -31,12 +31,13 @@ import (
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
-	if ok {
+	if !ok {
 		return nil
 	}
 
 	now := time.Now()
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceTagAddDel(ctx, &interfaces.SwInterfaceTagAddDel{
+		IsAdd:     true,
 		SwIfIndex: swIfIndex,
 		Tag:       conn.GetId(),
 	}); err != nil {
