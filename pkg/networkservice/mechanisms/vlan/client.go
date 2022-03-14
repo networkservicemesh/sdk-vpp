@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -34,6 +34,7 @@ import (
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/hwaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/l2vtr"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/mtu"
 )
 
 const (
@@ -49,6 +50,7 @@ type vlanClient struct {
 func NewClient(vppConn api.Connection, domain2Device map[string]string) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
 		hwaddress.NewClient(vppConn),
+		mtu.NewClient(vppConn),
 		l2vtr.NewClient(vppConn),
 		&vlanClient{
 			vppConn:     vppConn,

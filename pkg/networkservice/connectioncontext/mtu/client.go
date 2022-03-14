@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2022 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vlan"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -71,6 +74,11 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if vlan.ToMechanism(conn.GetMechanism()) != nil {
+		// No need to set the MTU since it is fetched from this interface
+		return conn, nil
 	}
 
 	if conn.GetPayload() == payload.Ethernet {
