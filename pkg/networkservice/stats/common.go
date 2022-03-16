@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -68,8 +70,11 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 	}
 }
 
-func initFunc(chainCtx context.Context) (*core.StatsConnection, error) {
-	statsConn, err := core.ConnectStats(statsclient.NewStatsClient(adapter.DefaultStatsSocket))
+func initFunc(chainCtx context.Context, statsSocket string) (*core.StatsConnection, error) {
+	if statsSocket == "" {
+		statsSocket = adapter.DefaultStatsSocket
+	}
+	statsConn, err := core.ConnectStats(statsclient.NewStatsClient(statsSocket))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

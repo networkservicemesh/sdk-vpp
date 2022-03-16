@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -32,19 +34,26 @@ import (
 type statsServer struct {
 	chainCtx  context.Context
 	statsConn *core.StatsConnection
+	statsSock string
 	once      sync.Once
 	initErr   error
 }
 
 // NewServer provides a NetworkServiceServer chain elements that retrieves vpp interface metrics.
-func NewServer(ctx context.Context) networkservice.NetworkServiceServer {
+func NewServer(ctx context.Context, options ...Option) networkservice.NetworkServiceServer {
+	opts := &statsOptions{}
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	return &statsServer{
-		chainCtx: ctx,
+		chainCtx:  ctx,
+		statsSock: opts.socket,
 	}
 }
 
 func (s *statsServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	initErr := s.init(s.chainCtx)
+	initErr := s.init()
 	if initErr != nil {
 		log.FromContext(ctx).Errorf("%v", initErr)
 	}
@@ -68,9 +77,9 @@ func (s *statsServer) Close(ctx context.Context, conn *networkservice.Connection
 	return &empty.Empty{}, nil
 }
 
-func (s *statsServer) init(chainCtx context.Context) error {
+func (s *statsServer) init() error {
 	s.once.Do(func() {
-		s.statsConn, s.initErr = initFunc(chainCtx)
+		s.statsConn, s.initErr = initFunc(s.chainCtx, s.statsSock)
 	})
 	return s.initErr
 }
