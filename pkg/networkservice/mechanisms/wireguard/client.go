@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -42,7 +44,6 @@ import (
 type wireguardClient struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
-	pubKeys  pubKeyMap
 }
 
 // NewClient - returns a new client for the wireguard remote mechanism
@@ -68,9 +69,7 @@ func (w *wireguardClient) Request(ctx context.Context, request *networkservice.N
 	// else create new key and store it after successful interface creation
 	if mechanism := wireguardMech.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil {
 		// If there is a key in mechanism then we can use it
-		if _, ok := w.pubKeys.Load(mechanism.SrcPublicKey()); ok {
-			publicKey = mechanism.SrcPublicKey()
-		}
+		publicKey = mechanism.SrcPublicKey()
 	}
 	mechanism := &networkservice.Mechanism{
 		Cls:        cls.REMOTE,
@@ -91,7 +90,7 @@ func (w *wireguardClient) Request(ctx context.Context, request *networkservice.N
 		return nil, err
 	}
 
-	if _, err = createInterface(ctx, conn, w.vppConn, &w.pubKeys, privateKey, metadata.IsClient(w)); err != nil {
+	if _, err = createInterface(ctx, conn, w.vppConn, privateKey, metadata.IsClient(w)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -109,6 +108,6 @@ func (w *wireguardClient) Close(ctx context.Context, conn *networkservice.Connec
 	if conn.GetPayload() != payload.IP {
 		return next.Client(ctx).Close(ctx, conn, opts...)
 	}
-	_ = delInterface(ctx, conn, w.vppConn, &w.pubKeys, metadata.IsClient(w))
+	_ = delInterface(ctx, conn, w.vppConn, metadata.IsClient(w))
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
