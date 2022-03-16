@@ -23,31 +23,30 @@ package forwarder
 import (
 	"context"
 	"net"
-	"net/url"
-	"time"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/filtermechanisms"
-	"google.golang.org/grpc"
+	"github.com/google/uuid"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/cleanup"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/filtermechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
-
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
 	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
 	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
 	registrysendfd "github.com/networkservicemesh/sdk/pkg/registry/common/sendfd"
+
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -73,15 +72,21 @@ type xconnectNSServer struct {
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, name string, authzServer networkservice.NetworkServiceServer, tokenGenerator token.GeneratorFunc, clientURL *url.URL, vppConn Connection, tunnelIP net.IP, tunnelPort uint16, dialTimeout time.Duration, domain2Device map[string]string, clientDialOptions ...grpc.DialOption) endpoint.Endpoint {
-	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
+func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn Connection, tunnelIP net.IP, options ...Option) endpoint.Endpoint {
+	opts := &forwarderOptions{
+		name: "forwarder-vpp-" + uuid.New().String(),
+	}
+	for _, opt := range options {
+		opt(opts)
+	}
+	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, opts.clientURL,
 		registryclient.WithNSEAdditionalFunctionality(
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
 			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
 		),
-		registryclient.WithDialOptions(clientDialOptions...),
+		registryclient.WithDialOptions(opts.dialOpts...),
 	)
-	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
+	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, opts.clientURL, registryclient.WithDialOptions(opts.dialOpts...))
 
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
@@ -89,7 +94,7 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 		sendfd.NewServer(),
 		discover.NewServer(nsClient, nseClient),
 		roundrobin.NewServer(),
-		stats.NewServer(ctx),
+		stats.NewServer(ctx, opts.statsOpts...),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
@@ -101,20 +106,21 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 				memif.WithDirectMemif(),
 				memif.WithChangeNetNS()),
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
-			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
+			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
 		pinhole.NewServer(vppConn),
 		connect.NewServer(
 			client.NewClient(ctx,
 				client.WithoutRefresh(),
-				client.WithName(name),
-				client.WithDialOptions(clientDialOptions...),
-				client.WithDialTimeout(dialTimeout),
+				client.WithName(opts.name),
+				client.WithDialOptions(opts.dialOpts...),
+				client.WithDialTimeout(opts.dialTimeout),
 				client.WithAdditionalFunctionality(
+					cleanup.NewClient(ctx, opts.cleanupOpts...),
 					mechanismtranslation.NewClient(),
 					connectioncontextkernel.NewClient(),
-					stats.NewClient(ctx),
+					stats.NewClient(ctx, opts.statsOpts...),
 					up.NewClient(ctx, vppConn),
 					mtu.NewClient(vppConn),
 					tag.NewClient(ctx, vppConn),
@@ -123,9 +129,9 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 						memif.WithChangeNetNS(),
 					),
 					kernel.NewClient(vppConn),
-					vxlan.NewClient(vppConn, tunnelIP, vxlan.WithVniPort(tunnelPort)),
+					vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 					wireguard.NewClient(vppConn, tunnelIP),
-					vlan.NewClient(vppConn, domain2Device),
+					vlan.NewClient(vppConn, opts.domain2Device),
 					filtermechanisms.NewClient(),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
@@ -135,8 +141,8 @@ func NewServer(ctx context.Context, name string, authzServer networkservice.Netw
 	}
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
-		endpoint.WithName(name),
-		endpoint.WithAuthorizeServer(authzServer),
+		endpoint.WithName(opts.name),
+		endpoint.WithAuthorizeServer(opts.authorizeServer),
 		endpoint.WithAdditionalFunctionality(additionalFunctionality...))
 
 	return rv
