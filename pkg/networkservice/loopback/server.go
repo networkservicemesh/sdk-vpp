@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,21 +30,16 @@ import (
 type loopbackServer struct {
 	vppConn api.Connection
 
-	loopbacks *Map
+	loopbacks *loopbackMap
 }
 
 // NewServer creates a NetworkServiceServer chain element to create the loopback vpp-interface
-func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
-	o := &options{
-		loopbacks: NewMap(),
-	}
-	for _, opt := range opts {
-		opt(o)
-	}
-
+func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return &loopbackServer{
-		vppConn:   vppConn,
-		loopbacks: o.loopbacks,
+		vppConn: vppConn,
+		loopbacks: &loopbackMap{
+			entries: make(map[string]*loopInfo),
+		},
 	}
 }
 

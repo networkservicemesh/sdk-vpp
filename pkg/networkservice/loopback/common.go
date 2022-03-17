@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -25,14 +25,25 @@ import (
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/edwarnicke/serialize"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
+type loopInfo struct {
+	swIfIndex interface_types.InterfaceIndex
+	count     uint32
+}
+
+type loopbackMap struct {
+	serialize.Executor
+	entries map[string]*loopInfo
+}
+
 /* Create loopback interface and store it in metadata */
-func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) (err error) {
+func createLoopback(ctx context.Context, vppConn api.Connection, networkService string, t *loopbackMap, isClient bool) (err error) {
 	if _, ok := Load(ctx, isClient); !ok {
-		<-t.exec.AsyncExec(func() {
+		<-t.AsyncExec(func() {
 			/* Check if we have already created loopback for a given NetworkService previously */
 			info, ok := t.entries[networkService]
 			if !ok {
@@ -66,9 +77,9 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 	return reply.SwIfIndex, nil
 }
 
-func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) {
+func del(ctx context.Context, vppConn api.Connection, networkService string, t *loopbackMap, isClient bool) {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
-		t.exec.AsyncExec(func() {
+		t.AsyncExec(func() {
 			t.entries[networkService].count--
 
 			/* If there are no more clients using the loopback - delete it */
