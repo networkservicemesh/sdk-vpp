@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -18,7 +18,6 @@ package vrf
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -28,44 +27,27 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/ip"
 
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-type vrfInfo struct {
-	/* vrf ID */
-	id uint32
-
-	/* count - the number of clients using this vrf ID */
-	count uint32
-}
-
-type vrfMap struct {
-	/* entries - is a map[NetworkServiceName]{vrfId, count} */
-	entries map[string]*vrfInfo
-
-	/* mutex for entries */
-	mut sync.Mutex
-}
-
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, t *vrfMap, isIPv6, isClient bool) (uint32, error) {
+func loadOrCreate(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vrfID uint32, loaded bool, err error) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
-	info, contains := t.entries[conn.NetworkService]
+	info, contains := t.entries[networkService]
 	if !contains {
 		vrfID, err := createVPP(ctx, vppConn, isIPv6)
 		if err != nil {
-			return vrfID, err
+			return vrfID, contains, err
 		}
 		info = &vrfInfo{
 			id: vrfID,
 		}
-		t.entries[conn.NetworkService] = info
+		t.entries[networkService] = info
 	}
 	info.count++
 
-	return info.id, nil
+	return info.id, contains, nil
 }
 
 func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32, error) {
@@ -87,18 +69,18 @@ func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32
 	return reply.Table.TableID, nil
 }
 
-func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isClient bool) error  {
-	for _, isIPv6 := range[]bool{false, true} {
+func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isClient bool) error {
+	for _, isIPv6 := range []bool{false, true} {
 		now := time.Now()
-		vrfId, ok := Load(ctx, isClient, isIPv6)
+		vrfID, ok := Load(ctx, isClient, isIPv6)
 		if !ok {
 			/* Use default vrf ID*/
-			vrfId = 0
+			vrfID = 0
 		}
 		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
 			SwIfIndex: swIfIndex,
 			IsIPv6:    isIPv6,
-			VrfID:     vrfId,
+			VrfID:     vrfID,
 		}); err != nil {
 			return errors.WithStack(err)
 		}
@@ -111,14 +93,14 @@ func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_typ
 	return nil
 }
 
-func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, t *vrfMap, isIPv6, isClient bool) {
+func del(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6, isClient bool) {
 	if vrfID, ok := LoadAndDelete(ctx, isClient, isIPv6); ok {
 		t.mut.Lock()
-		t.entries[conn.NetworkService].count--
+		t.entries[networkService].count--
 
 		/* If there are no more clients using the vrf - delete it */
-		if t.entries[conn.NetworkService].count == 0 {
-			delete(t.entries, conn.NetworkService)
+		if t.entries[networkService].count == 0 {
+			delete(t.entries, networkService)
 			_ = delVPP(ctx, vppConn, vrfID, isIPv6)
 		}
 		t.mut.Unlock()

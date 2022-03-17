@@ -14,5 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vrf provides networkservice.NetworkService chain elements for vrf creating
-package vrf
+package ifindex
+
+import (
+	"context"
+
+	"github.com/edwarnicke/govpp/binapi/interface_types"
+)
+
+// LoadInterfaceFn is alias for function that loads interface from index
+type LoadInterfaceFn = func(ctx context.Context, isClient bool) (value interface_types.InterfaceIndex, ok bool)
