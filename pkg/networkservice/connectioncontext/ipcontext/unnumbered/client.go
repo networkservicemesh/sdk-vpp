@@ -19,34 +19,37 @@ package unnumbered
 import (
 	"context"
 
-	"git.fd.io/govpp.git/api"
-	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/pkg/errors"
 
-	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"git.fd.io/govpp.git/api"
+	"github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
-type unnumberedServer struct {
+type unnumberedClient struct {
 	vppConn     api.Connection
 	loadIfaceFn func(ctx context.Context, isClient bool) (value interface_types.InterfaceIndex, ok bool)
 }
 
-// NewServer creates a new instance of unnumbered server
-func NewServer(vppConn api.Connection, loadIfaceFn func(ctx context.Context, isClient bool) (value interface_types.InterfaceIndex, ok bool)) networkservice.NetworkServiceServer {
-	return &unnumberedServer{
+// NewClient creates a new instance of unnumbered client
+func NewClient(vppConn api.Connection, loadIfaceFn func(ctx context.Context, isClient bool) (value interface_types.InterfaceIndex, ok bool)) networkservice.NetworkServiceClient {
+	return &unnumberedClient{
 		vppConn:     vppConn,
 		loadIfaceFn: loadIfaceFn,
 	}
 }
 
-func (u *unnumberedServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (u *unnumberedClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
-	conn, err := next.Server(ctx).Request(ctx, request)
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +58,7 @@ func (u *unnumberedServer) Request(ctx context.Context, request *networkservice.
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
-		if _, closeErr := u.Close(closeCtx, conn); closeErr != nil {
+		if _, closeErr := u.Close(closeCtx, conn, opts...); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
 		return nil, err
@@ -64,7 +67,7 @@ func (u *unnumberedServer) Request(ctx context.Context, request *networkservice.
 	return conn, nil
 }
 
-func (u *unnumberedServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+func (u *unnumberedClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	delete(ctx, metadata.IsClient(u))
-	return next.Server(ctx).Close(ctx, conn)
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,21 +23,25 @@ import (
 	"github.com/pkg/errors"
 
 	"git.fd.io/govpp.git/api"
-	interfaces "github.com/edwarnicke/govpp/binapi/interface"
-	"github.com/edwarnicke/govpp/binapi/ip"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/loopback"
+	interfaces "github.com/edwarnicke/govpp/binapi/interface"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-func addDel(ctx context.Context, vppConn api.Connection, isClient, isAdd bool) error {
+func addDel(ctx context.Context, vppConn api.Connection, isClient, isAdd bool, loadIfaceFn func(ctx context.Context, isClient bool) (value interface_types.InterfaceIndex, ok bool)) error {
+	if _, ok := load(ctx, isClient); ok {
+		return nil
+	}
+
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return errors.New("no swIfIndex available")
 	}
-	loopIfIndex, ok := loopback.Load(ctx, isClient)
+	loopIfIndex, ok := loadIfaceFn(ctx, isClient)
 	if !ok {
 		return errors.New("no loopback available")
 	}
@@ -57,26 +61,7 @@ func addDel(ctx context.Context, vppConn api.Connection, isClient, isAdd bool) e
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceSetUnnumbered").Debug("completed")
 
-	return nil
-}
-
-func enableIp6(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
-	if !ok {
-		return errors.New("no swIfIndex available")
-	}
-
-	now := time.Now()
-	if _, err := ip.NewServiceClient(vppConn).SwInterfaceIP6EnableDisable(ctx, &ip.SwInterfaceIP6EnableDisable{
-		SwIfIndex: swIfIndex,
-		Enable:    true,
-	}); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("swIfIndex", swIfIndex).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "SwInterfaceIP6EnableDisable").Debug("completed")
+	store(ctx, isClient)
 
 	return nil
 }
