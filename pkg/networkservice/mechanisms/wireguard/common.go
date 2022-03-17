@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -33,28 +35,14 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
-func getKey(mech *wireguardMech.Mechanism, isClient bool) string {
-	if isClient {
-		return mech.SrcPublicKey()
-	}
-	return mech.DstPublicKey()
-}
-
 // createInterface - returns public key of wireguard interface
-func createInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, pubKeyMap *pubKeyMap, privateKey wgtypes.Key, isClient bool) (string, error) {
+func createInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, privateKey wgtypes.Key, isClient bool) (string, error) {
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		pubKeyStr := getKey(mechanism, isClient)
-		if _, ok := pubKeyMap.Load(pubKeyStr); ok {
-			return pubKeyStr, nil
-		}
-
-		_, ok := ifindex.Load(ctx, isClient)
-		if ok {
+		if pubKeyStr, ok := load(ctx, isClient); ok {
 			return pubKeyStr, nil
 		}
 
 		now := time.Now()
-
 		wgIfCreate := &wireguard.WireguardInterfaceCreate{
 			Interface: wireguard.WireguardInterface{
 				UserInstance: ^uint32(0),
@@ -82,16 +70,15 @@ func createInterface(ctx context.Context, conn *networkservice.Connection, vppCo
 		ifindex.Store(ctx, isClient, rspIf.SwIfIndex)
 
 		newPublicKey := privateKey.PublicKey().String()
-		pubKeyMap.Store(newPublicKey, struct{}{})
+		store(ctx, newPublicKey, isClient)
 		return newPublicKey, nil
 	}
 	return "", nil
 }
 
-func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, pubKeyMap *pubKeyMap, isClient bool) error {
+func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		_, ok := pubKeyMap.LoadAndDelete(getKey(mechanism, isClient))
-		if !ok {
+		if _, ok := loadAndDelete(ctx, isClient); !ok {
 			return nil
 		}
 

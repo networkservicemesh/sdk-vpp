@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -40,7 +42,6 @@ import (
 type wireguardServer struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
-	pubKeys  pubKeyMap
 }
 
 // NewServer - returns a new server for the wireguard remote mechanism
@@ -73,7 +74,7 @@ func (w *wireguardServer) Request(ctx context.Context, request *networkservice.N
 
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		privateKey, _ := wgtypes.GeneratePrivateKey()
-		pubKey, err := createInterface(ctx, conn, w.vppConn, &w.pubKeys, privateKey, metadata.IsClient(w))
+		pubKey, err := createInterface(ctx, conn, w.vppConn, privateKey, metadata.IsClient(w))
 		if err != nil {
 			closeCtx, cancelClose := postponeCtxFunc()
 			defer cancelClose()
@@ -94,6 +95,6 @@ func (w *wireguardServer) Close(ctx context.Context, conn *networkservice.Connec
 	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
-	_ = delInterface(ctx, conn, w.vppConn, &w.pubKeys, metadata.IsClient(w))
+	_ = delInterface(ctx, conn, w.vppConn, metadata.IsClient(w))
 	return next.Server(ctx).Close(ctx, conn)
 }
