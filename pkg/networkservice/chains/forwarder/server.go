@@ -23,6 +23,8 @@ package forwarder
 import (
 	"context"
 	"net"
+	"net/url"
+	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/google/uuid"
@@ -30,6 +32,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/authorize"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/cleanup"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
@@ -74,7 +77,11 @@ type xconnectNSServer struct {
 // NewServer - returns an implementation of the xconnectns network service
 func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn Connection, tunnelIP net.IP, options ...Option) endpoint.Endpoint {
 	opts := &forwarderOptions{
-		name: "forwarder-vpp-" + uuid.New().String(),
+		name:            "forwarder-vpp-" + uuid.New().String(),
+		authorizeServer: authorize.NewServer(authorize.Any()),
+		clientURL:       &url.URL{Scheme: "unix", Host: "connect.to.socket"},
+		dialTimeout:     time.Millisecond * 200,
+		domain2Device:   make(map[string]string),
 	}
 	for _, opt := range options {
 		opt(opts)
