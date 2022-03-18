@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -21,13 +21,15 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/pkg/errors"
+
 	"github.com/edwarnicke/govpp/binapi/fib_types"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/ip"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/pkg/errors"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/vrf"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
@@ -46,8 +48,9 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		routes = conn.GetContext().GetIpContext().GetSrcIPRoutes()
 		routes = append(routes, conn.GetContext().GetIpContext().GetDstRoutesWithExplicitNextHop()...)
 	}
+
 	for _, route := range routes {
-		if err := routeAddDel(ctx, vppConn, swIfIndex, isAdd, route); err != nil {
+		if err := routeAddDel(ctx, vppConn, swIfIndex, isClient, isAdd, route); err != nil {
 			return err
 		}
 	}
@@ -55,11 +58,13 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	return nil
 }
 
-func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isAdd bool, route *networkservice.Route) error {
+func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isClient, isAdd bool, route *networkservice.Route) error {
 	if route.GetPrefixIPNet() == nil {
 		return errors.New("vppRoute prefix must not be nil")
 	}
-	vppRoute := toRoute(route, swIfIndex)
+	isIPV6 := route.GetPrefixIPNet().IP.To4() == nil
+	tableID, _ := vrf.Load(ctx, isClient, isIPV6)
+	vppRoute := toRoute(route, swIfIndex, tableID)
 	now := time.Now()
 	if _, err := ip.NewServiceClient(vppConn).IPRouteAddDel(ctx, &ip.IPRouteAddDel{
 		IsAdd:       isAdd,
@@ -71,16 +76,18 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("prefix", vppRoute.Prefix).
+		WithField("isIpV6", isIPV6).
+		WithField("tableID", tableID).
 		WithField("isAdd", isAdd).
-		WithField("type", isAdd).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "IPRouteAddDel").Debug("completed")
+		WithField("vppapi", "IPRouteAddDel").Info("completed")
 	return nil
 }
 
-func toRoute(route *networkservice.Route, via interface_types.InterfaceIndex) ip.IPRoute {
+func toRoute(route *networkservice.Route, via interface_types.InterfaceIndex, tableID uint32) ip.IPRoute {
 	prefix := route.GetPrefixIPNet()
 	rv := ip.IPRoute{
+		TableID:    tableID,
 		StatsIndex: 0,
 		Prefix:     types.ToVppPrefix(prefix),
 		NPaths:     1,
