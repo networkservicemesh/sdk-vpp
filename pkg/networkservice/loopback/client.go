@@ -19,6 +19,8 @@ package loopback
 import (
 	"context"
 
+	"google.golang.org/grpc"
+
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -27,14 +29,14 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
-type loopbackServer struct {
+type loopbackClient struct {
 	vppConn api.Connection
 
 	loopbacks *Map
 }
 
-// NewServer creates a NetworkServiceServer chain element to create the loopback vpp-interface
-func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+// NewClient creates a NetworkServiceClient chain element to create the loopback vpp-interface
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
 	o := &options{
 		loopbacks: NewMap(),
 	}
@@ -42,25 +44,25 @@ func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkSer
 		opt(o)
 	}
 
-	return &loopbackServer{
+	return &loopbackClient{
 		vppConn:   vppConn,
 		loopbacks: o.loopbacks,
 	}
 }
 
-func (l *loopbackServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (l *loopbackClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	networkService := request.GetConnection().NetworkService
 	if err := createLoopback(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); err != nil {
 		return nil, err
 	}
-	conn, err := next.Server(ctx).Request(ctx, request)
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		del(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l))
 	}
 	return conn, err
 }
 
-func (l *loopbackServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+func (l *loopbackClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	del(ctx, l.vppConn, conn.NetworkService, l.loopbacks, metadata.IsClient(l))
-	return next.Server(ctx).Close(ctx, conn)
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }

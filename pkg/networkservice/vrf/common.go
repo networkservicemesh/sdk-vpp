@@ -30,7 +30,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-func loadOrCreate(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vrfID uint32, loaded bool, err error) {
+func create(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vtfID uint32, loaded bool, err error) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
@@ -126,4 +126,8 @@ func delVPP(ctx context.Context, vppConn api.Connection, vrfID uint32, isIPv6 bo
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "IPTableAddDel").Debug("completed")
 	return nil
+}
+func delV46(ctx context.Context, vppConn api.Connection, m *Map, networkService string, isClient bool) {
+	del(ctx, vppConn, networkService, m.ipv6, true, isClient)
+	del(ctx, vppConn, networkService, m.ipv4, false, isClient)
 }
