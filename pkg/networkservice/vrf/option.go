@@ -31,29 +31,45 @@ type vrfInfo struct {
 }
 
 type vrfMap struct {
-	/* entries - is a map[NetworkServiceName]{vrfId, count} */
 	entries map[string]*vrfInfo
-
-	/* mutex for entries */
-	mut sync.Mutex
+	mut     sync.Mutex
 }
 
-func newMap() *vrfMap {
-	return &vrfMap{
-		entries: make(map[string]*vrfInfo),
+// Map contains ipv6 and ipv4 vrf entries.
+type Map struct {
+	ipv6 *vrfMap
+	ipv4 *vrfMap
+}
+
+// NewMap creates a new vrf.Map that can be used together with client and server.
+func NewMap() *Map {
+	return &Map{
+		ipv6: &vrfMap{
+			entries: make(map[string]*vrfInfo),
+		},
+		ipv4: &vrfMap{
+			entries: make(map[string]*vrfInfo),
+		},
 	}
 }
 
 type options struct {
+	m      *Map
 	loadFn ifindex.LoadInterfaceFn
 }
 
 // Option is an option pattern for upClient/Server
 type Option func(o *options)
 
-// WithLoadInterfaceFn allows to attach rtf table to custom interface.
-// This option might be useful for example, for a loopback interface.
-func WithLoadInterfaceFn(loadFn ifindex.LoadInterfaceFn) Option {
+// WithSharedMap - sets shared vrfV4 and vrfV6 map.
+func WithSharedMap(v *Map) Option {
+	return func(o *options) {
+		o.m = v
+	}
+}
+
+// WithLoadInterface replaces for for loading iface to attach the vrf table.
+func WithLoadInterface(loadFn ifindex.LoadInterfaceFn) Option {
 	return func(o *options) {
 		o.loadFn = loadFn
 	}

@@ -19,42 +19,46 @@ package vrf
 import (
 	"context"
 
-	"git.fd.io/govpp.git/api"
-	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"git.fd.io/govpp.git/api"
+	"github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-type vrfServer struct {
+type vrfClient struct {
 	vppConn api.Connection
 	loadFn  ifindex.LoadInterfaceFn
 	m       *Map
 }
 
-// NewServer creates a NetworkServiceServer chain element to create the ip table in vpp
-func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+// NewClient creates a NetworkServiceClient chain element to create the ip table in vpp
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
 	o := &options{
 		m:      NewMap(),
 		loadFn: ifindex.Load,
 	}
+
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	return &vrfServer{
+	return &vrfClient{
 		vppConn: vppConn,
-		loadFn:  o.loadFn,
 		m:       o.m,
+		loadFn:  o.loadFn,
 	}
 }
 
-func (v *vrfServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (v *vrfClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	var loadIfaces = []ifindex.LoadInterfaceFn{v.loadFn, ifindex.Load}
 	var networkService = request.GetConnection().GetNetworkService()
 
@@ -76,8 +80,10 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 			loadIfaces = nil
 		}
 	}
+
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
-	conn, err := next.Server(ctx).Request(ctx, request)
+
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
 		return conn, err
@@ -88,9 +94,8 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 			if attachErr := attach(ctx, v.vppConn, swIfIndex, metadata.IsClient(v)); attachErr != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
-				delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
 
-				if _, closeErr := next.Server(closeCtx).Close(closeCtx, conn); closeErr != nil {
+				if _, closeErr := v.Close(closeCtx, conn, opts...); closeErr != nil {
 					attachErr = errors.Wrapf(attachErr, "connection closed with error: %s", closeErr.Error())
 				}
 				return nil, attachErr
@@ -101,9 +106,8 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 	return conn, err
 }
 
-func (v *vrfServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_, err := next.Server(ctx).Close(ctx, conn)
-
+func (v *vrfClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	_, err := next.Client(ctx).Close(ctx, conn, opts...)
 	delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
 	return &empty.Empty{}, err
 }
