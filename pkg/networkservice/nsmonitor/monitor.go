@@ -1,3 +1,19 @@
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package nsmonitor
 
 import (
@@ -18,12 +34,11 @@ import (
 )
 
 const (
-	//netNsMonitorInterval = 250 * time.Millisecond
-	netNsMonitorInterval = 1 * time.Second
+	monitorInterval = 250 * time.Millisecond
 
-	monitorResult_Added             = "added to monitoring"
-	monitorResult_AlreadyMonitored  = "already monitored"
-	monitorResult_UnsupportedScheme = "unsupported scheme"
+	monitorResultAdded             = "added to monitoring"
+	monitorResultAlreadyMonitored  = "already monitored"
+	monitorResultUnsupportedScheme = "unsupported scheme"
 )
 
 // getProcName returns process name by its pid
@@ -51,18 +66,18 @@ func getInode(file string) (uint64, error) {
 	return stat.Ino, nil
 }
 
-type netNsInfo struct {
+type netNSInfo struct {
 	pid   uint64
 	inode uint64
 }
 
-// getAllNetNs returns all network namespace inodes and associated process pids
-func getAllNetNs() ([]netNsInfo, error) {
+// getAllNetNS returns all network namespace inodes and associated process pids
+func getAllNetNS() ([]netNSInfo, error) {
 	files, err := ioutil.ReadDir("/proc")
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read /proc directory")
 	}
-	var inodes []netNsInfo
+	var inodes []netNSInfo
 	for _, f := range files {
 		pid, err := strconv.ParseUint(f.Name(), 10, 64)
 		if err != nil {
@@ -76,7 +91,7 @@ func getAllNetNs() ([]netNsInfo, error) {
 				return nil, err
 			}
 		}
-		inodes = append(inodes, netNsInfo{
+		inodes = append(inodes, netNSInfo{
 			pid:   pid,
 			inode: inode,
 		})
@@ -89,19 +104,19 @@ type monitorItem struct {
 	pause string
 }
 
-type netNsMonitor struct {
+type netNSMonitor struct {
 	mutex sync.Mutex
 	nses  map[uint64]monitorItem
 	on    bool
 }
 
-func newMonitor() *netNsMonitor {
-	return &netNsMonitor{
+func newMonitor() *netNSMonitor {
+	return &netNSMonitor{
 		nses: map[uint64]monitorItem{},
 	}
 }
 
-func (m *netNsMonitor) AddNsInode(ctx context.Context, nsInodeURL string) (string, error) {
+func (m *netNSMonitor) AddNSInode(ctx context.Context, nsInodeURL string) (string, error) {
 	inodeURL, err := url.Parse(nsInodeURL)
 	if err != nil {
 		return "", errors.Wrap(err, "invalid url")
@@ -110,7 +125,7 @@ func (m *netNsMonitor) AddNsInode(ctx context.Context, nsInodeURL string) (strin
 	if inodeURL.Scheme != "inode" {
 		// We also receive smth like file:///proc/2608554/fd/37
 		// it's not an error
-		return monitorResult_UnsupportedScheme, nil
+		return monitorResultUnsupportedScheme, nil
 	}
 
 	pathParts := strings.Split(inodeURL.Path, "/")
@@ -123,10 +138,10 @@ func (m *netNsMonitor) AddNsInode(ctx context.Context, nsInodeURL string) (strin
 	defer m.mutex.Unlock()
 
 	if _, ok := m.nses[inode]; ok {
-		return monitorResult_AlreadyMonitored, nil
+		return monitorResultAlreadyMonitored, nil
 	}
 
-	nses, err := getAllNetNs()
+	nses, err := getAllNetNS()
 	if err != nil {
 		return "", errors.Wrap(err, "unable to get all netns")
 	}
@@ -155,21 +170,20 @@ func (m *netNsMonitor) AddNsInode(ctx context.Context, nsInodeURL string) (strin
 		m.on = true
 		go m.monitor()
 	}
-	return monitorResult_Added, nil
+	return monitorResultAdded, nil
 }
 
-func (m *netNsMonitor) monitor() {
+func (m *netNSMonitor) monitor() {
 	for {
-		select {
-		case <-time.After(netNsMonitorInterval):
-			if !m.checkAllNs() {
-				return
-			}
+		<-time.After(monitorInterval)
+
+		if !m.checkAllNS() {
+			return
 		}
 	}
 }
 
-func (m *netNsMonitor) checkAllNs() bool {
+func (m *netNSMonitor) checkAllNS() bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
