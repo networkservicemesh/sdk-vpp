@@ -143,7 +143,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 					filtermechanisms.NewClient(),
 					pinhole.NewClient(vppConn),
 					recvfd.NewClient(),
-					nsmonitor.NewClient(),
+					nsmonitor.NewClient(ctx),
 					sendfd.NewClient()),
 			),
 		),

@@ -14,30 +14,53 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
 // +build linux
 
 package nsmonitor
 
 import (
 	"context"
+	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/begin"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )
 
+type key struct{}
+
+// Monitor provides interface for netns monitor
+type Monitor interface {
+	Subscribe(ctx context.Context, inodeURL, connID string) <-chan bool
+	Unsubscribe(ctx context.Context, connID string)
+}
+
 type netNSMonitorClient struct {
-	monitor *netNSMonitor
+	chainCtx      context.Context
+	monitor       Monitor
+	onceInit      sync.Once
+	supplyMonitor func(ctx context.Context) Monitor
 }
 
 // NewClient returns new net ns monitoring client
-func NewClient() networkservice.NetworkServiceClient {
+func NewClient(chainCtx context.Context, opts ...Option) networkservice.NetworkServiceClient {
+	options := &clientOptions{
+		supplyMonitor: newMonitor,
+	}
+
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	return &netNSMonitorClient{
-		monitor: newMonitor(),
+		chainCtx:      chainCtx,
+		supplyMonitor: options.supplyMonitor,
 	}
 }
 
@@ -47,22 +70,40 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 		return nil, err
 	}
 
-	inodeURL, ok := conn.GetMechanism().GetParameters()[common.InodeURL]
-	logger := log.FromContext(ctx).WithField("component", "netNsMonitor").WithField(common.InodeURL, inodeURL)
-	if ok {
-		result, err := r.monitor.AddNSInode(ctx, inodeURL)
-		if err != nil {
-			logger.WithField("error", err).Error("unable to monitor")
-			return nil, err
+	r.onceInit.Do(func() {
+		r.monitor = r.supplyMonitor(r.chainCtx)
+	})
+
+	cancelCtx, cancel := context.WithCancel(r.chainCtx)
+	if _, ok := metadata.Map(ctx, metadata.IsClient(r)).LoadOrStore(key{}, cancel); !ok {
+		if inodeURL, ok := conn.GetMechanism().GetParameters()[common.InodeURL]; ok {
+			monitorCh := r.monitor.Subscribe(ctx, inodeURL, conn.GetId())
+			factory := begin.FromContext(ctx)
+			go func() {
+				select {
+				case <-r.chainCtx.Done():
+					return
+				case <-cancelCtx.Done():
+					return
+				case shouldClose := <-monitorCh:
+					if shouldClose {
+						factory.Close(begin.CancelContext(cancelCtx))
+					}
+					return
+				}
+			}()
 		}
-		logger.Info(result)
-	} else {
-		logger.Info("inodeURL not found")
 	}
 
 	return conn, nil
 }
 
 func (r *netNSMonitorClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	if v, ok := metadata.Map(ctx, metadata.IsClient(r)).LoadAndDelete(key{}); ok {
+		v.(func())()
+	}
+
+	r.monitor.Unsubscribe(ctx, conn.GetId())
+
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
