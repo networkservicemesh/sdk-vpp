@@ -96,12 +96,14 @@ func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_typ
 func del(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6, isClient bool) {
 	if vrfID, ok := LoadAndDelete(ctx, isClient, isIPv6); ok {
 		t.mut.Lock()
-		t.entries[networkService].count--
+		if vrfInfo, ok := t.entries[networkService]; ok {
+			vrfInfo.count--
 
-		/* If there are no more clients using the vrf - delete it */
-		if t.entries[networkService].count == 0 {
-			delete(t.entries, networkService)
-			_ = delVPP(ctx, vppConn, vrfID, isIPv6)
+			/* If there are no more clients using the vrf - delete it */
+			if vrfInfo.count == 0 {
+				delete(t.entries, networkService)
+				_ = delVPP(ctx, vppConn, vrfID, isIPv6)
+			}
 		}
 		t.mut.Unlock()
 	}
