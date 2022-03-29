@@ -37,8 +37,7 @@ type key struct{}
 
 // Monitor provides interface for netns monitor
 type Monitor interface {
-	Subscribe(ctx context.Context, inodeURL, connID string) <-chan bool
-	Unsubscribe(ctx context.Context, connID string)
+	Watch(ctx context.Context, inodeURL string) <-chan struct{}
 }
 
 type netNSMonitorClient struct {
@@ -77,7 +76,7 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 	cancelCtx, cancel := context.WithCancel(r.chainCtx)
 	if _, ok := metadata.Map(ctx, metadata.IsClient(r)).LoadOrStore(key{}, cancel); !ok {
 		if inodeURL, ok := conn.GetMechanism().GetParameters()[common.InodeURL]; ok {
-			monitorCh := r.monitor.Subscribe(ctx, inodeURL, conn.GetId())
+			deleteCh := r.monitor.Watch(cancelCtx, inodeURL)
 			factory := begin.FromContext(ctx)
 			go func() {
 				select {
@@ -85,10 +84,8 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 					return
 				case <-cancelCtx.Done():
 					return
-				case shouldClose := <-monitorCh:
-					if shouldClose {
-						factory.Close(begin.CancelContext(cancelCtx))
-					}
+				case <-deleteCh:
+					factory.Close(begin.CancelContext(cancelCtx))
 					return
 				}
 			}()
@@ -100,10 +97,10 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 
 func (r *netNSMonitorClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
 	if v, ok := metadata.Map(ctx, metadata.IsClient(r)).LoadAndDelete(key{}); ok {
-		v.(func())()
+		if cancel, ok := v.(context.CancelFunc); ok {
+			cancel()
+		}
 	}
-
-	r.monitor.Unsubscribe(ctx, conn.GetId())
 
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
