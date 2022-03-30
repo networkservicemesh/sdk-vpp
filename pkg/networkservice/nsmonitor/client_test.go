@@ -21,6 +21,7 @@ package nsmonitor_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -47,10 +48,13 @@ type testMonitor struct {
 	inodes                     []string
 	watchShouldCloseMonitoing  bool
 	watchShouldCloseConnection bool
+	mutex                      sync.Mutex
 }
 
 func (m *testMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct{} {
+	m.mutex.Lock()
 	m.inodes = append(m.inodes, inodeURL)
+	m.mutex.Unlock()
 
 	result := make(chan struct{}, 1)
 	if m.watchShouldCloseConnection {
@@ -60,6 +64,12 @@ func (m *testMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct{
 		close(result)
 	}
 	return result
+}
+
+func (m *testMonitor) requireInodes(t *testing.T, inodeURLs []string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	require.Equal(t, m.inodes, inodeURLs)
 }
 
 func Test_Client_DontFailWhenNoInode(t *testing.T) {
@@ -106,7 +116,7 @@ func Test_Client_DontFailWhenNoInode(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Empty(t, monitor.inodes)
+	monitor.requireInodes(t, nil)
 }
 
 func Test_Client_MonitorOnceSameConnectionId(t *testing.T) {
@@ -137,13 +147,11 @@ func Test_Client_MonitorOnceSameConnectionId(t *testing.T) {
 
 	_, err := client.Request(ctx, request)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(monitor.inodes))
-	require.Equal(t, testInode1, monitor.inodes[0])
+	monitor.requireInodes(t, []string{testInode1})
 
 	_, err = client.Request(ctx, request)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(monitor.inodes))
-	require.Equal(t, testInode1, monitor.inodes[0])
+	monitor.requireInodes(t, []string{testInode1})
 }
 
 func Test_Client_MonitorDifferentConnectionIds(t *testing.T) {
@@ -174,7 +182,7 @@ func Test_Client_MonitorDifferentConnectionIds(t *testing.T) {
 
 	_, err := client.Request(ctx, request1)
 	require.NoError(t, err)
-	require.Equal(t, monitor.inodes, []string{testInode1})
+	monitor.requireInodes(t, []string{testInode1})
 
 	request2 := &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{
@@ -189,7 +197,7 @@ func Test_Client_MonitorDifferentConnectionIds(t *testing.T) {
 
 	_, err = client.Request(ctx, request2)
 	require.NoError(t, err)
-	require.Equal(t, monitor.inodes, []string{testInode1, testInode2})
+	monitor.requireInodes(t, []string{testInode1, testInode2})
 }
 
 func Test_Client_CloseMustCloseMonitoringGoroutine(t *testing.T) {
@@ -220,11 +228,11 @@ func Test_Client_CloseMustCloseMonitoringGoroutine(t *testing.T) {
 
 	_, err := client.Request(ctx, request)
 	require.NoError(t, err)
+	require.Error(t, goleak.Find())
 
 	_, err = client.Close(ctx, request.Connection)
 	require.NoError(t, err)
-
-	goleak.VerifyNone(t)
+	require.NoError(t, goleak.Find())
 }
 
 func Test_Client_MonitorMustCloseMonitoringGoroutine(t *testing.T) {
@@ -301,8 +309,8 @@ func Test_Client_MonitorCanCloseConnection(t *testing.T) {
 	require.NoError(t, err)
 
 	// we need some time for Close to finish
-	<-time.After(200 * time.Millisecond)
-	require.Equal(t, 1, counter.Closes())
+	checkCounter := func() bool { return counter.Closes() == 1 }
+	require.Eventually(t, checkCounter, 1*time.Second, 50*time.Millisecond)
 }
 
 func Test_Client_ChainContextMustCloseMonitoringGoroutine(t *testing.T) {
