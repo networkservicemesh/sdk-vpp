@@ -29,13 +29,13 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/nsmonitor"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/begin"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/count"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/nsmonitor"
 )
 
 const (
