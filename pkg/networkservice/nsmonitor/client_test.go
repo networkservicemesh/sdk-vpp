@@ -226,6 +226,7 @@ func Test_Client_CloseMustCloseMonitoringGoroutine(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, goleak.Find())
 	_, err := client.Request(ctx, request)
 	require.NoError(t, err)
 	require.Error(t, goleak.Find())
