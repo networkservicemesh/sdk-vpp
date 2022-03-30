@@ -84,8 +84,10 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 					return
 				case <-cancelCtx.Done():
 					return
-				case <-deleteCh:
-					factory.Close(begin.CancelContext(cancelCtx))
+				case _, ok := <-deleteCh:
+					if ok {
+						factory.Close(begin.CancelContext(cancelCtx))
+					}
 					return
 				}
 			}()

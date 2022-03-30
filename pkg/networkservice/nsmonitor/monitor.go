@@ -44,6 +44,8 @@ func (m *netNSMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct
 	logger := log.FromContext(ctx).WithField("component", "netNsMonitor").WithField("inodeURL", inodeURL)
 
 	go func() {
+		defer close(result)
+
 		proc, err := resolveProcByInodeURL(inodeURL)
 		if err != nil {
 			logger.Error(err.Error())
@@ -51,8 +53,8 @@ func (m *netNSMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct
 		}
 
 		defer func() {
+			result <- struct{}{}
 			logger.Infof("stopping...")
-			close(result)
 		}()
 
 		logger.Info("started")
