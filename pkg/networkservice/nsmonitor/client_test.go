@@ -69,7 +69,20 @@ func (m *testMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct{
 func (m *testMonitor) requireInodes(t *testing.T, inodeURLs []string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	require.Equal(t, m.inodes, inodeURLs)
+
+	compareInodes := func() bool {
+		if len(m.inodes) != len(inodeURLs) {
+			return false
+		}
+		for i, inode := range m.inodes {
+			if inode != inodeURLs[i] {
+				return false
+			}
+		}
+		return true
+	}
+
+	require.Eventually(t, compareInodes, 1*time.Second, 50*time.Millisecond)
 }
 
 func Test_Client_DontFailWhenNoInode(t *testing.T) {
@@ -97,7 +110,7 @@ func Test_Client_DontFailWhenNoInode(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Empty(t, monitor.inodes)
+	monitor.requireInodes(t, nil)
 
 	// no mechanism parameters
 	_, err = client.Request(ctx, &networkservice.NetworkServiceRequest{
@@ -107,7 +120,7 @@ func Test_Client_DontFailWhenNoInode(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Empty(t, monitor.inodes)
+	monitor.requireInodes(t, nil)
 
 	// no mechanism
 	_, err = client.Request(ctx, &networkservice.NetworkServiceRequest{
