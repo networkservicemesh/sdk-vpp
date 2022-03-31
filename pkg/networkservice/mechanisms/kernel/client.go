@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,9 +30,14 @@ import (
 )
 
 // NewClient - returns a new Client chain element implementing the kernel mechanism with vpp
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewClient(vppConn)
+		return kerneltap.NewClient(vppConn, kerneltap.WithDump(o.dumpOpt))
 	}
 	return kernelvethpair.NewClient(vppConn)
 }

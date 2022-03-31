@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -28,6 +28,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -36,12 +37,30 @@ import (
 
 type kernelTapClient struct {
 	vppConn api.Connection
+	dumpMap *dumptool.Map
 }
 
 // NewClient - return a new Client chain element implementing the kernel mechanism with vpp using tapv2
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	ctx := context.Background()
+	dumpMap := dumptool.NewMap(ctx, 0)
+	if o.dumpOpt != nil {
+		var err error
+		dumpMap, err = dump(ctx, vppConn, o.dumpOpt.PodName, o.dumpOpt.Timeout, true)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return &kernelTapClient{
 		vppConn: vppConn,
+		dumpMap: dumpMap,
 	}
 }
 
@@ -60,7 +79,7 @@ func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.N
 		return nil, err
 	}
 
-	if err := create(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
+	if err := create(ctx, conn, k.vppConn, k.dumpMap, metadata.IsClient(k)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -75,7 +94,7 @@ func (k *kernelTapClient) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	err := del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	err := del(ctx, conn, k.vppConn, k.dumpMap, metadata.IsClient(k))
 	if err != nil {
 		log.FromContext(ctx).Error(err)
 	}

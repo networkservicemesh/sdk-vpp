@@ -22,6 +22,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
@@ -38,8 +40,11 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, dumpMap *dumptool.Map, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			ifindex.Store(ctx, isClient, val.(interface_types.InterfaceIndex))
+		}
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
@@ -53,7 +58,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			}
 		}
 		// Delete the kernel interface if there is one in the target namespace
-		_ = del(ctx, conn, vppConn, isClient)
+		_ = del(ctx, conn, vppConn, dumpMap, isClient)
 
 		nsFilename, err := mechutils.ToNSFilename(mechanism)
 		if err != nil {
@@ -141,8 +146,11 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	return nil
 }
 
-func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, dumpMap *dumptool.Map, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			ifindex.Store(ctx, isClient, val.(interface_types.InterfaceIndex))
+		}
 		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 		if !ok {
 			return nil
@@ -161,4 +169,22 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		return nil
 	}
 	return nil
+}
+
+func dump(ctx context.Context, vppConn api.Connection, podName string, timeout time.Duration, isClient bool) (*dumptool.Map, error) {
+	return dumptool.DumpInterfaces(ctx, vppConn, podName, timeout, isClient,
+		/* Function on dump */
+		func(details *interfaces.SwInterfaceDetails) (interface{}, error) {
+			if details.InterfaceDevType == dumptool.DevTypeTap {
+				return details.SwIfIndex, nil
+			}
+			return nil, errors.New("Doesn't match the tap interface")
+		},
+		/* Function on delete */
+		func(ifindex interface{}) error {
+			_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
+				SwIfIndex: ifindex.(interface_types.InterfaceIndex),
+			})
+			return err
+		})
 }

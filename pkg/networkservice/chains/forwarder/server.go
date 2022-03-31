@@ -26,6 +26,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+
 	"git.fd.io/govpp.git/api"
 	"github.com/google/uuid"
 
@@ -81,11 +83,18 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		authorizeServer: authorize.NewServer(authorize.Any()),
 		clientURL:       &url.URL{Scheme: "unix", Host: "connect.to.socket"},
 		dialTimeout:     time.Millisecond * 200,
+		dumpCleanTimeou: time.Minute,
 		domain2Device:   make(map[string]string),
 	}
 	for _, opt := range options {
 		opt(opts)
 	}
+
+	dumpOption := &dumptool.DumpOption{
+		PodName: opts.name,
+		Timeout: opts.dumpCleanTimeou,
+	}
+
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, opts.clientURL,
 		registryclient.WithNSEAdditionalFunctionality(
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
@@ -111,9 +120,10 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM: memif.NewServer(ctx, vppConn,
 				memif.WithDirectMemif(),
-				memif.WithChangeNetNS()),
-			kernel.MECHANISM:    kernel.NewServer(vppConn),
-			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
+				memif.WithChangeNetNS(),
+				memif.WithDump(dumpOption)),
+			kernel.MECHANISM:    kernel.NewServer(vppConn, kernel.WithDump(dumpOption)),
+			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, append(opts.vxlanOpts, vxlan.WithDump(dumpOption))...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
 		pinhole.NewServer(vppConn),
@@ -134,9 +144,10 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 					// mechanisms
 					memif.NewClient(vppConn,
 						memif.WithChangeNetNS(),
+						memif.WithDump(dumpOption),
 					),
-					kernel.NewClient(vppConn),
-					vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
+					kernel.NewClient(vppConn, kernel.WithDump(dumpOption)),
+					vxlan.NewClient(vppConn, tunnelIP, append(opts.vxlanOpts, vxlan.WithDump(dumpOption))...),
 					wireguard.NewClient(vppConn, tunnelIP),
 					vlan.NewClient(vppConn, opts.domain2Device),
 					filtermechanisms.NewClient(),

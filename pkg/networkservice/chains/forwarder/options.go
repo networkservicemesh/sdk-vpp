@@ -36,6 +36,7 @@ type forwarderOptions struct {
 	authorizeServer networkservice.NetworkServiceServer
 	clientURL       *url.URL
 	dialTimeout     time.Duration
+	dumpCleanTimeou time.Duration
 	domain2Device   map[string]string
 	statsOpts       []stats.Option
 	cleanupOpts     []cleanup.Option
@@ -74,6 +75,13 @@ func WithClientURL(clientURL *url.URL) Option {
 func WithDialTimeout(dialTimeout time.Duration) Option {
 	return func(o *forwarderOptions) {
 		o.dialTimeout = dialTimeout
+	}
+}
+
+// WithDumpCleanupTimeout sets
+func WithDumpCleanupTimeout(timeout time.Duration) Option {
+	return func(o *forwarderOptions) {
+		o.dumpCleanTimeou = timeout
 	}
 }
 

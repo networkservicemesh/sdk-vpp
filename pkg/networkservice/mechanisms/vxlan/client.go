@@ -20,6 +20,7 @@ package vxlan
 
 import (
 	"context"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"net"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -43,6 +44,7 @@ import (
 
 type vxlanClient struct {
 	vppConn api.Connection
+	dumpMap *dumptool.Map
 }
 
 // NewClient - returns a new client for the vxlan remote mechanism
@@ -54,9 +56,21 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP, options ...Option) netwo
 		opt(opts)
 	}
 
+	ctx := context.Background()
+	dumpMap := dumptool.NewMap(ctx, 0)
+	if opts.dumpOpt != nil {
+		var err error
+		dumpMap, err = dump(ctx, vppConn, opts.dumpOpt.PodName, opts.dumpOpt.Timeout, true)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return chain.NewNetworkServiceClient(
 		&vxlanClient{
 			vppConn: vppConn,
+			dumpMap: dumpMap,
 		},
 		mtu.NewClient(vppConn, tunnelIP),
 		vni.NewClient(tunnelIP, vni.WithTunnelPort(opts.vxlanPort)),
@@ -82,7 +96,7 @@ func (v *vxlanClient) Request(ctx context.Context, request *networkservice.Netwo
 		return nil, err
 	}
 
-	if err := addDel(ctx, conn, v.vppConn, true, metadata.IsClient(v)); err != nil {
+	if err := addDel(ctx, conn, v.vppConn, v.dumpMap,true, metadata.IsClient(v)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -100,8 +114,7 @@ func (v *vxlanClient) Close(ctx context.Context, conn *networkservice.Connection
 	if conn.GetPayload() != payload.Ethernet {
 		return next.Client(ctx).Close(ctx, conn, opts...)
 	}
-
-	if err := addDel(ctx, conn, v.vppConn, false, metadata.IsClient(v)); err != nil {
+	if err := addDel(ctx, conn, v.vppConn, v.dumpMap, false, metadata.IsClient(v)); err != nil {
 		log.FromContext(ctx).WithField("vxlan", "client").Errorf("error while deleting vxlan connection: %v", err.Error())
 	}
 

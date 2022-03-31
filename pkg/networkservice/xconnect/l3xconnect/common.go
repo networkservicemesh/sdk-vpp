@@ -18,6 +18,8 @@ package l3xconnect
 
 import (
 	"context"
+	interfaces "github.com/edwarnicke/govpp/binapi/interface"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"net"
 	"time"
 
@@ -143,4 +145,24 @@ func l3xcUpdate(fromSwIfIndex, toIfIndex interface_types.InterfaceIndex, nextHop
 		}
 	}
 	return rv
+}
+
+func dump(ctx context.Context, vppConn api.Connection, podName string, timeout time.Duration, isClient bool) (*dumptool.Map, error) {
+	return dumptool.DumpInterfaces(ctx, vppConn, podName, timeout, isClient,
+		/* Function on dump */
+		func(details *interfaces.SwInterfaceDetails) (interface{}, error) {
+			return details.SwIfIndex, nil
+		},
+		/* Function on delete */
+		func(ifindex interface{}) error {
+			for _, isIP6 := range []bool{true, false} {
+				if _, err := l3xc.NewServiceClient(vppConn).L3xcDel(ctx, &l3xc.L3xcDel{
+					SwIfIndex: ifindex.(interface_types.InterfaceIndex),
+					IsIP6:     isIP6,
+				}); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+			return nil
+		})
 }

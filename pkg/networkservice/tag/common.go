@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+
 	"git.fd.io/govpp.git/api"
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -36,16 +38,21 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	}
 
 	now := time.Now()
+	tag := dumptool.ConvertToTag(&dumptool.TagStruct{
+		PodName:  conn.Path.PathSegments[conn.Path.Index].Name,
+		ConnID:   conn.GetId(),
+		IsClient: isClient,
+	})
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceTagAddDel(ctx, &interfaces.SwInterfaceTagAddDel{
 		IsAdd:     true,
 		SwIfIndex: swIfIndex,
-		Tag:       conn.GetId(),
+		Tag:       tag,
 	}); err != nil {
 		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
-		WithField("tag", conn.GetId()).
+		WithField("tag", tag).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceTagAddDel").Debug("completed")
 	return nil
