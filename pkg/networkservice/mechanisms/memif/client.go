@@ -41,7 +41,7 @@ import (
 
 type memifClient struct {
 	vppConn     api.Connection
-	changeNetNs bool
+	changeNetNS bool
 	nsInfo      NetNSInfo
 }
 
@@ -55,7 +55,7 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 	return chain.NewNetworkServiceClient(
 		&memifClient{
 			vppConn:     vppConn,
-			changeNetNs: opts.changeNetNS,
+			changeNetNS: opts.changeNetNS,
 			nsInfo:      newNetNSInfo(),
 		},
 	)
@@ -64,7 +64,7 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 func (m *memifClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	if !m.updateMechanismPreferences(request) {
 		mechanism := memif.ToMechanism(memif.NewAbstract(m.nsInfo.netNSPath))
-		if m.changeNetNs {
+		if m.changeNetNS {
 			mechanism.SetNetNSURL("")
 		}
 		request.MechanismPreferences = append(request.MechanismPreferences, mechanism.Mechanism)
@@ -111,7 +111,7 @@ func (m *memifClient) updateMechanismPreferences(request *networkservice.Network
 	for _, p := range request.GetRequestMechanismPreferences() {
 		if mechanism := memif.ToMechanism(p); mechanism != nil {
 			mechanism.SetNetNSURL((&url.URL{Scheme: memif.FileScheme, Path: m.nsInfo.netNSPath}).String())
-			if m.changeNetNs {
+			if m.changeNetNS {
 				mechanism.SetNetNSURL("")
 			}
 			updated = true
