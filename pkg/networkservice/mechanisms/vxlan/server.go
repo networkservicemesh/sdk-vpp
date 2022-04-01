@@ -83,10 +83,7 @@ func NewServer(vppConn api.Connection, tunnelIP net.IP, options ...Option) netwo
 					if err == io.EOF || vxDetails == nil {
 						return nil, nil
 					}
-					return &vni.VniKey{
-						SrcIPString: vxDetails.SrcAddress.String(),
-						Vni:         vxDetails.Vni,
-					}, nil
+					return vni.NewVniKey(vxDetails.SrcAddress.String(), vxDetails.Vni), nil
 				}
 				return nil, nil
 			},

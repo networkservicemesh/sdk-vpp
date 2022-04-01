@@ -20,6 +20,8 @@ package afpacket
 
 import (
 	"context"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -33,12 +35,30 @@ import (
 
 type afPacketServer struct {
 	vppConn api.Connection
+	dumpMap *dumptool.Map
 }
 
 // NewServer - return a new Server chain element implementing the kernel mechanism with vpp using afpacket
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	ctx := context.Background()
+	dumpMap := dumptool.NewMap(ctx, 0)
+	if o.dumpOpt != nil {
+		var err error
+		dumpMap, err = dump(ctx, vppConn, o.dumpOpt.PodName, o.dumpOpt.Timeout, true)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return &afPacketServer{
 		vppConn: vppConn,
+		dumpMap: dumpMap,
 	}
 }
 
@@ -50,7 +70,7 @@ func (a *afPacketServer) Request(ctx context.Context, request *networkservice.Ne
 		return nil, err
 	}
 
-	if err := create(ctx, conn, a.vppConn, metadata.IsClient(a)); err != nil {
+	if err := create(ctx, conn, a.vppConn, a.dumpMap, metadata.IsClient(a)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -65,6 +85,6 @@ func (a *afPacketServer) Request(ctx context.Context, request *networkservice.Ne
 }
 
 func (a *afPacketServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_ = del(ctx, conn, a.vppConn, false)
+	_ = del(ctx, conn, a.vppConn, a.dumpMap,false)
 	return next.Server(ctx).Close(ctx, conn)
 }

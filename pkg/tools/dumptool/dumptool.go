@@ -33,6 +33,8 @@ const (
 	DevTypeMemif = "memif"
 	// DevTypeMemif -
 	DevTypeVxlan = "VXLAN"
+	// DevTypeAfPacket -
+	DevTypeAfPacket = "af_packet"
 )
 
 // TagStruct -

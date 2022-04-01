@@ -20,7 +20,7 @@ package kernelvethpair
 
 import (
 	"context"
-	"fmt"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"time"
 
 	"github.com/pkg/errors"
@@ -38,11 +38,13 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
-func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, podName string, dumpMap *dumptool.Map, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			peer.Store(ctx, isClient, val.(netlink.Link))
+		}
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
@@ -50,7 +52,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		defer handle.Close()
 
-		if _, ok := link.Load(ctx, isClient); ok {
+		if _, ok := peer.Load(ctx, isClient); ok {
 			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
 				return nil
 			}
@@ -70,7 +72,11 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		ifindex.Delete(ctx, isClient)
 
-		alias := mechutils.ToAlias(conn, isClient)
+		alias := dumptool.ConvertToTag(&dumptool.TagStruct{
+			PodName:  podName,
+			ConnID:   conn.Id,
+			IsClient: isClient,
+		})
 		la := netlink.NewLinkAttrs()
 		la.Name = randstr.Hex(7)
 
@@ -186,14 +192,14 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		// Set Alias of peerLink
 		now = time.Now()
-		if err = netlink.LinkSetAlias(peerLink, fmt.Sprintf("veth-%s", alias)); err != nil {
+		if err = netlink.LinkSetAlias(peerLink, alias); err != nil {
 			_ = netlink.LinkDel(l)
 			_ = netlink.LinkDel(peerLink)
 			return err
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
-			WithField("peerLink", fmt.Sprintf("veth-%s", alias)).
+			WithField("peerLink", alias).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetAlias").Debug("completed")
 
@@ -233,6 +239,26 @@ func del(ctx context.Context, conn *networkservice.Connection, isClient bool) er
 		link.Delete(ctx, isClient)
 	}
 	return nil
+}
+
+func dump(ctx context.Context, podName string, timeout time.Duration, isClient bool) (*dumptool.Map, error) {
+	peerLinks, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	dumpMap := dumptool.NewMap(ctx, timeout)
+	for _, peerLink := range peerLinks {
+		if peerLink.Type() == "veth" {
+			t, _ := dumptool.ConvertFromTag(peerLink.Attrs().Alias)
+			if t.IsClient != isClient || t.PodName != podName {
+				continue
+			}
+			dumpMap.Store(t.ConnID, peerLink, func(value interface{}) error {
+				return netlink.LinkDel(peerLink)
+			})
+		}
+	}
+	return dumpMap, nil
 }
 
 func linuxIfaceName(ifaceName string) string {

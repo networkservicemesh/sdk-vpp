@@ -19,14 +19,10 @@
 package kernel
 
 import (
-	"os"
-
 	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kerneltap"
 )
 
 // NewServer return a NetworkServiceServer chain element that correctly handles the kernel Mechanism
@@ -36,8 +32,8 @@ func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkSer
 		opt(o)
 	}
 
-	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewServer(vppConn, kerneltap.WithDump(o.dumpOpt))
-	}
+	//if _, err := os.Stat(vnetFilename); err == nil {
+	//	return kerneltap.NewServer(vppConn, kerneltap.WithDump(o.dumpOpt))
+	//}
 	return kernelvethpair.NewServer(vppConn)
 }

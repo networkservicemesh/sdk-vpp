@@ -20,6 +20,7 @@ package kernelvethpair
 
 import (
 	"context"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -37,15 +38,34 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel/kernelvethpair/ipneighbor"
 )
 
-type kernelVethPairServer struct{}
+type kernelVethPairServer struct{
+	podName string
+	dumpMap *dumptool.Map
+}
 
 // NewServer - return a new Server chain element implementing the kernel mechanism with vpp using a veth pair
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	ctx := context.Background()
+	podName := "forwarder"
+	dumpMap := dumptool.NewMap(ctx, 0)
+	if o.dumpOpt != nil {
+		podName = o.dumpOpt.PodName
+		dumpMap, _ = dump(ctx, o.dumpOpt.PodName, o.dumpOpt.Timeout, false)
+	}
+
 	return chain.NewNetworkServiceServer(
 		ipneighbor.NewServer(vppConn),
 		afpacket.NewServer(vppConn),
 		mtu.NewServer(),
-		&kernelVethPairServer{},
+		&kernelVethPairServer{
+			podName: podName,
+			dumpMap: dumpMap,
+		},
 	)
 }
 
@@ -57,7 +77,7 @@ func (k *kernelVethPairServer) Request(ctx context.Context, request *networkserv
 		return nil, err
 	}
 
-	if err := create(ctx, request.GetConnection(), false); err != nil {
+	if err := create(ctx, request.GetConnection(), k.podName, k.dumpMap, false); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
