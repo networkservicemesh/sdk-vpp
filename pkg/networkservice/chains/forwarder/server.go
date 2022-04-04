@@ -63,6 +63,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -87,6 +88,12 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 	for _, opt := range options {
 		opt(opts)
 	}
+
+	dumpOption := &dumptool.DumpOption{
+		Ctx:     ctx,
+		PodName: opts.name,
+	}
+
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, opts.clientURL,
 		registryclient.WithNSEAdditionalFunctionality(
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
@@ -113,7 +120,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			memif.MECHANISM: memif.NewServer(ctx, vppConn,
 				memif.WithDirectMemif(),
 				memif.WithChangeNetNS()),
-			kernel.MECHANISM:    kernel.NewServer(vppConn),
+			kernel.MECHANISM:    kernel.NewServer(vppConn, kernel.WithDump(dumpOption)),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
@@ -136,7 +143,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 					memif.NewClient(vppConn,
 						memif.WithChangeNetNS(),
 					),
-					kernel.NewClient(vppConn),
+					kernel.NewClient(vppConn, kernel.WithDump(dumpOption)),
 					vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 					wireguard.NewClient(vppConn, tunnelIP),
 					vlan.NewClient(vppConn, opts.domain2Device),
