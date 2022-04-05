@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -33,6 +33,9 @@ import (
 
 func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection) error {
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if mechanism.GetVlanID() == 0 {
+			return nil
+		}
 		swIfIndex, ok := ifindex.Load(ctx, true)
 		if !ok {
 			return nil
@@ -58,6 +61,9 @@ func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api
 
 func disableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection) error {
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if mechanism.GetVlanID() == 0 {
+			return nil
+		}
 		swIfIndex, ok := ifindex.Load(ctx, true)
 		if !ok {
 			return nil
