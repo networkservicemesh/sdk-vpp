@@ -38,9 +38,9 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 	now := time.Now()
 	tag := tagtool.ConvertToString(&tagtool.Tag{
-		PodName:  conn.Path.PathSegments[conn.Path.Index].Name,
-		ConnID:   conn.GetId(),
-		IsClient: isClient,
+		TagPrefix: conn.Path.PathSegments[conn.Path.Index].Name,
+		ConnID:    conn.GetId(),
+		IsClient:  isClient,
 	})
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceTagAddDel(ctx, &interfaces.SwInterfaceTagAddDel{
 		IsAdd:     true,

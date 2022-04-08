@@ -34,7 +34,6 @@ import (
 	kernellink "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
@@ -168,14 +167,9 @@ func delVpp(ctx context.Context, vppConn api.Connection, swIfIndex interface_typ
 	return nil
 }
 
-func dumpAndDelete(ctx context.Context, vppConn api.Connection, podName string, isClient bool) error {
-	log.FromContext(ctx).WithField("dump", "TapV2").Debug("started")
-	return dumptool.DumpVppInterfaces(ctx, vppConn, podName, isClient,
-		/* Function on dump */
-		func(details *interfaces.SwInterfaceDetails) error {
-			if details.InterfaceDevType == DevTypeTap {
-				return delVpp(ctx, vppConn, details.SwIfIndex)
-			}
-			return nil
-		})
+func onDump(ctx context.Context, vppConn api.Connection, details *interfaces.SwInterfaceDetails) error {
+	if details.InterfaceDevType == DevTypeTap {
+		return delVpp(ctx, vppConn, details.SwIfIndex)
+	}
+	return nil
 }

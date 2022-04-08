@@ -43,9 +43,9 @@ func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkSer
 		opt(o)
 	}
 
-	if o.dumpOpt != nil {
-		if err := dumpAndDelete(o.dumpOpt.Ctx, vppConn, o.dumpOpt.PodName, true); err != nil {
-			log.FromContext(o.dumpOpt.Ctx).Error(err)
+	if o.dump != nil {
+		if err := o.dump(onDump, true); err != nil {
+			log.FromContext(context.Background()).Error(err)
 		}
 	}
 

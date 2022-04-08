@@ -31,9 +31,9 @@ const (
 
 // Tag - represent an NSM tag
 type Tag struct {
-	PodName  string
-	ConnID   string
-	IsClient bool
+	TagPrefix string
+	ConnID    string
+	IsClient  bool
 }
 
 // ConvertToString - converts Tag to the string format: { forwarder-name }_{ identifier }_{ connID }
@@ -42,7 +42,7 @@ func ConvertToString(t *Tag) string {
 	if !t.IsClient {
 		isClientStr = serverIdentifier
 	}
-	return t.PodName + delimiter + isClientStr + delimiter + t.ConnID
+	return t.TagPrefix + delimiter + isClientStr + delimiter + t.ConnID
 }
 
 // ConvertFromString - converts from string to Tag
@@ -56,8 +56,8 @@ func ConvertFromString(tag string) (t *Tag, err error) {
 	}
 
 	t = &Tag{
-		PodName: substrs[0],
-		ConnID:  substrs[2],
+		TagPrefix: substrs[0],
+		ConnID:    substrs[2],
 	}
 	switch substrs[1] {
 	case clientIdentifier:

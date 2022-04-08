@@ -89,9 +89,9 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		opt(opts)
 	}
 
-	dumpOption := &dumptool.DumpOption{
-		Ctx:     ctx,
-		PodName: opts.name,
+	// Create a function, that will dump NSM interfaces and apply to them onDump func
+	dumper := func(onDump dumptool.OnDumpFn, isClient bool) error {
+		return dumptool.DumpVppInterfaces(ctx, vppConn, opts.name, isClient, onDump)
 	}
 
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, opts.clientURL,
@@ -120,7 +120,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			memif.MECHANISM: memif.NewServer(ctx, vppConn,
 				memif.WithDirectMemif(),
 				memif.WithChangeNetNS()),
-			kernel.MECHANISM:    kernel.NewServer(vppConn, kernel.WithDump(dumpOption)),
+			kernel.MECHANISM:    kernel.NewServer(vppConn, kernel.WithDump(dumper)),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 		}),
@@ -143,7 +143,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 					memif.NewClient(vppConn,
 						memif.WithChangeNetNS(),
 					),
-					kernel.NewClient(vppConn, kernel.WithDump(dumpOption)),
+					kernel.NewClient(vppConn, kernel.WithDump(dumper)),
 					vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 					wireguard.NewClient(vppConn, tunnelIP),
 					vlan.NewClient(vppConn, opts.domain2Device),

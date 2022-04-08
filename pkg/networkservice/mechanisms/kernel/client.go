@@ -37,7 +37,7 @@ func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkSer
 	}
 
 	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewClient(vppConn, kerneltap.WithDump(o.dumpOpt))
+		return kerneltap.NewClient(vppConn, kerneltap.WithDump(o.dump))
 	}
 	return kernelvethpair.NewClient(vppConn)
 }

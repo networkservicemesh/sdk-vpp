@@ -29,18 +29,15 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/tagtool"
 )
 
-// DumpFn - action with dumped NSM interfaces
-type DumpFn func(details *interfaces.SwInterfaceDetails) error
+// DumpNSMFn - dumps NSM interfaces applies onDump func for each of them
+type DumpNSMFn func(onDump OnDumpFn, isClient bool) error
 
-// DumpOption - option that configures chain elements
-type DumpOption struct {
-	Ctx     context.Context
-	PodName string
-}
+// OnDumpFn - action with dumped NSM interfaces
+type OnDumpFn func(ctx context.Context, vppConn api.Connection, details *interfaces.SwInterfaceDetails) error
 
 // DumpVppInterfaces - dumps vpp interfaces by tag.
 //	- onDump - determines what to do if we found an NSM interface during the dump
-func DumpVppInterfaces(ctx context.Context, vppConn api.Connection, podName string, isClient bool, onDump DumpFn) error {
+func DumpVppInterfaces(ctx context.Context, vppConn api.Connection, tagPrefix string, isClient bool, onDump OnDumpFn) error {
 	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
 	if err != nil {
 		return errors.Wrap(err, "SwInterfaceDump error")
@@ -57,11 +54,11 @@ func DumpVppInterfaces(ctx context.Context, vppConn api.Connection, podName stri
 		if err != nil {
 			continue
 		}
-		if t.PodName != podName || t.IsClient != isClient {
+		if t.TagPrefix != tagPrefix || t.IsClient != isClient {
 			continue
 		}
 
-		if err := onDump(details); err != nil {
+		if err := onDump(ctx, vppConn, details); err != nil {
 			log.FromContext(ctx).Error(err)
 		}
 	}

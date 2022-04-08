@@ -21,15 +21,15 @@ package kerneltap
 import "github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 
 type options struct {
-	dumpOpt *dumptool.DumpOption
+	dump dumptool.DumpNSMFn
 }
 
 // Option is an option pattern for kernel
 type Option func(o *options)
 
 // WithDump - sets dump parameters
-func WithDump(dump *dumptool.DumpOption) Option {
+func WithDump(dump dumptool.DumpNSMFn) Option {
 	return func(o *options) {
-		o.dumpOpt = dump
+		o.dump = dump
 	}
 }
