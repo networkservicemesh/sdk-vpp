@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,6 +23,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -34,12 +35,30 @@ import (
 
 type kernelTapServer struct {
 	vppConn api.Connection
+	dumpMap *dumptool.Map
 }
 
 // NewServer - return a new Server chain element implementing the kernel mechanism with vpp using tapv2
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	ctx := context.Background()
+	dumpMap := dumptool.NewMap(ctx, 0)
+	if o.dumpOpt != nil {
+		var err error
+		dumpMap, err = dump(ctx, vppConn, o.dumpOpt.PodName, o.dumpOpt.Timeout, false)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return &kernelTapServer{
 		vppConn: vppConn,
+		dumpMap: dumpMap,
 	}
 }
 
@@ -51,7 +70,7 @@ func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.N
 		return nil, err
 	}
 
-	if err := create(ctx, conn, k.vppConn, metadata.IsClient(k)); err != nil {
+	if err := create(ctx, conn, k.vppConn, k.dumpMap, metadata.IsClient(k)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -66,7 +85,7 @@ func (k *kernelTapServer) Request(ctx context.Context, request *networkservice.N
 }
 
 func (k *kernelTapServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	err := del(ctx, conn, k.vppConn, metadata.IsClient(k))
+	err := del(ctx, conn, k.vppConn, k.dumpMap, metadata.IsClient(k))
 	if err != nil {
 		log.FromContext(ctx).Error(err)
 	}

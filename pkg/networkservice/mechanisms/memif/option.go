@@ -16,9 +16,12 @@
 
 package memif
 
+import "github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+
 type memifOptions struct {
 	directMemifEnabled bool
 	changeNetNS        bool
+	dumpOpt            *dumptool.DumpOption
 }
 
 // Option is an option for the connect server
@@ -35,5 +38,12 @@ func WithDirectMemif() Option {
 func WithChangeNetNS() Option {
 	return func(o *memifOptions) {
 		o.changeNetNS = true
+	}
+}
+
+// WithDump - sets dump parameters
+func WithDump(dump *dumptool.DumpOption) Option {
+	return func(o *memifOptions) {
+		o.dumpOpt = dump
 	}
 }

@@ -20,6 +20,9 @@ package afpacket
 
 import (
 	"context"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+	"github.com/vishvananda/netlink"
+	"io"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -38,8 +41,12 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, dumpMap *dumptool.Map, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			ifindex.Store(ctx, isClient, val.(interface_types.InterfaceIndex))
+		}
+
 		if _, ok := ifindex.Load(ctx, isClient); ok {
 			return nil
 		}
@@ -78,8 +85,12 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	return nil
 }
 
-func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, dumpMap *dumptool.Map, isClient bool) error {
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			ifindex.Store(ctx, isClient, val.(interface_types.InterfaceIndex))
+		}
+
 		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
 		if !ok {
 			return nil
@@ -102,4 +113,42 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		return nil
 	}
 	return nil
+}
+
+func dump(ctx context.Context, vppConn api.Connection, podName string, timeout time.Duration, isClient bool) (*dumptool.Map, error) {
+	return dumptool.DumpInterfaces(ctx, vppConn, podName, timeout, isClient,
+		/* Function on dump */
+		func(details *interfaces.SwInterfaceDetails) (interface{}, error) {
+			if details.InterfaceDevType == dumptool.DevTypeAfPacket {
+				return details.SwIfIndex, nil
+			}
+			return nil, errors.New("Doesn't match the af_packet interface")
+		},
+		/* Function on delete */
+		func(val interface{}) error {
+			swIfIndex := val.(interface_types.InterfaceIndex)
+			afClient, err := af_packet.NewServiceClient(vppConn).AfPacketDump(ctx, &af_packet.AfPacketDump{})
+			if err != nil {
+				return err
+			}
+			defer func() { _ = afClient.Close() }()
+
+			for {
+				afDetails, err := afClient.Recv()
+				if err == io.EOF {
+					break
+				}
+				if afDetails == nil || afDetails.SwIfIndex != swIfIndex {
+					continue
+				}
+
+				if _, err := af_packet.NewServiceClient(vppConn).AfPacketDelete(ctx, &af_packet.AfPacketDelete{
+					HostIfName: afDetails.HostIfName,
+				}); err != nil {
+					return err
+				}
+				return nil
+			}
+			return netlink.LinkDel(val.(netlink.Link))
+		})
 }

@@ -24,8 +24,11 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
@@ -43,6 +46,8 @@ type memifClient struct {
 	vppConn     api.Connection
 	changeNetNS bool
 	nsInfo      NetNSInfo
+
+	dumpMap *dumptool.Map
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
@@ -52,11 +57,23 @@ func NewClient(vppConn api.Connection, options ...Option) networkservice.Network
 		o(opts)
 	}
 
+	chainCtx := context.Background()
+	dumpMap := dumptool.NewMap(chainCtx, 0)
+	if opts.dumpOpt != nil {
+		var err error
+		dumpMap, err = dump(chainCtx, vppConn, opts.dumpOpt.PodName, opts.dumpOpt.Timeout, true)
+		if err != nil {
+			log.FromContext(chainCtx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return chain.NewNetworkServiceClient(
 		&memifClient{
 			vppConn:     vppConn,
 			changeNetNS: opts.changeNetNS,
 			nsInfo:      newNetNSInfo(),
+			dumpMap:     dumpMap,
 		},
 	)
 }
@@ -86,7 +103,7 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 		}
 	}
 
-	if err = create(ctx, conn, m.vppConn, metadata.IsClient(m), m.nsInfo.netNS); err != nil {
+	if err = create(ctx, conn, m.vppConn, m.dumpMap, metadata.IsClient(m), m.nsInfo.netNS); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
@@ -101,7 +118,7 @@ func (m *memifClient) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (m *memifClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_ = del(ctx, conn, m.vppConn, metadata.IsClient(m))
+	_ = del(ctx, conn, m.vppConn, m.dumpMap, metadata.IsClient(m))
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
 

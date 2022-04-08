@@ -18,6 +18,8 @@ package l3xconnect
 
 import (
 	"context"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -31,12 +33,38 @@ import (
 
 type l3XconnectServer struct {
 	vppConn api.Connection
+	dumpMapC *dumptool.Map
+	dumpMapS *dumptool.Map
 }
 
 // NewServer returns a Server chain element that will cross connect a client and server vpp interface (if present)
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	ctx := context.Background()
+	dumpMapC := dumptool.NewMap(ctx, 0)
+	dumpMapS := dumptool.NewMap(ctx, 0)
+	if o.dumpOpt != nil {
+		var err error
+		dumpMapC, err = dump(ctx, vppConn, o.dumpOpt.PodName, o.dumpOpt.Timeout, true)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+		dumpMapS, err = dump(ctx, vppConn, o.dumpOpt.PodName, o.dumpOpt.Timeout, false)
+		if err != nil {
+			log.FromContext(ctx).Errorf("failed to Dump: %v", err)
+			/* TODO: set empty dumpMap here? */
+		}
+	}
+
 	return &l3XconnectServer{
 		vppConn: vppConn,
+		dumpMapC: dumpMapC,
+		dumpMapS: dumpMapS,
 	}
 }
 
@@ -52,6 +80,8 @@ func (v *l3XconnectServer) Request(ctx context.Context, request *networkservice.
 		return nil, err
 	}
 
+	_,_ = v.dumpMapC.LoadAndDelete(conn.GetId())
+	_,_ = v.dumpMapS.LoadAndDelete(conn.GetId())
 	if err := create(ctx, v.vppConn, conn); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
@@ -70,6 +100,8 @@ func (v *l3XconnectServer) Close(ctx context.Context, conn *networkservice.Conne
 	if conn.GetPayload() != payload.IP {
 		return next.Server(ctx).Close(ctx, conn)
 	}
+	_,_ = v.dumpMapC.LoadAndDelete(conn.GetId())
+	_,_ = v.dumpMapS.LoadAndDelete(conn.GetId())
 	_ = del(ctx, v.vppConn)
 	rv, err := next.Server(ctx).Close(ctx, conn)
 	if err != nil {

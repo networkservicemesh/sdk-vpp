@@ -18,6 +18,10 @@ package vxlan
 
 import (
 	"context"
+	interfaces "github.com/edwarnicke/govpp/binapi/interface"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
+	"io"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -33,8 +37,12 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
-func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isAdd, isClient bool) error {
+func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, dumpMap *dumptool.Map, isAdd, isClient bool) error {
 	if mechanism := vxlanMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
+		if val, loaded := dumpMap.LoadAndDelete(conn.GetId()); loaded {
+			ifindex.Store(ctx, isClient, val.(interface_types.InterfaceIndex))
+		}
+
 		port := mechanism.DstPort()
 		if isClient {
 			port = mechanism.SrcPort()
@@ -110,3 +118,50 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 	return nil
 }
+
+func dump(ctx context.Context, vppConn api.Connection, podName string, timeout time.Duration, isClient bool) (*dumptool.Map, error) {
+	return dumptool.DumpInterfaces(ctx, vppConn, podName, timeout, isClient,
+		/* Function on dump */
+		func(details *interfaces.SwInterfaceDetails) (interface{}, error) {
+			if details.InterfaceDevType == dumptool.DevTypeVxlan {
+				return details.SwIfIndex, nil
+			}
+			return nil, errors.New("Doesn't match the Vxlan interface")
+		},
+		/* Function on delete */
+		func(ifindex interface{}) error {
+			vxClient, err := vxlan.NewServiceClient(vppConn).VxlanTunnelV2Dump(ctx, &vxlan.VxlanTunnelV2Dump{
+				SwIfIndex: ifindex.(interface_types.InterfaceIndex),
+			})
+			if err != nil {
+				return err
+			}
+			defer func() { _ = vxClient.Close() }()
+
+			for {
+				vxDetails, err := vxClient.Recv()
+				if err == io.EOF {
+					break
+				}
+				if vxDetails == nil {
+					continue
+				}
+
+				_, err = vxlan.NewServiceClient(vppConn).VxlanAddDelTunnelV2(ctx, &vxlan.VxlanAddDelTunnelV2{
+					IsAdd:          false,
+					Instance:       vxDetails.Instance,
+					SrcAddress:     vxDetails.SrcAddress,
+					DstAddress:     vxDetails.DstAddress,
+					SrcPort:        vxDetails.SrcPort,
+					DstPort:        vxDetails.DstPort,
+					McastSwIfIndex: vxDetails.McastSwIfIndex,
+					EncapVrfID:     vxDetails.EncapVrfID,
+					DecapNextIndex: vxDetails.DecapNextIndex,
+					Vni:            vxDetails.Vni,
+				})
+				return err
+			}
+			return nil
+		})
+}
+

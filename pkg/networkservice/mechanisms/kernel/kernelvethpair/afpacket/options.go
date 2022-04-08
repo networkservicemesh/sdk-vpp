@@ -1,6 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
-//
-// Copyright (c) 2021-2022 Nordix Foundation.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,35 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vxlan
+// +build linux
 
-import (
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/vxlan/vni"
-)
+package afpacket
 
-// Option is an option pattern for vxlan server/client
-type Option func(o *vxlanOptions)
+import "github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 
-// WithPort sets vxlan udp port
-func WithPort(port uint16) Option {
-	return func(o *vxlanOptions) {
-		if port != 0 {
-			o.vxlanPort = port
-		}
-	}
+type options struct {
+	dumpOpt *dumptool.DumpOption
 }
+
+// Option is an option pattern for kernel
+type Option func(o *options)
 
 // WithDump - sets dump parameters
 func WithDump(dump *dumptool.DumpOption) Option {
-	return func(o *vxlanOptions) {
+	return func(o *options) {
 		o.dumpOpt = dump
 	}
-}
-
-
-type vxlanOptions struct {
-	vxlanPort uint16
-	vniKeys   []*vni.VniKey
-	dumpOpt *dumptool.DumpOption
 }
