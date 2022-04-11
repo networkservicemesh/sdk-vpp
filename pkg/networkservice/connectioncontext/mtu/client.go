@@ -28,7 +28,6 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vlan"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
@@ -81,22 +80,11 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 		return conn, nil
 	}
 
-	if conn.GetPayload() == payload.Ethernet {
-		if err := setVPPL2MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			if closeErr := m.closeOnFailure(postponeCtxFunc, conn, opts); closeErr != nil {
-				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
-			}
-			return nil, err
+	if err := setVPPMTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		if closeErr := m.closeOnFailure(postponeCtxFunc, conn, opts); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
-	}
-
-	if conn.GetPayload() == payload.IP {
-		if err := setVPPL3MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			if closeErr := m.closeOnFailure(postponeCtxFunc, conn, opts); closeErr != nil {
-				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
-			}
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return conn, nil
