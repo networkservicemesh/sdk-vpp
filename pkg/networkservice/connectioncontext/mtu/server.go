@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
@@ -72,22 +71,11 @@ func (m *mtuServer) Request(ctx context.Context, request *networkservice.Network
 		return nil, err
 	}
 
-	if conn.GetPayload() == payload.Ethernet {
-		if err := setVPPL2MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
-				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
-			}
-			return nil, err
+	if err := setVPPMTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
+		if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
-	}
-
-	if conn.GetPayload() == payload.IP {
-		if err := setVPPL3MTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
-			if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
-				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
-			}
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return conn, nil

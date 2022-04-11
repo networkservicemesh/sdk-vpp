@@ -30,10 +30,6 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
-const (
-	overhead = 50
-)
-
 func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint32, error) {
 	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
 	if err != nil {
@@ -67,10 +63,29 @@ func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 			if err != nil {
 				return 0, errors.Wrapf(err, "error attempting to get interface ip address for %q (swIfIndex: %q) to determine MTU for tunnelIP %q", details.InterfaceName, details.SwIfIndex, tunnelIP)
 			}
-			if types.FromVppAddressWithPrefix(ipAddressDetails.Prefix).IP.Equal(tunnelIP) {
-				return (uint32(details.LinkMtu) - overhead), nil
+			if types.FromVppAddressWithPrefix(ipAddressDetails.Prefix).IP.Equal(tunnelIP) && details.Mtu[0] != 0 {
+				return (details.Mtu[0] - overhead(tunnelIP.To4() == nil)), nil
 			}
 		}
 	}
-	return 0, errors.Errorf("unable to find interface in vpp with tunnelIP: %q", tunnelIP)
+	return 0, errors.Errorf("unable to find interface in vpp with tunnelIP: %q or interface IP MTU is zero", tunnelIP)
+}
+
+func overhead(isV6 bool) uint32 {
+	if !isV6 {
+		// outer ipv4 header - 20 bytes
+		// outer udp header - 8 bytes
+		// vxlan header - 8 bytes
+		// inner ethernet header - 14 bytes
+		// optional overhead for 802.1q vlan tags - 4 bytes
+		// total - 54 bytes
+		return 54
+	}
+	// outer ipv6 header - 40 bytes
+	// outer udp header - 8 bytes
+	// vxlan header - 8 bytes
+	// inner ethernet header - 14 bytes
+	// optional overhead for 802.1q vlan tags - 4 bytes
+	// total - 74 bytes
+	return 74
 }

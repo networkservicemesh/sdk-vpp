@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -34,36 +34,7 @@ const (
 	jumboFrameSize = 9000
 )
 
-func setVPPL2MTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
-	now := time.Now()
-	swIfIndex, ok := ifindex.Load(ctx, isClient)
-	if !ok || conn.GetContext().GetMTU() == 0 {
-		return nil
-	}
-	setMTU := &interfaces.HwInterfaceSetMtu{
-		SwIfIndex: swIfIndex,
-		Mtu:       uint16(conn.GetContext().GetMTU()),
-	}
-	_, err := interfaces.NewServiceClient(vppConn).HwInterfaceSetMtu(ctx, setMTU)
-	if err != nil {
-		err = errors.WithStack(err)
-		log.FromContext(ctx).
-			WithField("SwIfIndex", setMTU.SwIfIndex).
-			WithField("MTU", setMTU.Mtu).
-			WithField("duration", time.Since(now)).
-			WithField("error", err).
-			WithField("vppapi", "HwInterfaceSetMtu").Debug("error")
-		return err
-	}
-	log.FromContext(ctx).
-		WithField("SwIfIndex", setMTU.SwIfIndex).
-		WithField("MTU", setMTU.Mtu).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "HwInterfaceSetMtu").Debug("completed")
-	return nil
-}
-
-func setVPPL3MTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	now := time.Now()
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok || conn.GetContext().GetMTU() == 0 {
