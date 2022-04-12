@@ -60,7 +60,7 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 	if mechanism := vlan.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		localMtu, loaded := m.mtu.Load(swIfIndex)
 		if !loaded {
-			localMtu, err = getMTU(ctx, m.vppConn, swIfIndex)
+			localMtu, err = getL3MTU(ctx, m.vppConn, swIfIndex)
 			if err != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()

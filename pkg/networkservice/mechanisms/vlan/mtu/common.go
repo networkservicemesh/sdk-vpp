@@ -28,7 +28,9 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-func getMTU(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (uint32, error) {
+const l3MtuIndex = 0
+
+func getL3MTU(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (uint32, error) {
 	now := time.Now()
 	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
 		SwIfIndex: swIfIndex,
@@ -47,5 +49,5 @@ func getMTU(ctx context.Context, vppConn api.Connection, swIfIndex interface_typ
 		WithField("details.LinkMtu", details.LinkMtu).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceDump").Debug("completed")
-	return uint32(details.LinkMtu), nil
+	return details.Mtu[l3MtuIndex], nil
 }
