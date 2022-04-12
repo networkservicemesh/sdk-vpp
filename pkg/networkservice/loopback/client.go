@@ -56,7 +56,7 @@ func (l *loopbackClient) Request(ctx context.Context, request *networkservice.Ne
 	if err := createLoopback(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); err != nil {
 		return nil, err
 	}
-	postponeCtxFunc := postpone.Context(ctx)
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()

@@ -25,6 +25,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 )
 
 type loopbackServer struct {
@@ -53,9 +54,13 @@ func (l *loopbackServer) Request(ctx context.Context, request *networkservice.Ne
 	if err := createLoopback(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l)); err != nil {
 		return nil, err
 	}
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		del(ctx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l))
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+		del(closeCtx, l.vppConn, networkService, l.loopbacks, metadata.IsClient(l))
 	}
 	return conn, err
 }
