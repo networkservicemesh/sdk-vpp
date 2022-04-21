@@ -28,6 +28,9 @@ type vrfInfo struct {
 
 	/* count - the number of clients using this vrf ID */
 	count uint32
+
+	/* attached - */
+	attached bool
 }
 
 type vrfMap struct {

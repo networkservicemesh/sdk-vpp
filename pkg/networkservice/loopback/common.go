@@ -68,14 +68,17 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 
 func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
-		t.exec.AsyncExec(func() {
-			t.entries[networkService].count--
+		<-t.exec.AsyncExec(func() {
+			info, ok := t.entries[networkService]
+			if ok {
+				info.count--
 
-			/* If there are no more clients using the loopback - delete it */
-			if t.entries[networkService].count == 0 {
-				delete(t.entries, networkService)
-				if err := delVPP(ctx, vppConn, swIfIndex); err != nil {
-					log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", err)
+				/* If there are no more clients using the loopback - delete it */
+				if info.count == 0 {
+					delete(t.entries, networkService)
+					if err := delVPP(ctx, vppConn, swIfIndex); err != nil {
+						log.FromContext(ctx).Errorf("unable to delete loopback interface: %v", err)
+					}
 				}
 			}
 		})

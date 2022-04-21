@@ -68,30 +68,26 @@ func (v *vrfClient) Request(ctx context.Context, request *networkservice.Network
 			t = v.m.ipv6
 		}
 		if _, ok := Load(ctx, metadata.IsClient(v), isIPv6); !ok {
-			vrfID, loaded, err := create(ctx, v.vppConn, networkService, t, isIPv6)
+			vrfID, _, err := create(ctx, v.vppConn, networkService, t, isIPv6)
 			if err != nil {
 				return nil, err
 			}
 			Store(ctx, metadata.IsClient(v), isIPv6, vrfID)
-			if loaded {
-				loadIfaces = []ifindex.LoadInterfaceFn{ifindex.Load}
-			}
 		} else {
 			loadIfaces = nil
 		}
 	}
 
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
-
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
-		delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
+		delV46(ctx, v.vppConn, v.m, networkService, metadata.IsClient(v))
 		return conn, err
 	}
 
 	for _, loadFn := range loadIfaces {
 		if swIfIndex, ok := loadFn(ctx, metadata.IsClient(v)); ok {
-			if attachErr := attach(ctx, v.vppConn, swIfIndex, metadata.IsClient(v)); attachErr != nil {
+			if attachErr := attach(ctx, v.vppConn, networkService, swIfIndex, v.m, metadata.IsClient(v)); attachErr != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
 

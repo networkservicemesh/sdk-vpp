@@ -18,6 +18,7 @@ package vrf
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,6 +31,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
+var MyMutex sync.Mutex
+
 func create(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vtfID uint32, loaded bool, err error) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
@@ -41,7 +44,8 @@ func create(ctx context.Context, vppConn api.Connection, networkService string, 
 			return vrfID, contains, err
 		}
 		info = &vrfInfo{
-			id: vrfID,
+			id:       vrfID,
+			attached: false,
 		}
 		t.entries[networkService] = info
 	}
@@ -69,27 +73,42 @@ func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32
 	return reply.Table.TableID, nil
 }
 
-func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isClient bool) error {
+func attach(ctx context.Context, vppConn api.Connection, networkService string, swIfIndex interface_types.InterfaceIndex, m *Map, isClient bool) error {
 	for _, isIPv6 := range []bool{false, true} {
-		now := time.Now()
-		vrfID, ok := Load(ctx, isClient, isIPv6)
-		if !ok {
-			/* Use default vrf ID*/
-			vrfID = 0
+		t := m.ipv4
+		if isIPv6 {
+			t = m.ipv6
 		}
-		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
-			SwIfIndex: swIfIndex,
-			IsIPv6:    isIPv6,
-			VrfID:     vrfID,
-		}); err != nil {
-			return errors.WithStack(err)
+
+		log.FromContext(ctx).Info("MY_INFO attach begin")
+		t.mut.Lock()
+		if !t.entries[networkService].attached {
+			log.FromContext(ctx).Info("MY_INFO attach in progress")
+			now := time.Now()
+			vrfID, ok := Load(ctx, isClient, isIPv6)
+			if !ok {
+				/* Use default vrf ID*/
+				vrfID = 0
+			}
+			if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
+				SwIfIndex: swIfIndex,
+				IsIPv6:    isIPv6,
+				VrfID:     vrfID,
+			}); err != nil {
+				return errors.WithStack(err)
+			}
+			log.FromContext(ctx).
+				WithField("swIfIndex", swIfIndex).
+				WithField("isIPv6", isIPv6).
+				WithField("duration", time.Since(now)).
+				WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
+
+			t.entries[networkService].attached = true
 		}
-		log.FromContext(ctx).
-			WithField("swIfIndex", swIfIndex).
-			WithField("isIPv6", isIPv6).
-			WithField("duration", time.Since(now)).
-			WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
+		t.mut.Unlock()
+		log.FromContext(ctx).Info("MY_INFO attach completed")
 	}
+
 	return nil
 }
 
@@ -129,6 +148,7 @@ func delVPP(ctx context.Context, vppConn api.Connection, vrfID uint32, isIPv6 bo
 		WithField("vppapi", "IPTableAddDel").Debug("completed")
 	return nil
 }
+
 func delV46(ctx context.Context, vppConn api.Connection, m *Map, networkService string, isClient bool) {
 	del(ctx, vppConn, networkService, m.ipv6, true, isClient)
 	del(ctx, vppConn, networkService, m.ipv4, false, isClient)
