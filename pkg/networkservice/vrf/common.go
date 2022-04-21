@@ -18,7 +18,6 @@ package vrf
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,8 +29,6 @@ import (
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
-
-var MyMutex sync.Mutex
 
 func create(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vtfID uint32, loaded bool, err error) {
 	t.mut.Lock()
