@@ -19,6 +19,7 @@ package vrf
 import (
 	"context"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 	"github.com/pkg/errors"
 
@@ -85,17 +86,42 @@ func (v *vrfClient) Request(ctx context.Context, request *networkservice.Network
 		return conn, err
 	}
 
-	for _, loadFn := range loadIfaces {
-		if swIfIndex, ok := loadFn(ctx, metadata.IsClient(v)); ok {
-			if attachErr := attach(ctx, v.vppConn, networkService, swIfIndex, v.m, metadata.IsClient(v)); attachErr != nil {
-				closeCtx, cancelClose := postponeCtxFunc()
-				defer cancelClose()
-
-				if _, closeErr := v.Close(closeCtx, conn, opts...); closeErr != nil {
-					attachErr = errors.Wrapf(attachErr, "connection closed with error: %s", closeErr.Error())
-				}
-				return nil, attachErr
+	if loadIfaces != nil {
+		for _, isIPv6 := range []bool{false, true} {
+			t := v.m.ipv4
+			if isIPv6 {
+				t = v.m.ipv6
 			}
+
+			log.FromContext(ctx).Info("MY_INFO [client] attach begin")
+			t.mut.Lock()
+			if t.entries[networkService].attached {
+				loadIfaces = []ifindex.LoadInterfaceFn{ifindex.Load}
+			}
+
+			log.FromContext(ctx).Info("MY_INFO [client] attach in progress")
+
+			for _, loadFn := range loadIfaces {
+				if swIfIndex, ok := loadFn(ctx, metadata.IsClient(v)); ok {
+					if attachErr := attach(ctx, v.vppConn, swIfIndex, t, isIPv6, metadata.IsClient(v)); attachErr != nil {
+						closeCtx, cancelClose := postponeCtxFunc()
+						defer cancelClose()
+						delV46(ctx, v.vppConn, v.m, networkService, metadata.IsClient(v))
+
+						if _, closeErr := next.Server(closeCtx).Close(closeCtx, conn); closeErr != nil {
+							attachErr = errors.Wrapf(attachErr, "connection closed with error: %s", closeErr.Error())
+						}
+						return nil, attachErr
+					}
+				}
+			}
+
+			if len(loadIfaces) == 2 {
+				t.entries[networkService].attached = true
+			}
+
+			t.mut.Unlock()
+			log.FromContext(ctx).Info("MY_INFO [client] attach completed")
 		}
 	}
 

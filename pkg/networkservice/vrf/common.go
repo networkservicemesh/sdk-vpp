@@ -70,41 +70,25 @@ func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32
 	return reply.Table.TableID, nil
 }
 
-func attach(ctx context.Context, vppConn api.Connection, networkService string, swIfIndex interface_types.InterfaceIndex, m *Map, isClient bool) error {
-	for _, isIPv6 := range []bool{false, true} {
-		t := m.ipv4
-		if isIPv6 {
-			t = m.ipv6
-		}
-
-		log.FromContext(ctx).Info("MY_INFO attach begin")
-		t.mut.Lock()
-		if !t.entries[networkService].attached {
-			log.FromContext(ctx).Info("MY_INFO attach in progress")
-			now := time.Now()
-			vrfID, ok := Load(ctx, isClient, isIPv6)
-			if !ok {
-				/* Use default vrf ID*/
-				vrfID = 0
-			}
-			if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
-				SwIfIndex: swIfIndex,
-				IsIPv6:    isIPv6,
-				VrfID:     vrfID,
-			}); err != nil {
-				return errors.WithStack(err)
-			}
-			log.FromContext(ctx).
-				WithField("swIfIndex", swIfIndex).
-				WithField("isIPv6", isIPv6).
-				WithField("duration", time.Since(now)).
-				WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
-
-			t.entries[networkService].attached = true
-		}
-		t.mut.Unlock()
-		log.FromContext(ctx).Info("MY_INFO attach completed")
+func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, t *vrfMap, isIPv6, isClient bool) error {
+	now := time.Now()
+	vrfID, ok := Load(ctx, isClient, isIPv6)
+	if !ok {
+		/* Use default vrf ID*/
+		vrfID = 0
 	}
+	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
+		SwIfIndex: swIfIndex,
+		IsIPv6:    isIPv6,
+		VrfID:     vrfID,
+	}); err != nil {
+		return errors.WithStack(err)
+	}
+	log.FromContext(ctx).
+		WithField("swIfIndex", swIfIndex).
+		WithField("isIPv6", isIPv6).
+		WithField("duration", time.Since(now)).
+		WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
 
 	return nil
 }
