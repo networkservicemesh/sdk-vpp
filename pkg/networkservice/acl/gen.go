@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-//go:generate go-syncmap -output acl_indices_map.gen.go -type aclIndicesMap<string,[]uint32>
+//go:generate go run github.com/searKing/golang/tools/cmd/go-syncmap -output acl_indices_map.gen.go -type aclIndicesMap<string,[]uint32>
 
 // aclIndicesMap - sync.Map with key connection ID value of int index
 type aclIndicesMap sync.Map

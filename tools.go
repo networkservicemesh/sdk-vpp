@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Nordix Foundation.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,13 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mtu
+//go:build tools
+
+package tools
 
 import (
-	"sync"
+	_ "github.com/searKing/golang/tools/cmd/go-syncmap"
 )
-
-//go:generate go run github.com/searKing/golang/tools/cmd/go-syncmap -output mtu_map.gen.go -type mtuMap<github.com/edwarnicke/govpp/binapi/interface_types.InterfaceIndex,uint32>
-
-// mtuMap - sync.Map with key type interface_types.InterfaceIndex value of int index
-type mtuMap sync.Map

@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-//go:generate go-syncmap -output tunnel_ip_map.gen.go -type IPPortMap<ipPortKey,struct{}>
+//go:generate go run github.com/searKing/golang/tools/cmd/go-syncmap -output tunnel_ip_map.gen.go -type IPPortMap<ipPortKey,struct{}>
 
 // IPPortMap - sync.Map with key ipPortKey value of struct{}
 type IPPortMap sync.Map
