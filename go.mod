@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.3.0-rc.1.0.20220405210054-fbcde048efa5
 	github.com/networkservicemesh/sdk v0.5.1-0.20220415125440-009c3f3a16bd
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220415125717-fb284fbe9fc1
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220425220100-9d2c7c7ada92
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
