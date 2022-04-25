@@ -27,11 +27,12 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/ip"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-func create(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vtfID uint32, loaded bool, err error) {
+func create(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6 bool) (vtfID uint32, err error) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
@@ -39,7 +40,7 @@ func create(ctx context.Context, vppConn api.Connection, networkService string, 
 	if !contains {
 		vrfID, err := createVPP(ctx, vppConn, isIPv6)
 		if err != nil {
-			return vrfID, contains, err
+			return vrfID, err
 		}
 		info = &vrfInfo{
 			id:       vrfID,
@@ -47,9 +48,8 @@ func create(ctx context.Context, vppConn api.Connection, networkService string, 
 		}
 		t.entries[networkService] = info
 	}
-	info.count++
 
-	return info.id, contains, nil
+	return info.id, nil
 }
 
 func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32, error) {
@@ -79,6 +79,7 @@ func attach(ctx context.Context, vppConn api.Connection, networkService string, 
 		}
 
 		t.mut.Lock()
+		defer t.mut.Unlock()
 		vrfInfo := t.entries[networkService]
 		_, attached := vrfInfo.attached[swIfIndex]
 
@@ -103,13 +104,8 @@ func attach(ctx context.Context, vppConn api.Connection, networkService string, 
 				WithField("duration", time.Since(now)).
 				WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
 
-			log.FromContext(ctx).Infof("MY_INFO swIfIndex has been attached: %v", swIfIndex)
 			t.entries[networkService].attached[swIfIndex] = struct{}{}
-		} else {
-			log.FromContext(ctx).Infof("MY_INFO swIfIndex already attached: %v", swIfIndex)
 		}
-
-		t.mut.Unlock()
 	}
 	return nil
 }
@@ -118,10 +114,7 @@ func del(ctx context.Context, vppConn api.Connection, networkService string, t *
 	if vrfID, ok := LoadAndDelete(ctx, isClient, isIPv6); ok {
 		t.mut.Lock()
 		if vrfInfo, ok := t.entries[networkService]; ok {
-			vrfInfo.count--
-
 			swIfIndex, _ := ifindex.Load(ctx, isClient)
-			log.FromContext(ctx).Infof("MY_INFO swIfIndex has been load: %v", swIfIndex)
 			delete(vrfInfo.attached, swIfIndex)
 
 			/* If there are no more clients using the vrf - delete it */

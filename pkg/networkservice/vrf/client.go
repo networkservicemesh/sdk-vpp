@@ -68,7 +68,7 @@ func (v *vrfClient) Request(ctx context.Context, request *networkservice.Network
 			t = v.m.ipv6
 		}
 		if _, ok := Load(ctx, metadata.IsClient(v), isIPv6); !ok {
-			vrfID, _, err := create(ctx, v.vppConn, networkService, t, isIPv6)
+			vrfID, err := create(ctx, v.vppConn, networkService, t, isIPv6)
 			if err != nil {
 				return nil, err
 			}

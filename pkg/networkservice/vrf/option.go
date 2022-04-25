@@ -20,15 +20,13 @@ import (
 	"sync"
 
 	"github.com/edwarnicke/govpp/binapi/interface_types"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type vrfInfo struct {
 	/* vrf ID */
 	id uint32
-
-	/* count - the number of clients using this vrf ID */
-	count uint32
 
 	/* attached - attached interfaces */
 	attached map[interface_types.InterfaceIndex]struct{}
