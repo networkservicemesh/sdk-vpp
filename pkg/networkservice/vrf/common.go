@@ -27,6 +27,7 @@ import (
 	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/ip"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
@@ -41,7 +42,8 @@ func create(ctx context.Context, vppConn api.Connection, networkService string, 
 			return vrfID, contains, err
 		}
 		info = &vrfInfo{
-			id: vrfID,
+			id:       vrfID,
+			attached: make(map[interface_types.InterfaceIndex]struct{}),
 		}
 		t.entries[networkService] = info
 	}
@@ -69,26 +71,45 @@ func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32
 	return reply.Table.TableID, nil
 }
 
-func attach(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, isClient bool) error {
+func attach(ctx context.Context, vppConn api.Connection, networkService string, m *Map, swIfIndex interface_types.InterfaceIndex, isClient bool) error {
 	for _, isIPv6 := range []bool{false, true} {
-		now := time.Now()
-		vrfID, ok := Load(ctx, isClient, isIPv6)
-		if !ok {
-			/* Use default vrf ID*/
-			vrfID = 0
+		t := m.ipv4
+		if isIPv6 {
+			t = m.ipv6
 		}
-		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
-			SwIfIndex: swIfIndex,
-			IsIPv6:    isIPv6,
-			VrfID:     vrfID,
-		}); err != nil {
-			return errors.WithStack(err)
+
+		t.mut.Lock()
+		vrfInfo := t.entries[networkService]
+		_, attached := vrfInfo.attached[swIfIndex]
+
+		if !attached {
+			now := time.Now()
+			vrfID, ok := Load(ctx, isClient, isIPv6)
+			if !ok {
+				/* Use default vrf ID*/
+				vrfID = 0
+			}
+			if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetTable(ctx, &interfaces.SwInterfaceSetTable{
+				SwIfIndex: swIfIndex,
+				IsIPv6:    isIPv6,
+				VrfID:     vrfID,
+			}); err != nil {
+				return errors.WithStack(err)
+			}
+
+			log.FromContext(ctx).
+				WithField("swIfIndex", swIfIndex).
+				WithField("isIPv6", isIPv6).
+				WithField("duration", time.Since(now)).
+				WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
+
+			log.FromContext(ctx).Infof("MY_INFO swIfIndex has been attached: %v", swIfIndex)
+			t.entries[networkService].attached[swIfIndex] = struct{}{}
+		} else {
+			log.FromContext(ctx).Infof("MY_INFO swIfIndex already attached: %v", swIfIndex)
 		}
-		log.FromContext(ctx).
-			WithField("swIfIndex", swIfIndex).
-			WithField("isIPv6", isIPv6).
-			WithField("duration", time.Since(now)).
-			WithField("vppapi", "SwInterfaceSetTable").Debug("completed")
+
+		t.mut.Unlock()
 	}
 	return nil
 }
@@ -99,8 +120,12 @@ func del(ctx context.Context, vppConn api.Connection, networkService string, t *
 		if vrfInfo, ok := t.entries[networkService]; ok {
 			vrfInfo.count--
 
+			swIfIndex, _ := ifindex.Load(ctx, isClient)
+			log.FromContext(ctx).Infof("MY_INFO swIfIndex has been load: %v", swIfIndex)
+			delete(vrfInfo.attached, swIfIndex)
+
 			/* If there are no more clients using the vrf - delete it */
-			if vrfInfo.count == 0 {
+			if len(vrfInfo.attached) == 1 {
 				delete(t.entries, networkService)
 				_ = delVPP(ctx, vppConn, vrfID, isIPv6)
 			}

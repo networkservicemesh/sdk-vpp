@@ -68,7 +68,7 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 
 func del(ctx context.Context, vppConn api.Connection, networkService string, t *Map, isClient bool) {
 	if swIfIndex, ok := LoadAndDelete(ctx, isClient); ok {
-		t.exec.AsyncExec(func() {
+		<-t.exec.AsyncExec(func() {
 			t.entries[networkService].count--
 
 			/* If there are no more clients using the loopback - delete it */
