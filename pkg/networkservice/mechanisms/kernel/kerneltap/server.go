@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -37,7 +37,18 @@ type kernelTapServer struct {
 }
 
 // NewServer - return a new Server chain element implementing the kernel mechanism with vpp using tapv2
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	if o.dump != nil {
+		if err := o.dump(onDump, true); err != nil {
+			log.FromContext(context.Background()).Error(err)
+		}
+	}
+
 	return &kernelTapServer{
 		vppConn: vppConn,
 	}

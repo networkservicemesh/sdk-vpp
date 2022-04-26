@@ -147,18 +147,29 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 		if !ok {
 			return nil
 		}
-		now := time.Now()
-		_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
-			SwIfIndex: swIfIndex,
-		})
-		if err != nil {
-			return errors.Wrapf(err, "unable to delete connection with SwIfIndex %v", swIfIndex)
-		}
-		log.FromContext(ctx).
-			WithField("SwIfIndex", swIfIndex).
-			WithField("duration", time.Since(now)).
-			WithField("vppapi", "TapDeleteV2").Debug("completed")
-		return nil
+		return delVpp(ctx, vppConn, swIfIndex)
+	}
+	return nil
+}
+
+func delVpp(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) error {
+	now := time.Now()
+	_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
+		SwIfIndex: swIfIndex,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "unable to delete connection with SwIfIndex %v", swIfIndex)
+	}
+	log.FromContext(ctx).
+		WithField("SwIfIndex", swIfIndex).
+		WithField("duration", time.Since(now)).
+		WithField("vppapi", "TapDeleteV2").Debug("completed")
+	return nil
+}
+
+func onDump(ctx context.Context, vppConn api.Connection, details *interfaces.SwInterfaceDetails) error {
+	if details.InterfaceDevType == DevTypeTap {
+		return delVpp(ctx, vppConn, details.SwIfIndex)
 	}
 	return nil
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/tagtool"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
@@ -36,16 +37,21 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 	}
 
 	now := time.Now()
+	tag := tagtool.ConvertToString(&tagtool.Tag{
+		TagPrefix: conn.Path.PathSegments[conn.Path.Index].Name,
+		ConnID:    conn.GetId(),
+		IsClient:  isClient,
+	})
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceTagAddDel(ctx, &interfaces.SwInterfaceTagAddDel{
 		IsAdd:     true,
 		SwIfIndex: swIfIndex,
-		Tag:       conn.GetId(),
+		Tag:       tag,
 	}); err != nil {
 		return errors.WithStack(err)
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
-		WithField("tag", conn.GetId()).
+		WithField("tag", tag).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceTagAddDel").Debug("completed")
 	return nil

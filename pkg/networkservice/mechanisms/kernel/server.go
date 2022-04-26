@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,9 +30,14 @@ import (
 )
 
 // NewServer return a NetworkServiceServer chain element that correctly handles the kernel Mechanism
-func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
+func NewServer(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	if _, err := os.Stat(vnetFilename); err == nil {
-		return kerneltap.NewServer(vppConn)
+		return kerneltap.NewServer(vppConn, kerneltap.WithDump(o.dump))
 	}
 	return kernelvethpair.NewServer(vppConn)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,14 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kerneltap
+// +build linux
 
-import "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+package kernel
 
-const (
-	// MECHANISM string
-	MECHANISM = kernel.MECHANISM
+import "github.com/networkservicemesh/sdk-vpp/pkg/tools/dumptool"
 
-	// DevTypeTap - tap interface dev type
-	DevTypeTap = "virtio"
-)
+type options struct {
+	dump dumptool.DumpNSMFn
+}
+
+// Option is an option pattern for kernel
+type Option func(o *options)
+
+// WithDump - sets dump parameters
+func WithDump(dump dumptool.DumpNSMFn) Option {
+	return func(o *options) {
+		o.dump = dump
+	}
+}

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -39,7 +39,18 @@ type kernelTapClient struct {
 }
 
 // NewClient - return a new Client chain element implementing the kernel mechanism with vpp using tapv2
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	if o.dump != nil {
+		if err := o.dump(onDump, false); err != nil {
+			log.FromContext(context.Background()).Error(err)
+		}
+	}
+
 	return &kernelTapClient{
 		vppConn: vppConn,
 	}
