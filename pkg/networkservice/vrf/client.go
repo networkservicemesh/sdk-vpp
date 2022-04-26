@@ -104,7 +104,10 @@ func (v *vrfClient) Request(ctx context.Context, request *networkservice.Network
 }
 
 func (v *vrfClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_, err := next.Client(ctx).Close(ctx, conn, opts...)
 	delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
+	_, err := next.Client(ctx).Close(ctx, conn, opts...)
+
+	Delete(ctx, metadata.IsClient(v), true)
+	Delete(ctx, metadata.IsClient(v), false)
 	return &empty.Empty{}, err
 }

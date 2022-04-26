@@ -99,8 +99,10 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 }
 
 func (v *vrfServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
 	_, err := next.Server(ctx).Close(ctx, conn)
 
-	delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
+	Delete(ctx, metadata.IsClient(v), true)
+	Delete(ctx, metadata.IsClient(v), false)
 	return &empty.Empty{}, err
 }

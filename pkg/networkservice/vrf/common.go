@@ -111,7 +111,7 @@ func attach(ctx context.Context, vppConn api.Connection, networkService string, 
 }
 
 func del(ctx context.Context, vppConn api.Connection, networkService string, t *vrfMap, isIPv6, isClient bool) {
-	if vrfID, ok := LoadAndDelete(ctx, isClient, isIPv6); ok {
+	if vrfID, ok := Load(ctx, isClient, isIPv6); ok {
 		t.mut.Lock()
 		if vrfInfo, ok := t.entries[networkService]; ok {
 			swIfIndex, _ := ifindex.Load(ctx, isClient)
