@@ -156,7 +156,7 @@ func delV46(ctx context.Context, vppConn api.Connection, m *Map, networkService 
 	del(ctx, vppConn, networkService, m.ipv4, false, isClient)
 }
 
-func delTableIDV46(ctx context.Context, isClient bool) {
+func delTableFromMetadataV46(ctx context.Context, isClient bool) {
 	Delete(ctx, isClient, true)
 	Delete(ctx, isClient, false)
 }

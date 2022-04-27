@@ -77,7 +77,7 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
-		delTableIDV46(ctx, metadata.IsClient(v))
+		delTableFromMetadataV46(ctx, metadata.IsClient(v))
 
 		return conn, err
 	}
@@ -102,7 +102,7 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 func (v *vrfServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
 	delV46(ctx, v.vppConn, v.m, conn.GetNetworkService(), metadata.IsClient(v))
 	_, err := next.Server(ctx).Close(ctx, conn)
-	delTableIDV46(ctx, metadata.IsClient(v))
+	delTableFromMetadataV46(ctx, metadata.IsClient(v))
 
 	return &empty.Empty{}, err
 }
