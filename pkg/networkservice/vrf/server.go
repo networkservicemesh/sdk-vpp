@@ -88,7 +88,7 @@ func (v *vrfServer) Request(ctx context.Context, request *networkservice.Network
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
 
-				if _, closeErr := next.Server(closeCtx).Close(closeCtx, conn); closeErr != nil {
+				if _, closeErr := v.Close(closeCtx, conn); closeErr != nil {
 					attachErr = errors.Wrapf(attachErr, "connection closed with error: %s", closeErr.Error())
 				}
 				return nil, attachErr
