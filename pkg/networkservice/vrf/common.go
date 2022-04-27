@@ -116,7 +116,10 @@ func del(ctx context.Context, vppConn api.Connection, networkService string, t *
 		if vrfInfo, ok := t.entries[networkService]; ok {
 			swIfIndex, _ := ifindex.Load(ctx, isClient)
 			delete(vrfInfo.attached, swIfIndex)
-			log.FromContext(ctx).Debugf("swIfIndex [%v] deleted from vrfInfo.attached map", swIfIndex)
+			log.FromContext(ctx).
+				WithField("swIfIndex", swIfIndex).
+				WithField("networkService", networkService).
+				Debugf("swIfIndex deleted from vrfInfo.attached map")
 
 			/* If there are no more clients using the vrf - delete it */
 			if len(vrfInfo.attached) == 1 {
