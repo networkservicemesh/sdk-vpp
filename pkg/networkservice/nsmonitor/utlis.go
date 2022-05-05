@@ -57,7 +57,7 @@ func resolveProcByInodeURL(inodeURL string) (string, error) {
 			return fmt.Sprintf("/proc/%v", pid), nil
 		}
 	}
-	return "", errors.New(fmt.Sprintf("inode %v is not found in /proc", inode))
+	return "", errors.Errorf("inode %v is not found in /proc", inode)
 }
 
 func getProcName(pid uint64) (string, error) {
