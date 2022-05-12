@@ -7,11 +7,11 @@ require (
 	github.com/edwarnicke/govpp v0.0.0-20220509171552-731995b8f574
 	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.5.2
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.3.2-0.20220512020524-c57fd2623351
 	github.com/networkservicemesh/sdk v0.5.1-0.20220512090615-4f565a9784e0
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220512090846-1ab1aa466ce0
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220512161349-4d24356e42ea
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4

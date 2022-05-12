@@ -86,8 +86,9 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/uuid v1.1.2 h1:EVhdT+1Kseyi1/pUmXKaFxYsDNy9RQYkMWRH68J/W7Y=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.2.0 h1:qJYtXnJRWmpe7m/3XlyhrsLrEURqHRM2kxzoxXqyUDs=
+github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gorilla/mux v0.0.0-20181024020800-521ea7b17d02/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
@@ -123,8 +124,8 @@ github.com/networkservicemesh/api v1.3.2-0.20220512020524-c57fd2623351 h1:xkwnRa
 github.com/networkservicemesh/api v1.3.2-0.20220512020524-c57fd2623351/go.mod h1:hOF2844BSstH1311oDMDgqqXS+kdc77htZNPRKl9mf8=
 github.com/networkservicemesh/sdk v0.5.1-0.20220512090615-4f565a9784e0 h1:7ObtZZ4na7PIkco8XTIiGTgh9FhvDtTqKHTS1epR5HI=
 github.com/networkservicemesh/sdk v0.5.1-0.20220512090615-4f565a9784e0/go.mod h1:gOYlqDYMdIMCIAfl257+Jn8KNHKVQDZjRIvYSA6wH9s=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220512090846-1ab1aa466ce0 h1:jA12434k3miWlCrT/IO9wmvlpvQqud8XtmNK/lcBJvQ=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220512090846-1ab1aa466ce0/go.mod h1:ajoJFtAjgQ/UyotcgIbAv3a+x/c5DW6KwuXaLdWxKsY=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220512161349-4d24356e42ea h1:q+YVlJSooEzo8vcRwyfC2+LOeCy5N+zuvlxBm5s5hDQ=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220512161349-4d24356e42ea/go.mod h1:JVh8X7fHtyIyP8qU8m2tLPUybbA4bTkLwHSK7hNWnDE=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/onsi/ginkgo v1.8.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.1.0 h1:e3YP4dN/HYPpGh29X1ZkcxcEICsOls9huyVCRBaxjq8=
