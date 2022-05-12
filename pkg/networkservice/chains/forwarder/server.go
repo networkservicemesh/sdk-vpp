@@ -88,14 +88,17 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 	for _, opt := range options {
 		opt(opts)
 	}
-	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, opts.clientURL,
+	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx,
+		registryclient.WithClientURL(opts.clientURL),
 		registryclient.WithNSEAdditionalFunctionality(
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
 			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
 		),
 		registryclient.WithDialOptions(opts.dialOpts...),
 	)
-	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, opts.clientURL, registryclient.WithDialOptions(opts.dialOpts...))
+	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx,
+		registryclient.WithClientURL(opts.clientURL),
+		registryclient.WithDialOptions(opts.dialOpts...))
 
 	rv := &xconnectNSServer{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
