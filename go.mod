@@ -10,8 +10,8 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b
-	github.com/networkservicemesh/sdk v0.5.1-0.20220512164527-dc8b0c099894
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220513014027-1a5c14d724b1
+	github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
@@ -29,6 +29,7 @@ require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/edwarnicke/exechelper v1.0.2 // indirect
 	github.com/edwarnicke/grpcfd v1.1.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ftrvxmtrx/fd v0.0.0-20150925145434-c6d800382fff // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/go-logr/stdr v1.2.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/lunixbochs/struc v0.0.0-20200521075829-a4cb8d33dbbe // indirect
