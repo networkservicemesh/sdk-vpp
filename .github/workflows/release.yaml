@@ -50,6 +50,7 @@ jobs:
           - cmd-nse-vlan-vpp
           - cmd-nse-firewall-vpp
           - cmd-nse-vl3-vpp
+          - cmd-nse-simple-vl3-docker
     name: Update ${{ matrix.repository }}
     needs: create-release
     runs-on: ubuntu-latest
