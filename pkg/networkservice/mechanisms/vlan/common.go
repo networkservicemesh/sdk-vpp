@@ -24,6 +24,7 @@ import (
 	"git.fd.io/govpp.git/api"
 
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
+	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -43,13 +44,13 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 		if ok {
 			return nil
 		}
-		now := time.Now()
 		via := conn.GetLabels()[viaLabel]
 		hostIFName, ok := deviceNames[via]
 		if !ok {
 			return errors.Errorf("no interface name for label %s", via)
 		}
 
+		now := time.Now()
 		client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
 			NameFilterValid: true,
 			NameFilter:      hostIFName,
@@ -77,35 +78,56 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 					WithField("vppapi", "SwInterfaceDetails").Debug("skipped")
 				continue
 			}
-			now = time.Now()
+
 			swIfIndex := details.SwIfIndex
 			vlanID := mechanism.GetVlanID()
-			vlanSubif := &interfaces.CreateVlanSubif{
-				SwIfIndex: swIfIndex,
-				VlanID:    vlanID,
+			if vlanID != 0 {
+				vlanIfIndex, shouldReturn, returnValue := vppAddSubIf(ctx, vppConn, swIfIndex, vlanID)
+				if shouldReturn {
+					return returnValue
+				}
+				ifindex.Store(ctx, true, *vlanIfIndex)
+			} else {
+				log.FromContext(ctx).
+					WithField("HostInterfaceIndex", swIfIndex).
+					WithField("Details", details).Debug("QinQ disabled")
+				ifindex.Store(ctx, true, swIfIndex)
 			}
-
-			rsp, err := interfaces.NewServiceClient(vppConn).CreateVlanSubif(ctx, vlanSubif)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			log.FromContext(ctx).
-				WithField("duration", time.Since(now)).
-				WithField("HostInterfaceIndex", swIfIndex).
-				WithField("VlanID", vlanID).
-				WithField("vppapi", "CreateVlanSubIf").Debug("completed")
-
-			ifindex.Store(ctx, true, rsp.SwIfIndex)
 			return nil
 		}
 		return errors.Errorf("no interface name found %s", hostIFName)
 	}
 	return nil
 }
+
+func vppAddSubIf(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, vlanID uint32) (*interface_types.InterfaceIndex, bool, error) {
+	now := time.Now()
+	vlanSubif := &interfaces.CreateVlanSubif{
+		SwIfIndex: swIfIndex,
+		VlanID:    vlanID,
+	}
+
+	rsp, err := interfaces.NewServiceClient(vppConn).CreateVlanSubif(ctx, vlanSubif)
+	if err != nil {
+		return nil, true, errors.WithStack(err)
+	}
+	log.FromContext(ctx).
+		WithField("duration", time.Since(now)).
+		WithField("HostInterfaceIndex", swIfIndex).
+		WithField("SubInterfaceIndex", rsp.SwIfIndex).
+		WithField("VlanID", vlanID).
+		WithField("vppapi", "CreateVlanSubIf").Debug("completed")
+	return &rsp.SwIfIndex, false, nil
+}
 func delSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection) error {
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		swIfIndex, ok := ifindex.Load(ctx, true)
 		if !ok {
+			return nil
+		}
+
+		if mechanism.GetVlanID() == 0 {
+			ifindex.Delete(ctx, true)
 			return nil
 		}
 		now := time.Now()
