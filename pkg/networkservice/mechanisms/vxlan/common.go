@@ -1,4 +1,5 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2022 Nordix and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -58,6 +59,13 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		addNextNode := &vpe.AddNodeNext{
 			NodeName: "vxlan4-input",
 			NextName: "ethernet-input",
+		}
+
+		if mechanism.SrcIP().To4() == nil {
+			addNextNode = &vpe.AddNodeNext{
+				NodeName: "vxlan6-input",
+				NextName: "ethernet-input",
+			}
 		}
 
 		addNextNodeRsp, err := vpe.NewServiceClient(vppConn).AddNodeNext(ctx, addNextNode)
