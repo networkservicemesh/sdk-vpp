@@ -47,6 +47,7 @@ jobs:
         "cmd-nse-icmp-responder-vpp",
         "cmd-nse-vlan-vpp",
         "cmd-nse-firewall-vpp",
-        "cmd-nse-vl3-vpp"]
+        "cmd-nse-vl3-vpp",
+        "cmd-nse-simple-vl3-docker"]
     secrets:
       token: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}
