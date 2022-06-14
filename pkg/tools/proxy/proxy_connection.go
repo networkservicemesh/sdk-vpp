@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	maxFDCount = 1
+	maxFDCount = 19
 	bufferSize = 128
 )
 
