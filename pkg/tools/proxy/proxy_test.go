@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build linux
-// +build linux
+//go:build perm
+// +build perm
 
 package proxy_test
 
@@ -42,7 +42,7 @@ const (
 	pong    = "pong"
 )
 
-func TestStart(t *testing.T) {
+func TestStartPerm(t *testing.T) {
 	t.Cleanup(func() { goleak.VerifyNone(t) })
 
 	tempDir := t.TempDir()
