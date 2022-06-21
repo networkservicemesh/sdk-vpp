@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -66,7 +68,7 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		}
 		ipContext := conn.GetContext().GetIpContext()
 		if !isClient {
-			allowedIPs, err := extractAllowedIPs(ipContext.GetSrcIpAddrs(), ipContext.GetDstRoutes())
+			allowedIPs, err := extractAllowedIPs(ipContext.GetSrcIpAddrs(), ipContext.GetDstRoutes(), ipContext.GetPolicies())
 			if err != nil {
 				return errors.WithStack(e)
 			}
@@ -75,7 +77,7 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 			peer.Port = mechanism.SrcPort()
 			peer.Endpoint = types.ToVppAddress(mechanism.SrcIP())
 		} else {
-			allowedIPs, err := extractAllowedIPs(ipContext.GetDstIpAddrs(), ipContext.GetSrcRoutes())
+			allowedIPs, err := extractAllowedIPs(ipContext.GetDstIpAddrs(), ipContext.GetSrcRoutes(), ipContext.GetPolicies())
 			if err != nil {
 				return errors.WithStack(e)
 			}
@@ -101,7 +103,7 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 	return nil
 }
 
-func extractAllowedIPs(ips []string, routes []*networkservice.Route) ([]ip_types.Prefix, error) {
+func extractAllowedIPs(ips []string, routes []*networkservice.Route, policies []*networkservice.PolicyRoute) ([]ip_types.Prefix, error) {
 	var allowedIPs []ip_types.Prefix
 	for _, ip := range ips {
 		allowedIP, e := ip_types.ParsePrefix(ip)
@@ -116,6 +118,15 @@ func extractAllowedIPs(ips []string, routes []*networkservice.Route) ([]ip_types
 			return nil, errors.WithStack(e)
 		}
 		allowedIPs = append(allowedIPs, allowedIP)
+	}
+	for _, p := range policies {
+		for _, route := range p.Routes {
+			allowedIP, e := ip_types.ParsePrefix(route.Prefix)
+			if e != nil {
+				return nil, errors.WithStack(e)
+			}
+			allowedIPs = append(allowedIPs, allowedIP)
+		}
 	}
 	return allowedIPs, nil
 }
