@@ -33,15 +33,16 @@ import (
 )
 
 type forwarderOptions struct {
-	name            string
-	authorizeServer networkservice.NetworkServiceServer
-	clientURL       *url.URL
-	dialTimeout     time.Duration
-	domain2Device   map[string]string
-	statsOpts       []stats.Option
-	cleanupOpts     []cleanup.Option
-	vxlanOpts       []vxlan.Option
-	dialOpts        []grpc.DialOption
+	name                          string
+	authorizeServer               networkservice.NetworkServiceServer
+	clientURL                     *url.URL
+	dialTimeout                   time.Duration
+	domain2Device                 map[string]string
+	statsOpts                     []stats.Option
+	cleanupOpts                   []cleanup.Option
+	vxlanOpts                     []vxlan.Option
+	dialOpts                      []grpc.DialOption
+	clientAdditionalFunctionality []networkservice.NetworkServiceClient
 }
 
 // Option is an option pattern for forwarder chain elements
@@ -110,5 +111,12 @@ func WithVxlanOptions(opts ...vxlan.Option) Option {
 func WithDialOptions(opts ...grpc.DialOption) Option {
 	return func(o *forwarderOptions) {
 		o.dialOpts = opts
+	}
+}
+
+// WithClientAdditionalFunctionality sets client additional functionality
+func WithClientAdditionalFunctionality(additionalFunctionality ...networkservice.NetworkServiceClient) Option {
+	return func(o *forwarderOptions) {
+		o.clientAdditionalFunctionality = additionalFunctionality
 	}
 }
