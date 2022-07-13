@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -64,23 +66,16 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 			PublicKey:           pubKeyBin[:],
 			PersistentKeepalive: 10,
 		}
-		ipContext := conn.GetContext().GetIpContext()
+
+		peer.AllowedIps = []ip_types.Prefix{
+			{Address: ip_types.Address{Af: ip_types.ADDRESS_IP4}}, // IPv4 - 0.0.0.0/0
+			{Address: ip_types.Address{Af: ip_types.ADDRESS_IP6}}} // IPv6 - ::/0
+		peer.NAllowedIps = uint8(len(peer.AllowedIps))
+
 		if !isClient {
-			allowedIPs, err := extractAllowedIPs(ipContext.GetSrcIpAddrs(), ipContext.GetDstRoutes())
-			if err != nil {
-				return errors.WithStack(e)
-			}
-			peer.AllowedIps = allowedIPs
-			peer.NAllowedIps = uint8(len(peer.AllowedIps))
 			peer.Port = mechanism.SrcPort()
 			peer.Endpoint = types.ToVppAddress(mechanism.SrcIP())
 		} else {
-			allowedIPs, err := extractAllowedIPs(ipContext.GetDstIpAddrs(), ipContext.GetSrcRoutes())
-			if err != nil {
-				return errors.WithStack(e)
-			}
-			peer.AllowedIps = allowedIPs
-			peer.NAllowedIps = uint8(len(peer.AllowedIps))
 			peer.Port = mechanism.DstPort()
 			peer.Endpoint = types.ToVppAddress(mechanism.DstIP())
 		}
@@ -99,25 +94,6 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		Store(ctx, isClient, pubKeyStr, rspPeer.PeerIndex)
 	}
 	return nil
-}
-
-func extractAllowedIPs(ips []string, routes []*networkservice.Route) ([]ip_types.Prefix, error) {
-	var allowedIPs []ip_types.Prefix
-	for _, ip := range ips {
-		allowedIP, e := ip_types.ParsePrefix(ip)
-		if e != nil {
-			return nil, errors.WithStack(e)
-		}
-		allowedIPs = append(allowedIPs, allowedIP)
-	}
-	for _, route := range routes {
-		allowedIP, e := ip_types.ParsePrefix(route.Prefix)
-		if e != nil {
-			return nil, errors.WithStack(e)
-		}
-		allowedIPs = append(allowedIPs, allowedIP)
-	}
-	return allowedIPs, nil
 }
 
 func delPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
