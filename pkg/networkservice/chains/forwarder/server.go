@@ -43,6 +43,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
+	authmonitor "github.com/networkservicemesh/sdk/pkg/tools/monitorconnection/authorize"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
@@ -79,11 +80,12 @@ type xconnectNSServer struct {
 // NewServer - returns an implementation of the xconnectns network service
 func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn Connection, tunnelIP net.IP, options ...Option) endpoint.Endpoint {
 	opts := &forwarderOptions{
-		name:            "forwarder-vpp-" + uuid.New().String(),
-		authorizeServer: authorize.NewServer(authorize.Any()),
-		clientURL:       &url.URL{Scheme: "unix", Host: "connect.to.socket"},
-		dialTimeout:     time.Millisecond * 200,
-		domain2Device:   make(map[string]string),
+		name:                             "forwarder-vpp-" + uuid.New().String(),
+		authorizeServer:                  authorize.NewServer(authorize.Any()),
+		authorizeMonitorConnectionServer: authmonitor.NewMonitorConnectionServer(authmonitor.Any()),
+		clientURL:                        &url.URL{Scheme: "unix", Host: "connect.to.socket"},
+		dialTimeout:                      time.Millisecond * 200,
+		domain2Device:                    make(map[string]string),
 	}
 	for _, opt := range options {
 		opt(opts)
@@ -161,6 +163,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
 		endpoint.WithName(opts.name),
 		endpoint.WithAuthorizeServer(opts.authorizeServer),
+		endpoint.WithAuthorizeMonitorConnectionServer(opts.authorizeMonitorConnectionServer),
 		endpoint.WithAdditionalFunctionality(additionalFunctionality...))
 
 	return rv
