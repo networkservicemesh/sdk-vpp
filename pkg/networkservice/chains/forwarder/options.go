@@ -33,16 +33,17 @@ import (
 )
 
 type forwarderOptions struct {
-	name                          string
-	authorizeServer               networkservice.NetworkServiceServer
-	clientURL                     *url.URL
-	dialTimeout                   time.Duration
-	domain2Device                 map[string]string
-	statsOpts                     []stats.Option
-	cleanupOpts                   []cleanup.Option
-	vxlanOpts                     []vxlan.Option
-	dialOpts                      []grpc.DialOption
-	clientAdditionalFunctionality []networkservice.NetworkServiceClient
+	name                             string
+	authorizeServer                  networkservice.NetworkServiceServer
+	authorizeMonitorConnectionServer networkservice.MonitorConnectionServer
+	clientURL                        *url.URL
+	dialTimeout                      time.Duration
+	domain2Device                    map[string]string
+	statsOpts                        []stats.Option
+	cleanupOpts                      []cleanup.Option
+	vxlanOpts                        []vxlan.Option
+	dialOpts                         []grpc.DialOption
+	clientAdditionalFunctionality    []networkservice.NetworkServiceClient
 }
 
 // Option is an option pattern for forwarder chain elements
@@ -62,6 +63,16 @@ func WithAuthorizeServer(authorizeServer networkservice.NetworkServiceServer) Op
 	}
 	return func(o *forwarderOptions) {
 		o.authorizeServer = authorizeServer
+	}
+}
+
+// WithAuthorizeMonitorConnectionServer sets authorization server chain element
+func WithAuthorizeMonitorConnectionServer(authorizeMonitorConnectionServer networkservice.MonitorConnectionServer) Option {
+	if authorizeMonitorConnectionServer == nil {
+		panic("Authorize monitor server cannot be nil")
+	}
+	return func(o *forwarderOptions) {
+		o.authorizeMonitorConnectionServer = authorizeMonitorConnectionServer
 	}
 }
 
