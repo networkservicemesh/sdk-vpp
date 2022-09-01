@@ -58,29 +58,3 @@ func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api
 	}
 	return nil
 }
-
-func disableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection) error {
-	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if mechanism.GetVlanID() == 0 {
-			return nil
-		}
-		swIfIndex, ok := ifindex.Load(ctx, true)
-		if !ok {
-			return nil
-		}
-		now := time.Now()
-
-		if _, err := l2.NewServiceClient(vppConn).L2InterfaceVlanTagRewrite(ctx, &l2.L2InterfaceVlanTagRewrite{
-			SwIfIndex: swIfIndex,
-			VtrOp:     L2VtrDisabled,
-		}); err != nil {
-			return errors.WithStack(err)
-		}
-		log.FromContext(ctx).
-			WithField("duration", time.Since(now)).
-			WithField("SwIfIndex", swIfIndex).
-			WithField("operation", "DISABLE").
-			WithField("vppapi", "L2InterfaceVlanTagRewrite").Debug("completed")
-	}
-	return nil
-}

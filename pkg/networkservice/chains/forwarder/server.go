@@ -65,6 +65,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2bridgedomain"
 )
 
 // Connection aggregates the api.Connection and api.ChannelProvider interfaces
@@ -111,6 +112,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		stats.NewServer(ctx, opts.statsOpts...),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
+		l2bridgedomain.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
 		ethernetcontext.NewVFServer(),
 		tag.NewServer(ctx, vppConn),

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -61,6 +61,5 @@ func (v *l2vtrClient) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (v *l2vtrClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_ = disableVtr(ctx, conn, v.vppConn)
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }

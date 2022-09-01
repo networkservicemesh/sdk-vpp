@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2022 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,5 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package hwaddress provides networkservice chain elements to set the hwaddress in ethernetcontext
-package hwaddress
+package l2bridgedomain
+
+import (
+	"sync"
+)
+
+//go:generate go-syncmap -output l2_bridge_domain_map.gen.go -type l2BridgeDomain<bridgeDomainKey,*bridgeDomain>
+
+// l2BridgeDomain - sync.Map storing *bridgeDomain values to bridgeDomainKey(VLAN-ID, clientIfIndex)
+type l2BridgeDomain sync.Map
