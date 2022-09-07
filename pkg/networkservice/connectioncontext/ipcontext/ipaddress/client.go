@@ -1,6 +1,6 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -29,7 +29,6 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -100,8 +99,8 @@ func (i *ipaddressClient) Request(ctx context.Context, request *networkservice.N
 }
 
 func (i *ipaddressClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	if err := addDel(ctx, conn, i.vppConn, i.loadIfIndex, metadata.IsClient(i), false); err != nil {
-		log.FromContext(ctx).Warnf(err.Error())
-	}
+	// We don't need to remove the address on closing.
+	// In most cases, Close also removes the target interface and the address will be deleted along with it.
+	// Leaving the address allows us to solve the loopback + unnumbered problem where we don't need to remove the address when the connection is closed.
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
