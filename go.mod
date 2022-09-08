@@ -10,8 +10,8 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.4.1-0.20220711153918-a59689088578
-	github.com/networkservicemesh/sdk v0.5.1-0.20220831094238-ed5cc972107d
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220831094708-45248ec98ad6
+	github.com/networkservicemesh/sdk v0.5.1-0.20220908100121-e02e39b8b11b
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220908100521-dd085ae17b38
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	github.com/thanhpk/randstr v1.0.4
