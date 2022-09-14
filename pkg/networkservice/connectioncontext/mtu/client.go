@@ -40,25 +40,25 @@ type mtuClient struct {
 // NewClient creates a NetworkServiceClient chain element to set the mtu on a vpp interface
 // It sets the mtu on the *vpp* side of an interface leaving the
 // Endpoint.
-//                                         Endpoint
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |            mtu.NewClient()+-------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	           Endpoint
+//	+---------------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|            mtu.NewClient()+-------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	+---------------------------+
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &mtuClient{
 		vppConn: vppConn,

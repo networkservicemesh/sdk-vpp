@@ -21,10 +21,13 @@ import (
 )
 
 // IsV6toFibProto - returns fib_types.FIB_API_PATH_NH_PROTO_IP6 if isv6 is true
-//                  fib_types.FIB_API_PATH_NH_PROTO_IP4 if isv6 is false
+//
+//	fib_types.FIB_API_PATH_NH_PROTO_IP4 if isv6 is false
+//
 // Example:
-//    Given a *net.IPNet dst:
-//    types.IsV6toFibProto(dst.IP.To4() == nil)
+//
+//	Given a *net.IPNet dst:
+//	types.IsV6toFibProto(dst.IP.To4() == nil)
 func IsV6toFibProto(isv6 bool) fib_types.FibPathNhProto {
 	if isv6 {
 		return fib_types.FIB_API_PATH_NH_PROTO_IP6

@@ -35,25 +35,25 @@ type routesClient struct {
 }
 
 // NewClient creates a NetworkServiceClient chain element to set routes in vpp
-//                                         Client
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |      routes.NewClient()   +-------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	           Client
+//	+---------------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|      routes.NewClient()   +-------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	+---------------------------+
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &routesClient{
 		vppConn: vppConn,

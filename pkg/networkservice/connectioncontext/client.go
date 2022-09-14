@@ -33,25 +33,25 @@ import (
 // NewClient creates a NetworkServiceClient chain element to set the ip address on a vpp interface
 // It applies the connection context to the *vpp* side of an interface leaving the
 // Endpoint.
-//                                               Endpoint
-//                              +-------------------------------------+
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |        networkservice.NewClient()+-------------------+
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              |                                     |
-//                              +-------------------------------------+
 //
+//	                 Endpoint
+//	+-------------------------------------+
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|        networkservice.NewClient()+-------------------+
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	|                                     |
+//	+-------------------------------------+
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
 		mtu.NewClient(vppConn),

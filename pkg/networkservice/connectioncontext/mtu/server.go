@@ -36,25 +36,25 @@ type mtuServer struct {
 // NewServer creates a NetworkServiceServer chain element to set the MTU on a vpp interface
 // It sets the MTU on the *vpp* side of an interface plugged into the
 // Endpoint.
-//                                         Endpoint
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//          +-------------------+ mtu.NewServer()           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	                               Endpoint
+//	                    +---------------------------+
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	+-------------------+ mtu.NewServer()           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    +---------------------------+
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return &mtuServer{
 		vppConn: vppConn,

@@ -36,25 +36,25 @@ type routesServer struct {
 // NewServer creates a NetworkServiceServer chain element to set the ip address on a vpp interface
 // It sets the IP Address on the *vpp* side of an interface plugged into the
 // Endpoint.
-//                                         Endpoint
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//          +-------------------+ ipaddress.NewServer()     |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	                               Endpoint
+//	                    +---------------------------+
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	+-------------------+ ipaddress.NewServer()     |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    |                           |
+//	                    +---------------------------+
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return &routesServer{
 		vppConn: vppConn,
