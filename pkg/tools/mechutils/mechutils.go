@@ -47,7 +47,8 @@ func ToNSFilename(mechanism *kernel.Mechanism) (string, error) {
 }
 
 // ToAlias - create interface alias/tag from conn for client or server side for forwarder.
-//           Note: Don't use this in a non-forwarder context
+//
+//	Note: Don't use this in a non-forwarder context
 func ToAlias(conn *networkservice.Connection, isClient bool) string {
 	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
 	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,

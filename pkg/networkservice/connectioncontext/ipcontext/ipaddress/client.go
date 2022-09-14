@@ -43,25 +43,25 @@ type ipaddressClient struct {
 // NewClient creates a NetworkServiceClient chain element to set the ip address on a vpp interface
 // It sets the IP Address on the *vpp* side of an interface leaving the
 // Endpoint.
-//                                         Endpoint
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |      ipaddress.NewClient()+-------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	           Endpoint
+//	+---------------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|      ipaddress.NewClient()+-------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	+---------------------------+
 func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
 	o := &options{
 		loadIfIndex: ifindex.Load,

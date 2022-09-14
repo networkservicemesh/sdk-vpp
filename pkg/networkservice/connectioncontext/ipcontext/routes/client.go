@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -35,25 +35,25 @@ type routesClient struct {
 }
 
 // NewClient creates a NetworkServiceClient chain element to set routes in vpp
-//                                         Client
-//                              +---------------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |      routes.NewClient()   +-------------------+
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              |                           |
-//                              +---------------------------+
 //
+//	           Client
+//	+---------------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|      routes.NewClient()   +-------------------+
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	|                           |
+//	+---------------------------+
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &routesClient{
 		vppConn: vppConn,

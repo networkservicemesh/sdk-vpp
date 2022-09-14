@@ -34,25 +34,25 @@ import (
 // NewServer creates a NetworkServiceServer chain element to set the ip address on a vpp interface
 // It applies the connection context to the *vpp* side of an interface plugged into the
 // Endpoint.
-//                                         Endpoint
-//                              +------------------------------------+
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//          +-------------------+ networkservice.NewServer()      |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              |                                    |
-//                              +------------------------------------+
 //
+//	                               Endpoint
+//	                    +------------------------------------+
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	+-------------------+ networkservice.NewServer()      |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    |                                    |
+//	                    +------------------------------------+
 func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 	return chain.NewNetworkServiceServer(
 		mtu.NewServer(vppConn),
