@@ -63,6 +63,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tunnelmtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
 )
@@ -115,6 +116,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		ethernetcontext.NewVFServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
+		tunnelmtu.NewServer(vppConn, tunnelIP),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			memif.MECHANISM: memif.NewServer(ctx, vppConn,
 				memif.WithDirectMemif(),
@@ -144,6 +146,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 							memif.WithChangeNetNS(),
 						),
 						kernel.NewClient(vppConn),
+						tunnelmtu.NewClient(vppConn, tunnelIP),
 						vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 						wireguard.NewClient(vppConn, tunnelIP),
 						vlan.NewClient(vppConn, opts.domain2Device),

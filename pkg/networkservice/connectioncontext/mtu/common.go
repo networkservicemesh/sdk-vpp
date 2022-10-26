@@ -18,6 +18,7 @@ package mtu
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"git.fd.io/govpp.git/api"
@@ -26,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
@@ -68,15 +70,26 @@ func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api
 	return nil
 }
 
-func setConnContextMTU(request *networkservice.NetworkServiceRequest) {
-	if request.GetConnection().GetContext().GetMTU() != 0 {
-		return
+func setConnContextMTU(conn *networkservice.Connection) {
+	if conn.GetContext() == nil {
+		conn.Context = &networkservice.ConnectionContext{}
 	}
-	if request.GetConnection() == nil {
-		request.Connection = &networkservice.Connection{}
+	if conn.GetContext().GetMTU() == 0 {
+		conn.GetContext().MTU = jumboFrameSize
 	}
-	if request.GetConnection().GetContext() == nil {
-		request.GetConnection().Context = &networkservice.ConnectionContext{}
+
+	if mechMTU, err := fromMechanism(conn.GetMechanism()); err == nil && mechMTU < conn.GetContext().GetMTU() {
+		conn.GetContext().MTU = mechMTU
 	}
-	request.GetConnection().GetContext().MTU = jumboFrameSize
+}
+
+func fromMechanism(mechanism *networkservice.Mechanism) (val uint32, err error) {
+	if mechanism.GetParameters() == nil {
+		return 0, errors.New("mechanism is empty")
+	}
+	mtu, err := strconv.ParseUint(mechanism.GetParameters()[common.MTU], 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(mtu), nil
 }

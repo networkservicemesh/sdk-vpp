@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Cisco and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,32 +14,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mtu
+package tunnelmtu
 
 import (
 	"context"
 	"net"
+	"sync"
+	"sync/atomic"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vxlan"
-
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tunnelmtu"
 )
 
 type mtuClient struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
+	mtu      uint32
+
+	inited    uint32
+	initMutex sync.Mutex
 }
 
-// NewClient - returns client chain element to manage vxlan MTU
+// NewClient - returns client chain element that calculates MTU of the tunnel interface
 func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkServiceClient {
 	return &mtuClient{
 		vppConn:  vppConn,
@@ -48,27 +49,31 @@ func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 }
 
 func (m *mtuClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	tunnelMTU, ok := tunnelmtu.Load(ctx, metadata.IsClient(m))
-	if !ok {
-		return nil, errors.New("tunnel MTU is required")
-	}
-
-	mtu := tunnelMTU - overhead(m.tunnelIP.To4() == nil)
-	if mechanism := vxlan.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && (mechanism.MTU() == 0 || mechanism.MTU() > mtu) {
-		mechanism.SetMTU(mtu)
-	}
-	for _, mech := range request.GetMechanismPreferences() {
-		if mechanism := vxlan.ToMechanism(mech); mechanism != nil && (mechanism.MTU() == 0 || mechanism.MTU() > mtu) {
-			mechanism.SetMTU(mtu)
-		}
-	}
-	conn, err := next.Client(ctx).Request(ctx, request, opts...)
-	if err != nil {
+	if err := m.init(ctx); err != nil {
 		return nil, err
 	}
-	return conn, nil
+	Store(ctx, metadata.IsClient(m), m.mtu)
+	return next.Client(ctx).Request(ctx, request, opts...)
 }
 
 func (m *mtuClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	return next.Client(ctx).Close(ctx, conn, opts...)
+}
+
+func (m *mtuClient) init(ctx context.Context) error {
+	if atomic.LoadUint32(&m.inited) > 0 {
+		return nil
+	}
+	m.initMutex.Lock()
+	defer m.initMutex.Unlock()
+	if atomic.LoadUint32(&m.inited) > 0 {
+		return nil
+	}
+
+	var err error
+	m.mtu, err = getMTU(ctx, m.vppConn, m.tunnelIP)
+	if err == nil {
+		atomic.StoreUint32(&m.inited, 1)
+	}
+	return err
 }

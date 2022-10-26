@@ -66,7 +66,7 @@ func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 }
 
 func (m *mtuClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	setConnContextMTU(request)
+	setConnContextMTU(request.GetConnection())
 
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 

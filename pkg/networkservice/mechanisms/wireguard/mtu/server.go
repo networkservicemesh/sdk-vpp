@@ -19,25 +19,23 @@ package mtu
 import (
 	"context"
 	"net"
-	"sync"
-	"sync/atomic"
 
 	"git.fd.io/govpp.git/api"
+	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/wireguard"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tunnelmtu"
 )
 
 type mtuServer struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
-	mtu      uint32
-
-	inited    uint32
-	initMutex sync.Mutex
 }
 
 // NewServer - server chain element to manage wireguard MTU
@@ -49,26 +47,16 @@ func NewServer(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkSe
 }
 
 func (m *mtuServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if err := m.init(ctx); err != nil {
-		return nil, err
-	}
 	if mechanism := wireguard.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil {
-		if err := m.init(ctx); err != nil {
-			return nil, err
+		tunnelMTU, ok := tunnelmtu.Load(ctx, metadata.IsClient(m))
+		if !ok {
+			return nil, errors.New("tunnel MTU is required")
 		}
-		// If the clients MTU is zero or larger than the mtu for the local end of the tunnel, use the the mtu from the local end of the tunnel
-		if mechanism.MTU() > m.mtu || mechanism.MTU() == 0 {
-			mechanism.SetMTU(m.mtu)
-		}
-		// If the ConnectionContext's MTU is zero or larger than the MTU for the tunnel, set the ConnectionContexts MTU to the MTU for the tunnel
-		if request.GetConnection().GetContext().GetMTU() > mechanism.MTU() || request.GetConnection().GetContext().GetMTU() == 0 {
-			if request.GetConnection() == nil {
-				request.Connection = &networkservice.Connection{}
-			}
-			if request.GetConnection().GetContext() == nil {
-				request.GetConnection().Context = &networkservice.ConnectionContext{}
-			}
-			request.GetConnection().GetContext().MTU = mechanism.MTU()
+
+		// If the clients MTU is zero or larger than the mtu for the local end of the tunnel, use the mtu from the local end of the tunnel
+		mtu := tunnelMTU - overhead(m.tunnelIP.To4() == nil)
+		if mechanism.MTU() > mtu || mechanism.MTU() == 0 {
+			mechanism.SetMTU(mtu)
 		}
 	}
 	return next.Server(ctx).Request(ctx, request)
@@ -76,22 +64,4 @@ func (m *mtuServer) Request(ctx context.Context, request *networkservice.Network
 
 func (m *mtuServer) Close(ctx context.Context, conn *networkservice.Connection) (*emptypb.Empty, error) {
 	return next.Server(ctx).Close(ctx, conn)
-}
-
-func (m *mtuServer) init(ctx context.Context) error {
-	if atomic.LoadUint32(&m.inited) > 0 {
-		return nil
-	}
-	m.initMutex.Lock()
-	defer m.initMutex.Unlock()
-	if atomic.LoadUint32(&m.inited) > 0 {
-		return nil
-	}
-
-	var err error
-	m.mtu, err = getMTU(ctx, m.vppConn, m.tunnelIP)
-	if err == nil {
-		atomic.StoreUint32(&m.inited, 1)
-	}
-	return err
 }

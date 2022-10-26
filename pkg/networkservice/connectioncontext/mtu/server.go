@@ -62,14 +62,14 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (m *mtuServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	setConnContextMTU(request)
-
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
+
+	setConnContextMTU(conn)
 
 	if err := setVPPMTU(ctx, conn, m.vppConn, metadata.IsClient(m)); err != nil {
 		if closeErr := m.closeOnFailure(postponeCtxFunc, conn); closeErr != nil {
