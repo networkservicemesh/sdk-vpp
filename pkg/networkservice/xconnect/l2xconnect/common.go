@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2022 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +28,7 @@ import (
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
@@ -36,6 +39,13 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 	}
 	serverIfIndex, ok := ifindex.Load(ctx, false)
 	if !ok {
+		return nil
+	}
+
+	vlanID, ok := vlan.Load(ctx, true)
+	if ok {
+		log.FromContext(ctx).
+			WithField("VLAN-ID", vlanID).Info("bridge is used instead of xconnect")
 		return nil
 	}
 

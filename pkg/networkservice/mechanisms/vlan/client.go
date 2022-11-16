@@ -32,7 +32,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/hwaddress"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/l2vtr"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan/mtu"
 )
@@ -49,7 +48,6 @@ type vlanClient struct {
 // NewClient returns a VLAN client chain element
 func NewClient(vppConn api.Connection, domain2Device map[string]string) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
-		hwaddress.NewClient(vppConn),
 		mtu.NewClient(vppConn),
 		l2vtr.NewClient(vppConn),
 		&vlanClient{
@@ -89,6 +87,6 @@ func (v *vlanClient) Request(ctx context.Context, request *networkservice.Networ
 }
 
 func (v *vlanClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_ = delSubIf(ctx, conn, v.vppConn)
+	delSubIf(ctx, conn)
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
