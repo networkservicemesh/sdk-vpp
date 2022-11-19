@@ -48,7 +48,7 @@ type vlanClient struct {
 // NewClient returns a VLAN client chain element
 func NewClient(vppConn api.Connection, domain2Device map[string]string) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
-		mtu.NewClient(vppConn),
+		mtu.NewClient(vppConn, domain2Device),
 		l2vtr.NewClient(vppConn),
 		&vlanClient{
 			vppConn:     vppConn,

@@ -18,36 +18,47 @@ package mtu
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
 
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-const l3MtuIndex = 0
-
-func getL3MTU(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (uint32, error) {
+func getMTU(ctx context.Context, vppConn api.Connection, ifName string) (uint32, error) {
 	now := time.Now()
 	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
-		SwIfIndex: swIfIndex,
+		NameFilterValid: true,
+		NameFilter:      ifName,
 	})
 	if err != nil {
-		return 0, errors.Wrapf(err, "error attempting to get interface dump client to determine MTU for swIfIndex %d", swIfIndex)
+		return 0, errors.Wrapf(err, "failed to get interface dump client to determine MTU on %s", ifName)
 	}
-	defer func() { _ = dc.Close() }()
 
-	details, err := dc.Recv()
-	if err != nil {
-		return 0, errors.Wrapf(err, "error attempting to get interface details to determine MTU for swIfIndex %d", swIfIndex)
+	for {
+		details, err := dc.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return 0, errors.Wrapf(err, "failed to get interface details to determine MTU on %s", ifName)
+		}
+
+		if (ifName != details.InterfaceName) && (afPacketNamePrefix+ifName != details.InterfaceName) {
+			log.FromContext(ctx).
+				WithField("InterfaceName", details.InterfaceName).
+				WithField("vppapi", "SwInterfaceDetails").Debug("skipped")
+			continue
+		}
+		log.FromContext(ctx).
+			WithField("InterfaceName", details.InterfaceName).
+			WithField("L3 MTU", details.Mtu[l3MtuIndex]).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "SwInterfaceDump").Debug("completed")
+		return details.Mtu[l3MtuIndex], nil
 	}
-	log.FromContext(ctx).
-		WithField("swIfIndex", swIfIndex).
-		WithField("details.LinkMtu", details.LinkMtu).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "SwInterfaceDump").Debug("completed")
-	return details.Mtu[l3MtuIndex], nil
+	return 0, errors.New("unable to find interface in vpp")
 }

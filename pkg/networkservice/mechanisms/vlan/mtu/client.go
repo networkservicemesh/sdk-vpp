@@ -35,14 +35,16 @@ import (
 )
 
 type mtuClient struct {
-	vppConn api.Connection
-	mtu     mtuMap
+	vppConn     api.Connection
+	mtu         mtuMap
+	deviceNames map[string]string
 }
 
 // NewClient - returns client chain element to manage vlan MTU
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, deviceNames map[string]string) networkservice.NetworkServiceClient {
 	return &mtuClient{
-		vppConn: vppConn,
+		vppConn:     vppConn,
+		deviceNames: deviceNames,
 	}
 }
 
@@ -53,14 +55,19 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 	if err != nil {
 		return nil, err
 	}
-	swIfIndex, ok := ifindex.Load(ctx, metadata.IsClient(m))
+	_, ok := ifindex.Load(ctx, metadata.IsClient(m))
 	if !ok {
 		return conn, nil
 	}
 	if mechanism := vlan.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		localMtu, loaded := m.mtu.Load(swIfIndex)
+		via := conn.GetLabels()[viaLabel]
+		hostIFName, ok := m.deviceNames[via]
+		if !ok {
+			return nil, errors.New("can not find device name for via label")
+		}
+		localMtu, loaded := m.mtu.Load(hostIFName)
 		if !loaded {
-			localMtu, err = getL3MTU(ctx, m.vppConn, swIfIndex)
+			localMtu, err = getMTU(ctx, m.vppConn, hostIFName)
 			if err != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
@@ -69,9 +76,9 @@ func (m *mtuClient) Request(ctx context.Context, request *networkservice.Network
 				}
 				return nil, err
 			}
-			m.mtu.Store(swIfIndex, localMtu)
+			m.mtu.Store(hostIFName, localMtu)
 		}
-		if conn.GetContext().GetMTU() > localMtu || conn.GetContext().GetMTU() == 0 {
+		if localMtu > 0 && (conn.GetContext().GetMTU() > localMtu || conn.GetContext().GetMTU() == 0) {
 			if conn.GetContext() == nil {
 				conn.Context = &networkservice.ConnectionContext{}
 			}

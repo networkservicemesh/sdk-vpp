@@ -16,11 +16,11 @@
 
 package mtu
 
-import (
-	"sync"
+const (
+	// In remote vlan mechanism this label used to identify the host interface
+	viaLabel = "via"
+
+	// vpp constants
+	afPacketNamePrefix = "host-"
+	l3MtuIndex         = 0
 )
-
-//go:generate go-syncmap -output mtu_map.gen.go -type mtuMap<string,uint32>
-
-// mtuMap - sync.Map with key as interface name and value as MTU
-type mtuMap sync.Map
