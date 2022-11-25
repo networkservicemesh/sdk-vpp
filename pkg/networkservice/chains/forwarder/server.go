@@ -25,12 +25,15 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"sync"
 	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/google/uuid"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	ipsecapi "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/ipsec"
+
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/authorize"
@@ -54,6 +57,7 @@ import (
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/ipsec"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan"
@@ -104,6 +108,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		registryclient.WithDialOptions(opts.dialOpts...))
 
 	rv := &xconnectNSServer{}
+	pinholeMutex := new(sync.Mutex)
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		recvfd.NewServer(),
 		sendfd.NewServer(),
@@ -124,8 +129,9 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
+			ipsecapi.MECHANISM:  ipsec.NewServer(vppConn, tunnelIP),
 		}),
-		pinhole.NewServer(vppConn),
+		pinhole.NewServer(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 		connect.NewServer(
 			client.NewClient(ctx,
 				client.WithoutRefresh(),
@@ -148,9 +154,10 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						kernel.NewClient(vppConn),
 						vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 						wireguard.NewClient(vppConn, tunnelIP),
+						ipsec.NewClient(vppConn, tunnelIP),
 						vlan.NewClient(vppConn, opts.domain2Device),
 						filtermechanisms.NewClient(),
-						pinhole.NewClient(vppConn),
+						pinhole.NewClient(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 						recvfd.NewClient(),
 						nsmonitor.NewClient(ctx),
 						sendfd.NewClient(),

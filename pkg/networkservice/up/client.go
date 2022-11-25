@@ -32,6 +32,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up/ipsecup"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up/peerup"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
@@ -61,6 +62,7 @@ func NewClient(ctx context.Context, vppConn Connection, opts ...Option) networks
 			vppConn:     vppConn,
 			loadIfIndex: o.loadIfIndex,
 		},
+		ipsecup.NewClient(ctx, vppConn),
 	)
 }
 
