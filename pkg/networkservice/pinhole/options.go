@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,7 +20,18 @@ import (
 	"sync"
 )
 
-//go:generate go-syncmap -output tunnel_ip_map.gen.go -type ipPortMap<IPPort,struct{}>
+type option struct {
+	mutex *sync.Mutex
+}
 
-// IPPortMap - sync.Map with key IPPort value of struct{}
-type ipPortMap sync.Map
+// Option - options for the pinhole chain element
+type Option func(*option)
+
+// WithSharedMutex - set shared mutex between client and server chain elements.
+// This is necessary because the pinhole chain element dumps VPP, performs some manipulations and reassign ACL rules.
+// Possible data race.
+func WithSharedMutex(mutex *sync.Mutex) Option {
+	return func(o *option) {
+		o.mutex = mutex
+	}
+}

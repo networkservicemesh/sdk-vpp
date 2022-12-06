@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,6 +19,7 @@ package pinhole
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -33,13 +34,26 @@ import (
 
 type pinholeClient struct {
 	vppConn api.Connection
-	IPPortMap
+	ipPortMap
+
+	// We need to protect ACL rules applying with a mutex.
+	// Because adding new entries is based on a dump and applying modified data.
+	// This must be an atomic operation, otherwise a data race is possible.
+	mutex *sync.Mutex
 }
 
-// NewClient - returns a new client that will set an ACL permitting vxlan packets through if and only if there's an ACL on the interface
-func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
+// NewClient - returns a new client that will set an ACL permitting remote protocols packets through if and only if there's an ACL on the interface
+func NewClient(vppConn api.Connection, opts ...Option) networkservice.NetworkServiceClient {
+	o := &option{
+		mutex: new(sync.Mutex),
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	return &pinholeClient{
 		vppConn: vppConn,
+		mutex:   o.mutex,
 	}
 }
 
@@ -51,8 +65,16 @@ func (v *pinholeClient) Request(ctx context.Context, request *networkservice.Net
 		return nil, err
 	}
 
-	if key := fromMechanism(conn.GetMechanism(), metadata.IsClient(v)); key != nil {
-		if _, ok := v.IPPortMap.LoadOrStore(*key, struct{}{}); !ok {
+	keys := []*IPPort{
+		fromMechanism(conn.GetMechanism(), metadata.IsClient(v)),
+		fromContext(ctx, metadata.IsClient(v)),
+	}
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		if _, ok := v.ipPortMap.LoadOrStore(*key, struct{}{}); !ok {
+			v.mutex.Lock()
 			if err := create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
@@ -61,8 +83,10 @@ func (v *pinholeClient) Request(ctx context.Context, request *networkservice.Net
 					err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 				}
 
+				v.mutex.Unlock()
 				return nil, err
 			}
+			v.mutex.Unlock()
 		}
 	}
 

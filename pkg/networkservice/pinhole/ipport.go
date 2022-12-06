@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,6 +17,7 @@
 package pinhole
 
 import (
+	"context"
 	"net"
 	"strconv"
 
@@ -24,13 +25,21 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 )
 
-type ipPortKey struct {
+// IPPort stores IP and port for an ACL rule
+type IPPort struct {
 	ip   string
 	port uint16
 }
 
-func fromMechanism(mechanism *networkservice.Mechanism, isClient bool) *ipPortKey {
-	rv := &ipPortKey{}
+// NewIPPort returns *IPPort entry
+func NewIPPort(ip string, port uint16) *IPPort {
+	return &IPPort{
+		ip:   ip,
+		port: port,
+	}
+}
+
+func fromMechanism(mechanism *networkservice.Mechanism, isClient bool) *IPPort {
 	if mechanism.GetParameters() == nil {
 		return nil
 	}
@@ -44,7 +53,6 @@ func fromMechanism(mechanism *networkservice.Mechanism, isClient bool) *ipPortKe
 	if !ok || ipStr == "" {
 		return nil
 	}
-	rv.ip = ipStr
 	portStr, ok := mechanism.GetParameters()[portKey]
 	if !ok {
 		return nil
@@ -53,14 +61,23 @@ func fromMechanism(mechanism *networkservice.Mechanism, isClient bool) *ipPortKe
 	if err != nil {
 		return nil
 	}
-	rv.port = uint16(port)
-	return rv
+	return NewIPPort(ipStr, uint16(port))
 }
 
-func (i *ipPortKey) IP() net.IP {
+func fromContext(ctx context.Context, isClient bool) *IPPort {
+	v, ok := LoadExtra(ctx, isClient)
+	if !ok {
+		return nil
+	}
+	return v
+}
+
+// IP - converts string to net.IP
+func (i *IPPort) IP() net.IP {
 	return net.ParseIP(i.ip)
 }
 
-func (i *ipPortKey) Port() uint16 {
+// Port - returns port
+func (i *IPPort) Port() uint16 {
 	return i.port
 }

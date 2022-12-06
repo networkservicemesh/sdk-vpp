@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,13 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pinhole
+package ipsec
 
-import (
-	"sync"
+const (
+	// ikev2DefaultPort - ikev2 default port
+	ikev2DefaultPort = 4500
 )
-
-//go:generate go-syncmap -output tunnel_ip_map.gen.go -type ipPortMap<IPPort,struct{}>
-
-// IPPortMap - sync.Map with key IPPort value of struct{}
-type ipPortMap sync.Map
