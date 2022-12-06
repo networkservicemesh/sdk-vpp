@@ -39,6 +39,7 @@ type forwarderOptions struct {
 	clientURL                        *url.URL
 	dialTimeout                      time.Duration
 	domain2Device                    map[string]string
+	prioriyMechanismList             []string
 	statsOpts                        []stats.Option
 	cleanupOpts                      []cleanup.Option
 	vxlanOpts                        []vxlan.Option
@@ -94,6 +95,13 @@ func WithDialTimeout(dialTimeout time.Duration) Option {
 func WithVlanDomain2Device(domain2Device map[string]string) Option {
 	return func(o *forwarderOptions) {
 		o.domain2Device = domain2Device
+	}
+}
+
+// WithPriorityMechanisms sets prioritymechanisms option
+func WithPriorityMechanisms(priorityList []string) Option {
+	return func(o *forwarderOptions) {
+		o.prioriyMechanismList = priorityList
 	}
 }
 
