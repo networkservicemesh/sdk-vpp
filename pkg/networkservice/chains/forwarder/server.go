@@ -41,11 +41,11 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/filtermechanisms"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismpriority"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/prioritymechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
 	authmonitor "github.com/networkservicemesh/sdk/pkg/tools/monitorconnection/authorize"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
@@ -158,7 +158,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						ipsec.NewClient(vppConn, tunnelIP),
 						vlan.NewClient(vppConn, opts.domain2Device),
 						filtermechanisms.NewClient(),
-						prioritymechanisms.NewClient(opts.prioriyMechanismList...),
+						mechanismpriority.NewClient(opts.mechanismPrioriyList...),
 						pinhole.NewClient(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 						recvfd.NewClient(),
 						nsmonitor.NewClient(ctx),
