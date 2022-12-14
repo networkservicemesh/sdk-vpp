@@ -36,6 +36,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifproxy"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/memif/memifrxmode"
 )
 
 type memifServer struct {
@@ -45,7 +46,7 @@ type memifServer struct {
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
+func NewServer(chainCtx context.Context, vppConn Connection, options ...Option) networkservice.NetworkServiceServer {
 	opts := new(memifOptions)
 	for _, o := range options {
 		o(opts)
@@ -57,6 +58,7 @@ func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Opti
 	}
 
 	return chain.NewNetworkServiceServer(
+		memifrxmode.NewServer(chainCtx, vppConn),
 		memifProxyServer,
 		&memifServer{
 			vppConn:     vppConn,
