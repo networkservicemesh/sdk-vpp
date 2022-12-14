@@ -29,8 +29,6 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
-	interfaces "github.com/edwarnicke/govpp/binapi/interface"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/edwarnicke/govpp/binapi/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
@@ -43,6 +41,12 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
+
+// Connection aggregates the api.Connection and api.ChannelProvider interfaces
+type Connection interface {
+	api.Connection
+	api.ChannelProvider
+}
 
 // NetNSInfo contains shared info for server and client
 type NetNSInfo struct {
@@ -150,19 +154,6 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifCreate").Debug("completed")
 	ifindex.Store(ctx, isClient, rsp.SwIfIndex)
-
-	now = time.Now()
-	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
-		SwIfIndex: rsp.SwIfIndex,
-		Mode:      interface_types.RX_MODE_API_ADAPTIVE,
-	}); err != nil {
-		return errors.WithStack(err)
-	}
-	log.FromContext(ctx).
-		WithField("swIfIndex", rsp.SwIfIndex).
-		WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
 
 	if isClient {
 		up.Store(ctx, isClient, true)

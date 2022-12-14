@@ -149,7 +149,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						mtu.NewClient(vppConn),
 						tag.NewClient(ctx, vppConn),
 						// mechanisms
-						memif.NewClient(vppConn,
+						memif.NewClient(ctx, vppConn,
 							memif.WithChangeNetNS(),
 						),
 						kernel.NewClient(vppConn),
