@@ -46,9 +46,7 @@ func NewServer(vppConn api.Connection) networkservice.NetworkServiceServer {
 }
 
 func (v *l2BridgeDomainServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	vlanID, ok := vlan.Load(ctx, true)
-	// return if the belonging remote mechanism not vlan mechanism
-	if !ok || request.GetConnection().GetPayload() != payload.Ethernet {
+	if request.GetConnection().GetPayload() != payload.Ethernet {
 		return next.Server(ctx).Request(ctx, request)
 	}
 
@@ -57,6 +55,12 @@ func (v *l2BridgeDomainServer) Request(ctx context.Context, request *networkserv
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
+	}
+
+	// return if the belonging remote mechanism not vlan mechanism
+	vlanID, ok := vlan.Load(ctx, true)
+	if !ok {
+		return conn, nil
 	}
 
 	if err := addBridgeDomain(ctx, v.vppConn, &v.b, vlanID); err != nil {
