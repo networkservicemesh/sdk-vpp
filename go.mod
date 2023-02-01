@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
-	github.com/edwarnicke/govpp v0.0.0-20221205183833-306afd06cce5
+	github.com/edwarnicke/govpp v0.0.0-20230130211138-14ef5d20b1d0
 	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
