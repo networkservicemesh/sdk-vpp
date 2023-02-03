@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -43,13 +43,13 @@ func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) err
 	}
 	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
 	defer apiChannel.Close()
 	notifCh := make(chan api.Message, 256)
 	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
 	}
 	defer func() { _ = subscription.Unsubscribe() }()
 
@@ -58,7 +58,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) err
 		SwIfIndex: swIfIndex,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceDump returned error")
 	}
 	defer func() { _ = dc.Close() }()
 
@@ -81,7 +81,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) err
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return errors.Wrap(ctx.Err(), "provided context is done")
 		case rawMsg := <-notifCh:
 			if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 				msg.SwIfIndex == swIfIndex &&

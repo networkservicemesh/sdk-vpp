@@ -1,5 +1,7 @@
 // Copyright (c) 2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +40,7 @@ func listen(network, address string, nsHandle netns.NsHandle) (ln net.Listener, 
 	err = nshandle.RunIn(current, nsHandle, func() error {
 		var listenErr error
 		ln, listenErr = net.Listen(network, address)
-		return listenErr
+		return errors.Wrapf(listenErr, "failed to listen announces on %s in %s", address, network)
 	})
 
 	return ln, err
@@ -54,7 +56,7 @@ func dial(network, address string, nsHandle netns.NsHandle) (conn net.Conn, err 
 	err = nshandle.RunIn(current, nsHandle, func() error {
 		var dialErr error
 		conn, dialErr = net.Dial(network, address)
-		return dialErr
+		return errors.Wrapf(dialErr, "failed to connect to %s address on %s network", address, network)
 	})
 
 	return conn, err

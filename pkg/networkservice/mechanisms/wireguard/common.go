@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -59,7 +59,7 @@ func createInterface(ctx context.Context, conn *networkservice.Connection, vppCo
 
 		rspIf, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceCreate(ctx, wgIfCreate)
 		if err != nil {
-			return "", errors.WithStack(err)
+			return "", errors.Wrap(err, "vppapi WireguardInterfaceCreate returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", rspIf.SwIfIndex).
@@ -93,7 +93,7 @@ func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn 
 
 		_, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceDelete(ctx, wgIfDel)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi WireguardInterfaceDelete returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", wgIfDel.SwIfIndex).

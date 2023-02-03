@@ -1,5 +1,7 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,7 +124,7 @@ func vppAddSubIf(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 
 	rsp, err := interfaces.NewServiceClient(vppConn).CreateVlanSubif(ctx, vlanSubif)
 	if err != nil {
-		return nil, true, errors.WithStack(err)
+		return nil, true, errors.Wrap(err, "vppapi CreateVlanSubif returned error")
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
@@ -132,6 +134,7 @@ func vppAddSubIf(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 		WithField("vppapi", "CreateVlanSubIf").Debug("completed")
 	return &rsp.SwIfIndex, false, nil
 }
+
 func delSubIf(ctx context.Context, conn *networkservice.Connection) {
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		_, ok := ifindex.Load(ctx, true)

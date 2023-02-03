@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -41,7 +41,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		SwIfIndex: swIfIndex,
 		Tag:       conn.GetId(),
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceTagAddDel returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).

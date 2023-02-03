@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Cisco and/or its affiliates.
+// Copyright (c) 2021-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -51,7 +51,7 @@ func setVPPMTU(ctx context.Context, conn *networkservice.Connection, vppConn api
 	}
 	_, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetMtu(ctx, setMTU)
 	if err != nil {
-		err = errors.WithStack(err)
+		err = errors.Wrap(err, "vppapi SwInterfaceSetMtu returned error")
 		log.FromContext(ctx).
 			WithField("SwIfIndex", setMTU.SwIfIndex).
 			WithField("MTU", setMTU.Mtu).

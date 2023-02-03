@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +44,7 @@ func up(ctx context.Context, vppConn Connection, loadIfIndex ifIndexFunc, isClie
 
 	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
 	defer apiChannel.Close()
 
@@ -51,7 +53,7 @@ func up(ctx context.Context, vppConn Connection, loadIfIndex ifIndexFunc, isClie
 		SwIfIndex: swIfIndex,
 		Flags:     interface_types.IF_STATUS_API_FLAG_ADMIN_UP,
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceSetFlags returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
@@ -70,7 +72,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 	notifCh := make(chan api.Message, 256)
 	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
 	}
 	defer func() { _ = subscription.Unsubscribe() }()
 
@@ -79,7 +81,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 		SwIfIndex: swIfIndex,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceDump returned error")
 	}
 	defer func() { _ = dc.Close() }()
 
@@ -102,7 +104,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return errors.Wrap(ctx.Err(), "provided context is done")
 		case rawMsg := <-notifCh:
 			if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 				msg.SwIfIndex == swIfIndex &&
@@ -130,7 +132,7 @@ func initFunc(ctx context.Context, vppConn api.Connection) error {
 		return nil
 	}
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi WantInterfaceEvents returned error")
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).

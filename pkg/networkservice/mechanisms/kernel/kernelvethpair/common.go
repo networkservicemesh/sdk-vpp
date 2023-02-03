@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,7 +47,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		defer handle.Close()
 
@@ -62,7 +62,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if prevLink, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
 			now := time.Now()
 			if err = handle.LinkDel(prevLink); err != nil {
-				return errors.WithStack(err)
+				return errors.Wrapf(err, "failed to delete link device %v", prevLink)
 			}
 			log.FromContext(ctx).
 				WithField("link.Name", prevLink.Attrs().Name).
@@ -83,7 +83,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		var l netlink.Link = veth
 		if addErr := netlink.LinkAdd(l); addErr != nil {
-			return addErr
+			return errors.Wrapf(addErr, "failed to add new link device %v", l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
@@ -93,13 +93,13 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		err = ethtool.DisableVethChkSumOffload(veth)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// Construct the nsHandle for the target namespace for this kernel interface
 		nsHandle, err := nshandle.FromURL(mechanism.GetNetNSURL())
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		defer func() { _ = nsHandle.Close() }()
 
@@ -123,7 +123,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("link.Name", name).
 				WithField("err", err).
 				WithField("netlink", "LinkByName").Debug("error")
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to get net interface: %v", name)
 		}
 		log.FromContext(ctx).
 			WithField("duration", time.Since(now)).
@@ -140,7 +140,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("duration", time.Since(now)).
 				WithField("err", err).
 				WithField("netlink", "LinkSetName").Debug("error")
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to set the name(%s) of the link device(%v)", name, l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
@@ -151,7 +151,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// Set the Link Alias
 		now = time.Now()
 		if err = handle.LinkSetAlias(l, alias); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", alias, l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
@@ -163,7 +163,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		now = time.Now()
 		err = handle.LinkSetUp(l)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to enable the link device: %v", l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
@@ -178,7 +178,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		peerLink, err := netlink.LinkByName(veth.PeerName)
 		if err != nil {
 			_ = netlink.LinkDel(l)
-			return err
+			return errors.Wrapf(err, "failed to get net interface: %v", name)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", veth.PeerName).
@@ -190,7 +190,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err = netlink.LinkSetAlias(peerLink, fmt.Sprintf("veth-%s", alias)); err != nil {
 			_ = netlink.LinkDel(l)
 			_ = netlink.LinkDel(peerLink)
-			return err
+			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", fmt.Sprintf("veth-%s", alias), peerLink)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
@@ -204,7 +204,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			_ = netlink.LinkDel(l)
 			_ = netlink.LinkDel(peerLink)
-			return err
+			return errors.Wrapf(err, "failed to enable the link device: %v", peerLink)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
@@ -223,7 +223,7 @@ func del(ctx context.Context, conn *networkservice.Connection, isClient bool) er
 			// Delete the peerLink which deletes all associated pair partners, routes, etc
 			now := time.Now()
 			if err := netlink.LinkDel(peerLink); err != nil {
-				return err
+				return errors.Wrapf(err, "failed to delete link device %v", peerLink)
 			}
 			log.FromContext(ctx).
 				WithField("link.Name", peerLink.Attrs().Name).

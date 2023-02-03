@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Cisco and/or its affiliates.
+// Copyright (c) 2021-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -80,7 +80,7 @@ func addDelVPP(ctx context.Context, vppConn api.Connection, isAdd bool, swIfInde
 	}
 	_, err := ip_neighbor.NewServiceClient(vppConn).IPNeighborAddDel(ctx, ipNeighborAddDel)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "vppapi IPNeighborAddDel returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", ipNeighborAddDel.Neighbor.SwIfIndex).

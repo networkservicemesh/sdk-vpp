@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -77,7 +77,7 @@ func initFunc(chainCtx context.Context, statsSocket string) (*core.StatsConnecti
 	}
 	statsConn, err := core.ConnectStats(statsclient.NewStatsClient(statsSocket))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to connect to Stats API")
 	}
 	go func() {
 		<-chainCtx.Done()

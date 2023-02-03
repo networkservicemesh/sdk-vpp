@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -38,7 +38,7 @@ func resolveProcByInodeURL(inodeURL string) (string, error) {
 	}
 	candidates, err := ioutil.ReadDir("/proc")
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to read directory /proc")
 	}
 	for _, f := range candidates {
 		pid, err := strconv.ParseUint(f.Name(), 10, 64)
@@ -87,7 +87,7 @@ func inodeFromString(file string) (uint64, error) {
 func parseInode(nsInodeURL string) (uint64, error) {
 	inodeURL, err := url.Parse(nsInodeURL)
 	if err != nil {
-		return 0, errors.Wrap(err, "invalid url")
+		return 0, errors.Wrapf(err, "invalid url %s", nsInodeURL)
 	}
 
 	if inodeURL.Scheme != "inode" {

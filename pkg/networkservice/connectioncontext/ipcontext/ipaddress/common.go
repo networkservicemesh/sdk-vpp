@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,7 +77,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			IsAdd:     isAdd,
 			Prefix:    types.ToVppAddressWithPrefix(ipNet),
 		}); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi SwInterfaceAddDelAddress returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", swIfIndex).
@@ -95,7 +97,7 @@ func dumpIps(ctx context.Context, vppConn api.Connection, swIfIndex interface_ty
 			IsIPv6:    isIPv6,
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "vppapi IPAddressDump returned error")
 		}
 		for {
 			ipAddressDetails, err := ipAddressClient.Recv()

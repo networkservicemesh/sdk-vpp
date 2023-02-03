@@ -1,6 +1,6 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
-//
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -59,7 +59,7 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		now := time.Now()
 		pubKeyBin, e := wgtypes.ParseKey(pubKeyStr)
 		if e != nil {
-			return errors.WithStack(e)
+			return errors.Wrapf(e, "failed to parse Key %s", pubKeyStr)
 		}
 		peer := wireguard.WireguardPeer{
 			SwIfIndex:           ifIdx,
@@ -85,7 +85,7 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		}
 		rspPeer, err := wireguard.NewServiceClient(vppConn).WireguardPeerAdd(ctx, wgPeerCreate)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi WireguardPeerAdd returned error")
 		}
 		log.FromContext(ctx).
 			WithField("PeerIndex", rspPeer.PeerIndex).
@@ -108,7 +108,7 @@ func delPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.C
 		}
 		_, err := wireguard.NewServiceClient(vppConn).WireguardPeerRemove(ctx, wgPeerRem)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi WireguardPeerRemove returned error")
 		}
 		log.FromContext(ctx).
 			WithField("duration", time.Since(now)).

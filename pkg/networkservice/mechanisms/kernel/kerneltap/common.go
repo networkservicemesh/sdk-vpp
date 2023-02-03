@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -44,7 +44,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		defer handle.Close()
 
@@ -81,7 +81,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV2(ctx, tapCreateV2)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi TapCreateV2 returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
@@ -97,7 +97,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			SwIfIndex: rsp.SwIfIndex,
 			Mode:      interface_types.RX_MODE_API_ADAPTIVE,
 		}); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi SwInterfaceSetRxMode returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
@@ -120,7 +120,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		// Set the Link Alias
 		now = time.Now()
 		if err = handle.LinkSetAlias(l, alias); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", alias, l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
@@ -132,7 +132,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		now = time.Now()
 		err = handle.LinkSetUp(l)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "failed to enable the link device: %v", l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).

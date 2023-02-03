@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -56,7 +56,7 @@ func (m *memifrxmodeServer) Request(ctx context.Context, request *networkservice
 		return nil, err
 	}
 	if mechanism := memifMech.ToMechanism(conn.GetMechanism()); mechanism == nil {
-		return conn, err
+		return conn, errors.Wrap(err, "failed to get memif mechanism")
 	}
 
 	if ok := load(ctx, metadata.IsClient(m)); !ok {

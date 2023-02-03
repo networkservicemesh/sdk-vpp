@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2022 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +57,7 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 		TxSwIfIndex: serverIfIndex,
 		Enable:      addDel,
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceSetL2Xconnect returned error")
 	}
 	log.FromContext(ctx).
 		WithField("RxSwIfIndex", clientIfIndex).
@@ -70,7 +72,7 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 		TxSwIfIndex: clientIfIndex,
 		Enable:      addDel,
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceSetL2Xconnect returned error")
 	}
 	log.FromContext(ctx).
 		WithField("RxSwIfIndex", serverIfIndex).

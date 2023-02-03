@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -52,7 +52,7 @@ func addDel(ctx context.Context, vppConn api.Connection, isClient, isAdd bool, l
 		UnnumberedSwIfIndex: swIfIndex,
 		IsAdd:               isAdd,
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceSetUnnumbered returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", loopIfIndex).
