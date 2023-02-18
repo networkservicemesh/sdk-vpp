@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -62,43 +62,43 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		// *** CREATE IP TUNNEL *** //
 		swIfIndex, err := createIPSecTunnel(ctx, vppConn)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** CREATE PROFILE *** //
 		err = addDelProfile(ctx, vppConn, profileName, true)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** SET UDP ENCAPSULATION *** //
 		err = setUDPEncap(ctx, vppConn, profileName)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** SET KEYS *** //
 		err = setKeys(ctx, vppConn, profileName, mechanism, privateKey, isClient)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** SET FQDN *** //
 		err = setFQDN(ctx, vppConn, mechanism, profileName, isClient)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** SET TRAFFIC-SELECTOR *** //
 		err = setTrafficSelector(ctx, vppConn, profileName, conn, isClient)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** PROTECT THE TUNNEL *** //
 		err = protectTunnel(ctx, vppConn, profileName, swIfIndex)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// *** INITIATOR STEPS *** //
@@ -195,7 +195,7 @@ func createIPSecTunnel(ctx context.Context, vppConn api.Connection) (interface_t
 		Itf: ipsecapi.IpsecItf{UserInstance: ^uint32(0)}})
 
 	if err != nil {
-		return interface_types.InterfaceIndex(^uint32(0)), err
+		return interface_types.InterfaceIndex(^uint32(0)), errors.Wrap(err, "vppapi IpsecItfCreate returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", reply.SwIfIndex).
@@ -213,7 +213,7 @@ func delIPSecTunnel(ctx context.Context, vppConn api.Connection, isClient bool) 
 
 	_, err := ipsecapi.NewServiceClient(vppConn).IpsecItfDelete(ctx, &ipsecapi.IpsecItfDelete{SwIfIndex: swIfIndex})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi IpsecItfDelete returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
@@ -229,7 +229,7 @@ func addDelProfile(ctx context.Context, vppConn api.Connection, profileName stri
 		IsAdd: isAdd,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2ProfileAddDel returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -245,7 +245,7 @@ func setUDPEncap(ctx context.Context, vppConn api.Connection, profileName string
 		Name: profileName,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi Ikev2ProfileSetUDPEncap returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -279,7 +279,7 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 		Data:       []byte(publicKeyFileName),
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi Ikev2ProfileSetAuth returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -291,7 +291,7 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 		KeyFile: privateKeyFileName,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi Ikev2SetLocalKey returned error")
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
@@ -317,7 +317,7 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 		Data:    []byte(fqdnLocal),
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2ProfileSetID returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -334,7 +334,7 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 		Data:    []byte(fqdnRemote),
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2ProfileSetID returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -349,7 +349,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 	for _, addr := range conn.GetContext().GetIpContext().GetSrcIpAddrs() {
 		a, err := ip_types.ParseAddressWithPrefix(addr)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to parse address with prefix %s", addr)
 		}
 		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(ctx, &ikev2.Ikev2ProfileSetTs{
 			Name: profileName,
@@ -362,7 +362,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 			},
 		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "vppapi Ikev2ProfileSetTs returned error")
 		}
 		log.FromContext(ctx).
 			WithField("Name", profileName).
@@ -375,7 +375,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 	for _, addr := range conn.GetContext().GetIpContext().GetDstIpAddrs() {
 		a, err := ip_types.ParseAddressWithPrefix(addr)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to parse address with prefix %s", addr)
 		}
 		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(ctx, &ikev2.Ikev2ProfileSetTs{
 			Name: profileName,
@@ -388,7 +388,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 			},
 		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "vppapi Ikev2ProfileSetTs returned error")
 		}
 		log.FromContext(ctx).
 			WithField("Name", profileName).
@@ -407,7 +407,7 @@ func protectTunnel(ctx context.Context, vppConn api.Connection, profileName stri
 		SwIfIndex: tunSwIfIndex,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2SetTunnelInterface returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -427,7 +427,7 @@ func setResponder(ctx context.Context, vppConn api.Connection, profileName strin
 		},
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2SetResponder returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -450,7 +450,7 @@ func setTransforms(ctx context.Context, vppConn api.Connection, profileName stri
 		},
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2SetIkeTransforms returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -467,7 +467,7 @@ func setTransforms(ctx context.Context, vppConn api.Connection, profileName stri
 		},
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2SetEspTransforms returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -486,7 +486,7 @@ func setSaLifetime(ctx context.Context, vppConn api.Connection, profileName stri
 		LifetimeMaxdata: 0,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2SetSaLifetime returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -501,7 +501,7 @@ func saInit(ctx context.Context, vppConn api.Connection, profileName string) err
 		Name: profileName,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "vppapi Ikev2InitiateSaInit returned error")
 	}
 	log.FromContext(ctx).
 		WithField("Name", profileName).
@@ -519,14 +519,19 @@ func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn 
 }
 
 func generateRSAKey() (*rsa.PrivateKey, error) {
-	return rsa.GenerateKey(rand.Reader, 2048)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate private key")
+	}
+
+	return key, nil
 }
 
 func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, profileName string, isClient bool) (string, error) {
 	dir := path.Join(os.TempDir(), profileName)
 	err := os.Mkdir(dir, 0o700)
 	if err != nil && !os.IsExist(err) {
-		return "", err
+		return "", errors.Wrapf(err, "failed to create directory %s", dir)
 	}
 
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privatekey)
@@ -537,11 +542,11 @@ func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, profileName string, isClie
 
 	file, err := os.Create(path.Clean(path.Join(dir, isClientPrefix(isClient)+"-key.pem")))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, isClientPrefix(isClient)+"-key.pem")))
 	}
 	err = pem.Encode(file, privateKeyBlock)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "encode process has failed")
 	}
 
 	return file.Name(), nil
@@ -553,7 +558,7 @@ func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error)
 	max.Exp(big.NewInt(2), big.NewInt(130), nil).Sub(max, big.NewInt(1))
 	n, err := rand.Int(rand.Reader, max)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to get random integer")
 	}
 
 	template := &x509.Certificate{
@@ -566,7 +571,7 @@ func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error)
 	}
 	certbytes, err := x509.CreateCertificate(rand.Reader, template, template, &privatekey.PublicKey, privatekey)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create certificate")
 	}
 	return base64.StdEncoding.EncodeToString(certbytes), nil
 }
@@ -575,12 +580,12 @@ func dumpCertBase64ToFile(base64key, profileName string, isClient bool) (string,
 	dir := path.Join(os.TempDir(), profileName)
 	err := os.Mkdir(dir, 0o700)
 	if err != nil && !os.IsExist(err) {
-		return "", err
+		return "", errors.Wrapf(err, "failed to create directory %s", dir)
 	}
 
 	certbytes, err := base64.StdEncoding.DecodeString(base64key)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to decode base64 encoded string %s", base64key)
 	}
 
 	publicKeyBlock := &pem.Block{
@@ -590,11 +595,11 @@ func dumpCertBase64ToFile(base64key, profileName string, isClient bool) (string,
 
 	file, err := os.Create(path.Clean(path.Join(dir, isClientPrefix(!isClient)+"-cert.pem")))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, isClientPrefix(!isClient)+"-cert.pem")))
 	}
 	err = pem.Encode(file, publicKeyBlock)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "encode process has failed")
 	}
 
 	return file.Name(), nil

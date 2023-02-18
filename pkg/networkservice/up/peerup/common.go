@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,13 +47,13 @@ func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isCli
 
 	apiChannel, err := getAPIChannel(ctx, vppConn, peerIndex)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	notifCh := make(chan api.Message, 256)
 	subscription, err := apiChannel.SubscribeNotification(notifCh, &wireguard.WireguardPeerEvent{})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
 	}
 	defer func() { _ = subscription.Unsubscribe() }()
 
@@ -61,7 +63,7 @@ func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isCli
 		PeerIndex: peerIndex,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi WireguardPeersDump returned error")
 	}
 	defer func() { _ = dp.Close() }()
 
@@ -83,7 +85,7 @@ func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isCli
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return errors.Wrap(ctx.Err(), "provided context is done")
 		case rawMsg := <-notifCh:
 			if msg, ok := rawMsg.(*wireguard.WireguardPeerEvent); ok &&
 				msg.PeerIndex == peerIndex &&
@@ -102,7 +104,7 @@ func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isCli
 func getAPIChannel(ctx context.Context, vppConn Connection, peerIndex uint32) (api.Channel, error) {
 	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
 	now := time.Now()
 	if _, err = wireguard.NewServiceClient(vppConn).WantWireguardPeerEvents(ctx, &wireguard.WantWireguardPeerEvents{
@@ -112,7 +114,7 @@ func getAPIChannel(ctx context.Context, vppConn Connection, peerIndex uint32) (a
 		PID:           uint32(os.Getpid()),
 	}); err != nil {
 		apiChannel.Close()
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "vppapi WantWireguardPeerEvents returned error")
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).

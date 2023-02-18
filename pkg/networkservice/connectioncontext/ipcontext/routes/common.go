@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -71,7 +71,7 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 		IsMultipath: false,
 		Route:       vppRoute,
 	}); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi IPRouteAddDel returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).

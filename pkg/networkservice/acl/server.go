@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +68,7 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 				err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 			}
 
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
 		a.aclIndices.Store(conn.GetId(), indices)

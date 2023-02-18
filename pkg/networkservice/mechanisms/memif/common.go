@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -92,7 +92,7 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 
 	reply, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel)
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, errors.Wrap(err, "vppapi MemifSocketFilenameAddDel returned error")
 	}
 	memifSocketAddDel.SocketID = reply.SocketID
 
@@ -119,7 +119,7 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 	now := time.Now()
 
 	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi MemifSocketFilenameAddDelV2 returned error")
 	}
 
 	log.FromContext(ctx).
@@ -145,7 +145,7 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 	}
 	rsp, err := memif.NewServiceClient(vppConn).MemifCreate(ctx, memifCreate)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi MemifCreate returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", rsp.SwIfIndex).
@@ -172,7 +172,7 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	}
 	_, err := memif.NewServiceClient(vppConn).MemifDelete(ctx, memifDel)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi MemifDelete returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", memifDel.SwIfIndex).
@@ -240,7 +240,7 @@ func getVppSocketFilename(mechanism *memifMech.Mechanism, netNS netns.NsHandle) 
 
 	targetNetNS, err := netns.GetFromPath(u.Path)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to get network namespace handle for %s", u.Path)
 	}
 	defer func() { _ = targetNetNS.Close() }()
 

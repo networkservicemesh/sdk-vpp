@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,14 +55,14 @@ func create(ctx context.Context, vppConn api.Connection, tag string, isClient bo
 	interfaceACLList.Acls, err = addACLToACLList(ctx, vppConn, tag, false, aRules)
 	if err != nil {
 		logger.Info("error adding acl to acl list ingress")
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	interfaceACLList.NInput = uint8(len(interfaceACLList.Acls))
 
 	egressACLIndeces, err := addACLToACLList(ctx, vppConn, tag, true, aRules)
 	if err != nil {
 		logger.Info("error adding acl to acl list egress")
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	interfaceACLList.Acls = append(interfaceACLList.Acls, egressACLIndeces...)
 	interfaceACLList.Count = uint8(len(interfaceACLList.Acls))
@@ -68,7 +70,7 @@ func create(ctx context.Context, vppConn api.Connection, tag string, isClient bo
 	_, err = acl.NewServiceClient(vppConn).ACLInterfaceSetACLList(ctx, interfaceACLList)
 	if err != nil {
 		logger.Info("error setting acl list for interface")
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "vppapi ACLInterfaceSetACLList returned error")
 	}
 	return interfaceACLList.Acls, nil
 }
@@ -79,7 +81,7 @@ func addACLToACLList(ctx context.Context, vppConn api.Connection, tag string, eg
 	now := time.Now()
 	rsp, err := acl.NewServiceClient(vppConn).ACLAddReplace(ctx, aclAdd(tag, egress, aRules))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "vppapi ACLAddReplace returned error")
 	}
 	log.FromContext(ctx).
 		WithField("aclIndices", rsp.ACLIndex).

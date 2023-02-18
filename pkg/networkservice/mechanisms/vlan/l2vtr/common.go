@@ -1,5 +1,7 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +50,7 @@ func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api
 			Tag1:      0,
 			Tag2:      0,
 		}); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi L2InterfaceVlanTagRewrite returned error")
 		}
 		log.FromContext(ctx).
 			WithField("duration", time.Since(now)).

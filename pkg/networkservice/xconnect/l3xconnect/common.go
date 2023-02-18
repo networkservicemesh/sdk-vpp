@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +53,7 @@ func create(ctx context.Context, vppConn api.Connection, conn *networkservice.Co
 	for _, update := range l3xcUpdates(clientIfIndex, serverIfIndex, clientNextHops, serverNextHops) {
 		now := time.Now()
 		if _, err := l3xc.NewServiceClient(vppConn).L3xcUpdate(ctx, update); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi L3xcUpdate returned error")
 		}
 		log.FromContext(ctx).
 			WithField("SwIfIndex", update.L3xc.SwIfIndex).
@@ -80,7 +82,7 @@ func del(ctx context.Context, vppConn api.Connection) error {
 				SwIfIndex: ifIndex,
 				IsIP6:     isIP6,
 			}); err != nil {
-				return errors.WithStack(err)
+				return errors.Wrap(err, "vppapi L3xcDel returned error")
 			}
 			log.FromContext(ctx).
 				WithField("SwIfIndex", ifIndex).

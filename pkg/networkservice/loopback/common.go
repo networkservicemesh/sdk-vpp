@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -57,7 +57,7 @@ func createLoopbackVPP(ctx context.Context, vppConn api.Connection) (interface_t
 	now := time.Now()
 	reply, err := interfaces.NewServiceClient(vppConn).CreateLoopback(ctx, &interfaces.CreateLoopback{})
 	if err != nil {
-		return interface_types.InterfaceIndex(^uint32(0)), errors.WithStack(err)
+		return interface_types.InterfaceIndex(^uint32(0)), errors.Wrap(err, "vppapi CreateLoopback returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", reply.SwIfIndex).
@@ -88,7 +88,7 @@ func delVPP(ctx context.Context, vppConn api.Connection, swIfIndex interface_typ
 		SwIfIndex: swIfIndex,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi DeleteLoopback returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).

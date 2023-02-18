@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -61,7 +61,7 @@ func createVPP(ctx context.Context, vppConn api.Connection, isIPv6 bool) (uint32
 		},
 	})
 	if err != nil {
-		return ^uint32(0), errors.WithStack(err)
+		return ^uint32(0), errors.Wrap(err, "vppapi IPTableAllocate returned error")
 	}
 	log.FromContext(ctx).
 		WithField("vrfID", reply.Table.TableID).
@@ -95,7 +95,7 @@ func attach(ctx context.Context, vppConn api.Connection, networkService string, 
 				IsIPv6:    isIPv6,
 				VrfID:     vrfID,
 			}); err != nil {
-				return errors.WithStack(err)
+				return errors.Wrap(err, "vppapi SwInterfaceSetTable returned error")
 			}
 
 			log.FromContext(ctx).
@@ -141,7 +141,7 @@ func delVPP(ctx context.Context, vppConn api.Connection, vrfID uint32, isIPv6 bo
 		},
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi IPTableAddDel returned error")
 	}
 	log.FromContext(ctx).
 		WithField("isAdd", false).

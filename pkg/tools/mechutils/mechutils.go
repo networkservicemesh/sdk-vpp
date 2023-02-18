@@ -1,6 +1,6 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
-//
 // Copyright (c) 2021-2022 Nordix Foundation.
+//
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -35,7 +35,7 @@ import (
 func ToNSFilename(mechanism *kernel.Mechanism) (string, error) {
 	u, err := url.Parse(mechanism.GetNetNSURL())
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to parse url %s", mechanism.GetNetNSURL())
 	}
 	if u.Scheme != kernel.NetNSURLScheme {
 		return "", errors.Errorf("NetNSURL Scheme required to be %q actual %q", kernel.NetNSURLScheme, u.Scheme)

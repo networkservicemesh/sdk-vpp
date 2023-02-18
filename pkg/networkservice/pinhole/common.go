@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,12 +47,12 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, port u
 	}
 	swIfIndex, err := tunnelIPSwIfIndex(ctx, vppConn, tunnelIP)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	ingressACLs, egressACLs, err := interfacesACLDetails(ctx, vppConn, swIfIndex)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	interfaceACLList := &acl.ACLInterfaceSetACLList{
@@ -59,13 +61,13 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, port u
 
 	interfaceACLList.Acls, err = addToACLToACLListIfNeeded(ctx, vppConn, tunnelIP, port, tag, false, ingressACLs)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	interfaceACLList.NInput = uint8(len(interfaceACLList.Acls))
 
 	egressACLIndeces, err := addToACLToACLListIfNeeded(ctx, vppConn, tunnelIP, port, tag, true, egressACLs)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	interfaceACLList.Acls = append(interfaceACLList.Acls, egressACLIndeces...)
 	interfaceACLList.Count = uint8(len(interfaceACLList.Acls))
@@ -76,7 +78,7 @@ func create(ctx context.Context, vppConn api.Connection, tunnelIP net.IP, port u
 	now := time.Now()
 	_, err = acl.NewServiceClient(vppConn).ACLInterfaceSetACLList(ctx, interfaceACLList)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi ACLInterfaceSetACLList returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", interfaceACLList.SwIfIndex).
@@ -101,7 +103,7 @@ func addToACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection, tunn
 		now := time.Now()
 		rsp, err := acl.NewServiceClient(vppConn).ACLAddReplace(ctx, createACLAddReplace(tunnelIP, port, tag, egress))
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, errors.Wrap(err, "vppapi ACLAddReplace returned error")
 		}
 		log.FromContext(ctx).
 			WithField("aclIndex", rsp.ACLIndex).
@@ -115,15 +117,15 @@ func addToACLToACLListIfNeeded(ctx context.Context, vppConn api.Connection, tunn
 func interfacesACLDetails(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (ingressACLs, egressACLs []*acl.ACLDetails, err error) {
 	ingressIndeces, egressIndeces, err := interfaceACLIndeces(ctx, vppConn, swIfIndex)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 	ingressACLs, err = aclDetails(ctx, vppConn, ingressIndeces)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 	egressACLs, err = aclDetails(ctx, vppConn, egressIndeces)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 	return ingressACLs, egressACLs, nil
 }
@@ -136,12 +138,12 @@ func aclDetails(ctx context.Context, vppConn api.Connection, aclIndeces []uint32
 			ACLIndex: aclIndex,
 		})
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, errors.Wrap(err, "vppapi ACLDump returned error")
 		}
 		defer func() { _ = aclDumpClient.Close() }()
 		aclDetails, err := aclDumpClient.Recv()
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, errors.Wrapf(err, "error retrieving aclDetails")
 		}
 		log.FromContext(ctx).
 			WithField("aclIndex", aclIndex).
@@ -158,12 +160,12 @@ func interfaceACLIndeces(ctx context.Context, vppConn api.Connection, swIfIndex 
 		SwIfIndex: swIfIndex,
 	})
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrap(err, "vppapi ACLInterfaceListDump returned error")
 	}
 	defer func() { _ = aclInterfaceListDumpClient.Close() }()
 	aclInterfaceListDetails, err := aclInterfaceListDumpClient.Recv()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrapf(err, "error retrieving aclInterfaceListDetails for swIfIndex %d", swIfIndex)
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
@@ -178,7 +180,7 @@ func tunnelIPSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net
 	now := time.Now()
 	swIfDumpClient, swIfDumpErr := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
 	if swIfDumpErr != nil {
-		return 0, errors.WithStack(swIfDumpErr)
+		return 0, errors.Wrap(swIfDumpErr, "vppapi SwInterfaceDump returned error")
 	}
 	defer func() { _ = swIfDumpClient.Close() }()
 	swIfDetails, swIfDumpErr := swIfDumpClient.Recv()
@@ -188,7 +190,7 @@ func tunnelIPSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net
 			IsIPv6:    tunnelIP.To4() == nil,
 		})
 		if err != nil {
-			return 0, errors.WithStack(err)
+			return 0, errors.Wrap(err, "vppapi IPAddressDump returned error")
 		}
 		defer func() { _ = ipDumpClient.Close() }()
 		ipDetails, ipDumpErr := ipDumpClient.Recv()

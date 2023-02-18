@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -26,6 +26,7 @@ import (
 
 	interfaces "github.com/edwarnicke/govpp/binapi/interface"
 	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
@@ -39,13 +40,13 @@ type Connection interface {
 func setRxMode(ctx context.Context, vppConn Connection, swIfIndex interface_types.InterfaceIndex) error {
 	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
 
 	notifCh := make(chan api.Message, 256)
 	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
 	}
 
 	go func() {

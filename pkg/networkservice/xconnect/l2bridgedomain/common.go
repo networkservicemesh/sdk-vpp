@@ -1,5 +1,7 @@
 // Copyright (c) 2022 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,7 +148,7 @@ func addDelVppBridgeDomain(ctx context.Context, vppConn api.Connection, bridgeID
 	}
 	rsp, err := l2.NewServiceClient(vppConn).BridgeDomainAddDelV2(ctx, bridgeDomainAddDelV2)
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, errors.Wrap(err, "vppapi BridgeDomainAddDelV2 returned error")
 	}
 	log.FromContext(ctx).
 		WithField("bridgeID", rsp.BdID).
@@ -165,7 +167,7 @@ func addDelVppInterfaceBridgeDomain(ctx context.Context, vppConn api.Connection,
 		Shg:         shg,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi SwInterfaceSetL2Bridge returned error")
 	}
 	log.FromContext(ctx).
 		WithField("swIfIndex", swIfIndex).
@@ -188,7 +190,7 @@ func delVppSubIf(ctx context.Context, vppConn api.Connection, vlanID uint32, swI
 	}
 	_, err := interfaces.NewServiceClient(vppConn).DeleteSubif(ctx, vlanSubif)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "vppapi DeleteSubif returned error")
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).

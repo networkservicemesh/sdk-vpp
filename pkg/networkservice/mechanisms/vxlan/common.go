@@ -1,5 +1,8 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
+//
 // Copyright (c) 2022 Nordix and/or its affiliates.
+//
+// Copyright (c) 2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -70,7 +73,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 		addNextNodeRsp, err := vpe.NewServiceClient(vppConn).AddNodeNext(ctx, addNextNode)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi AddNodeNext returned error")
 		}
 		log.FromContext(ctx).
 			WithField("isAdd", isAdd).
@@ -97,7 +100,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 		rsp, err := vxlan.NewServiceClient(vppConn).VxlanAddDelTunnelV2(ctx, vxlanAddDelTunnel)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "vppapi VxlanAddDelTunnelV2 returned error")
 		}
 		log.FromContext(ctx).
 			WithField("isAdd", isAdd).

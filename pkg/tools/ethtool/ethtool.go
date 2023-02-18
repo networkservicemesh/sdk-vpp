@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -51,13 +51,13 @@ type ethtoolValue struct {
 }
 
 // ethtoolDisableOffload executes Linux ethtoolDisableOffload syscall.
-func ethtoolDisableOffload(iface string, cmd uint32) (retval uint32, err error) {
+func ethtoolDisableOffload(iface string, cmd uint32) (err error) {
 	if len(iface)+1 > maxIfNameSize {
-		return 0, errors.Errorf("interface name is too long")
+		return errors.Errorf("interface name is too long")
 	}
 	socket, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
 	if err != nil {
-		return 0, err
+		return errors.Wrap(err, "failed to create socket")
 	}
 	defer func() { _ = syscall.Close(socket) }()
 
@@ -70,28 +70,28 @@ func ethtoolDisableOffload(iface string, cmd uint32) (retval uint32, err error) 
 	_, _, errno := syscall.RawSyscall(syscall.SYS_IOCTL, uintptr(socket), uintptr(siocEthtool),
 		uintptr(unsafe.Pointer(&request))) // #nosec
 	if errno != 0 {
-		return 0, errno
+		return errors.Wrap(errno, "failed to execute ioctl system call")
 	}
-	return value.Data, nil
+	return nil
 }
 
 // DisableVethChkSumOffload - disables ChkSumOffload for Veth
 func DisableVethChkSumOffload(veth *netlink.Veth) error {
-	retval, err := ethtoolDisableOffload(veth.LinkAttrs.Name, ethtoolSTxCsum)
+	err := ethtoolDisableOffload(veth.LinkAttrs.Name, ethtoolSTxCsum)
 	if err != nil {
-		return errors.Wrapf(err, "with retval %d", retval)
+		return err
 	}
-	retval, err = ethtoolDisableOffload(veth.LinkAttrs.Name, ethtoolSRxCsum)
+	err = ethtoolDisableOffload(veth.LinkAttrs.Name, ethtoolSRxCsum)
 	if err != nil {
-		return errors.Wrapf(err, "with retval %d", retval)
+		return err
 	}
-	retval, err = ethtoolDisableOffload(veth.PeerName, ethtoolSTxCsum)
+	err = ethtoolDisableOffload(veth.PeerName, ethtoolSTxCsum)
 	if err != nil {
-		return errors.Wrapf(err, "with retval %d", retval)
+		return err
 	}
-	retval, err = ethtoolDisableOffload(veth.PeerName, ethtoolSRxCsum)
+	err = ethtoolDisableOffload(veth.PeerName, ethtoolSRxCsum)
 	if err != nil {
-		return errors.Wrapf(err, "with retval %d", retval)
+		return err
 	}
 	return nil
 }
