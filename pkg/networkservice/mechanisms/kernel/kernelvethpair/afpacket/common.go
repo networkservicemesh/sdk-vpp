@@ -25,8 +25,6 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/govpp/binapi/af_packet"
-	interfaces "github.com/edwarnicke/govpp/binapi/interface"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -49,31 +47,21 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			return errors.New("peer link not found")
 		}
 		now := time.Now()
-		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreate(ctx, &af_packet.AfPacketCreate{
+		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreateV3(ctx, &af_packet.AfPacketCreateV3{
+			Mode:       af_packet.AF_PACKET_API_MODE_ETHERNET,
 			HostIfName: peerLink.Attrs().Name,
 			HwAddr:     types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
+			Flags:      af_packet.AF_PACKET_API_FLAG_VERSION_2,
 		})
 		if err != nil {
-			return errors.Wrap(err, "vppapi AfPacketCreate returned error")
+			return errors.Wrap(err, "vppapi AfPacketCreateV3 returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("duration", time.Since(now)).
-			WithField("vppapi", "AfPacketCreate").Debug("completed")
+			WithField("vppapi", "AfPacketCreateV3").Debug("completed")
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 
-		now = time.Now()
-		if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
-			SwIfIndex: rsp.SwIfIndex,
-			Mode:      interface_types.RX_MODE_API_ADAPTIVE,
-		}); err != nil {
-			return errors.Wrap(err, "vppapi SwInterfaceSetRxMode returned error")
-		}
-		log.FromContext(ctx).
-			WithField("swIfIndex", rsp.SwIfIndex).
-			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
-			WithField("duration", time.Since(now)).
-			WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
 		up.Store(ctx, isClient, true)
 	}
 	return nil
