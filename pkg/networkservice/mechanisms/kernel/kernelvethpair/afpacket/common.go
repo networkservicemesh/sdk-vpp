@@ -48,18 +48,19 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if !ok {
 			return errors.New("peer link not found")
 		}
-		now := time.Now()
-		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreate(ctx, &af_packet.AfPacketCreate{
-			HostIfName: peerLink.Attrs().Name,
+
+		afPacketCreate := &af_packet.AfPacketCreateV3{
+			Mode:       af_packet.AF_PACKET_API_MODE_ETHERNET,
 			HwAddr:     types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
-		})
-		if err != nil {
-			return errors.Wrap(err, "vppapi AfPacketCreate returned error")
+			HostIfName: peerLink.Attrs().Name,
+			Flags:      af_packet.AF_PACKET_API_FLAG_VERSION_2,
 		}
-		log.FromContext(ctx).
-			WithField("swIfIndex", rsp.SwIfIndex).
-			WithField("duration", time.Since(now)).
-			WithField("vppapi", "AfPacketCreate").Debug("completed")
+		now := time.Now()
+		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreateV3(ctx, afPacketCreate)
+		if err != nil {
+			return err
+		}
+
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 
 		now = time.Now()
