@@ -60,7 +60,10 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return err
 		}
-
+		log.FromContext(ctx).
+			WithField("swIfIndex", rsp.SwIfIndex).
+			WithField("duration", time.Since(now)).
+			WithField("vppapi", "AfPacketCreateV3").Debug("completed")
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 
 		now = time.Now()
