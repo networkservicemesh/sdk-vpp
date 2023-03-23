@@ -48,10 +48,12 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 		now := time.Now()
 		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreateV3(ctx, &af_packet.AfPacketCreateV3{
-			Mode:       af_packet.AF_PACKET_API_MODE_ETHERNET,
-			HostIfName: peerLink.Attrs().Name,
-			HwAddr:     types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
-			Flags:      af_packet.AF_PACKET_API_FLAG_VERSION_2,
+			Mode:        af_packet.AF_PACKET_API_MODE_ETHERNET,
+			HostIfName:  peerLink.Attrs().Name,
+			HwAddr:      types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
+			RxFrameSize: 10240,
+			TxFrameSize: 10240,
+			Flags:       af_packet.AF_PACKET_API_FLAG_VERSION_2,
 		})
 		if err != nil {
 			return errors.Wrap(err, "vppapi AfPacketCreateV3 returned error")
