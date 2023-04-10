@@ -1,6 +1,6 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
-// Copyright (c) 2021-2022 Nordix Foundation.
+// Copyright (c) 2021-2023 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -57,6 +57,7 @@ import (
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/afxdppinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/ipsec"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/kernel"
@@ -132,6 +133,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
 			ipsecapi.MECHANISM:  ipsec.NewServer(vppConn, tunnelIP),
 		}),
+		afxdppinhole.NewServer(),
 		pinhole.NewServer(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 		connect.NewServer(
 			client.NewClient(ctx,
@@ -159,6 +161,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						vlan.NewClient(vppConn, opts.domain2Device),
 						filtermechanisms.NewClient(),
 						mechanismpriority.NewClient(opts.mechanismPrioriyList...),
+						afxdppinhole.NewClient(),
 						pinhole.NewClient(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 						recvfd.NewClient(),
 						nsmonitor.NewClient(ctx),

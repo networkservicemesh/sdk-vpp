@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
+	github.com/cilium/ebpf v0.10.0
 	github.com/edwarnicke/govpp v0.0.0-20230130211138-14ef5d20b1d0
 	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.5.2
@@ -40,7 +41,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
