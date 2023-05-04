@@ -5,6 +5,7 @@ go 1.18
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
 	github.com/cilium/ebpf v0.10.0
+	github.com/edwarnicke/exechelper v1.0.2
 	github.com/edwarnicke/govpp v0.0.0-20230130211138-14ef5d20b1d0
 	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.5.2
@@ -14,6 +15,7 @@ require (
 	github.com/networkservicemesh/sdk v0.5.1-0.20230501005204-6fa2f68d5532
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20230501005646-bfd86b518964
 	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b
@@ -23,6 +25,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
+	gopkg.in/fsnotify.v1 v1.4.7
 )
 
 require (
@@ -31,7 +34,6 @@ require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/edwarnicke/exechelper v1.0.2 // indirect
 	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29 // indirect
 	github.com/edwarnicke/grpcfd v1.1.2 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -49,7 +51,6 @@ require (
 	github.com/open-policy-agent/opa v0.44.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.0.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
