@@ -79,18 +79,18 @@ func writeDefaultConfigFiles(ctx context.Context, o *option) error {
 		filename = filepath.Join(o.rootDir, filename)
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			log.FromContext(ctx).Infof("Configuration file: %q not found, using defaults", filename)
-			if err := os.MkdirAll(path.Dir(filename), 0700); err != nil {
+			if err := os.MkdirAll(path.Dir(filename), 0o700); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(filename, []byte(contents), 0600); err != nil {
+			if err := ioutil.WriteFile(filename, []byte(contents), 0o600); err != nil {
 				return err
 			}
 		}
 	}
-	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/run/vpp"), 0700); os.IsNotExist(err) {
+	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/run/vpp"), 0o700); os.IsNotExist(err) {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/log/vpp"), 0700); os.IsNotExist(err) {
+	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/log/vpp"), 0o700); os.IsNotExist(err) {
 		return err
 	}
 	return nil
