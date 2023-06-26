@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,7 @@ package loopback
 import (
 	"context"
 
-	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/govpp/binapi/interface_types"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )

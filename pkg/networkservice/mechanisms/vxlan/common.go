@@ -26,7 +26,7 @@ import (
 
 	"git.fd.io/govpp.git/api"
 	"git.fd.io/govpp.git/binapi/vpe"
-	"github.com/edwarnicke/govpp/binapi/vxlan"
+	"github.com/networkservicemesh/govpp/binapi/vxlan"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"

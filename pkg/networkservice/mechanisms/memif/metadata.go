@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,7 @@ package memif
 import (
 	"context"
 
-	"github.com/edwarnicke/govpp/binapi/memif"
+	"github.com/networkservicemesh/govpp/binapi/memif"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 )

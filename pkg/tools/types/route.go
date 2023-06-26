@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,7 +17,7 @@
 package types
 
 import (
-	"github.com/edwarnicke/govpp/binapi/fib_types"
+	"github.com/networkservicemesh/govpp/binapi/fib_types"
 )
 
 // IsV6toFibProto - returns fib_types.FIB_API_PATH_NH_PROTO_IP6 if isv6 is true

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,7 @@ package types
 import (
 	"net"
 
-	"github.com/edwarnicke/govpp/binapi/ethernet_types"
+	"github.com/networkservicemesh/govpp/binapi/ethernet_types"
 )
 
 // ToVppMacAddress - converts *net.HardwareAddr to ethernet_types.MacAddress

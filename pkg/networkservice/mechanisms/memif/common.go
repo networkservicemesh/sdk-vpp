@@ -29,10 +29,10 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/edwarnicke/govpp/binapi/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
+	"github.com/networkservicemesh/govpp/binapi/memif"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"

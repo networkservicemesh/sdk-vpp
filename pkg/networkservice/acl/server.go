@@ -23,9 +23,9 @@ import (
 	"context"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/edwarnicke/govpp/binapi/acl"
-	"github.com/edwarnicke/govpp/binapi/acl_types"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/govpp/binapi/acl"
+	"github.com/networkservicemesh/govpp/binapi/acl_types"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
