@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +21,7 @@ package up
 import (
 	"context"
 
-	"github.com/edwarnicke/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/govpp/binapi/interface_types"
 )
 
 type options struct {

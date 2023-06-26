@@ -26,8 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
-	"github.com/edwarnicke/govpp/binapi/ip_types"
-	"github.com/edwarnicke/govpp/binapi/wireguard"
+	"github.com/networkservicemesh/govpp/binapi/ip_types"
+	"github.com/networkservicemesh/govpp/binapi/wireguard"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	wireguardMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/wireguard"

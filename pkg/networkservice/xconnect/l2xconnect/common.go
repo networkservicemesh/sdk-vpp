@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/edwarnicke/govpp/binapi/l2"
+	"github.com/networkservicemesh/govpp/binapi/l2"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"

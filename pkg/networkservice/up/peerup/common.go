@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"git.fd.io/govpp.git/api"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
-	"github.com/edwarnicke/govpp/binapi/wireguard"
+	"github.com/networkservicemesh/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/govpp/binapi/wireguard"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,8 +24,8 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
 
-	interfaces "github.com/edwarnicke/govpp/binapi/interface"
-	"github.com/edwarnicke/govpp/binapi/ip"
+	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
+	"github.com/networkservicemesh/govpp/binapi/ip"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )

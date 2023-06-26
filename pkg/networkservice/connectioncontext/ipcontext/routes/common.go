@@ -23,10 +23,10 @@ import (
 	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
 
-	"github.com/edwarnicke/govpp/binapi/fib_types"
-	"github.com/edwarnicke/govpp/binapi/interface_types"
-	"github.com/edwarnicke/govpp/binapi/ip"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/govpp/binapi/fib_types"
+	"github.com/networkservicemesh/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/govpp/binapi/ip"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/vrf"
