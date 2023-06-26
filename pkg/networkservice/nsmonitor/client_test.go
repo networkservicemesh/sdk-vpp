@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -51,7 +51,7 @@ type testMonitor struct {
 	mutex                      sync.Mutex
 }
 
-func (m *testMonitor) Watch(ctx context.Context, inodeURL string) <-chan struct{} {
+func (m *testMonitor) Watch(_ context.Context, inodeURL string) <-chan struct{} {
 	m.mutex.Lock()
 	m.inodes = append(m.inodes, inodeURL)
 	m.mutex.Unlock()

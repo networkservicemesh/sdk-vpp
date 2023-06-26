@@ -68,6 +68,6 @@ func (u *unnumberedClient) Request(ctx context.Context, request *networkservice.
 }
 
 func (u *unnumberedClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	delete(ctx, metadata.IsClient(u))
+	deleteFromMap(ctx, metadata.IsClient(u))
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
