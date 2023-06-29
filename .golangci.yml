@@ -130,7 +130,7 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    #- rowserrcheck
+    # - rowserrcheck
     - bodyclose
     - deadcode
     - depguard
@@ -145,17 +145,17 @@ linters:
     - gofmt
     - goheader
     - goimports
-    #- revive
+    # - revive
     - gosec
-    #- gosimple
-    #- govet
+    # - gosimple
+    # - govet
     - ineffassign
     - interfacer
     # - lll
     - misspell
     - nakedret
     - scopelint
-    #- staticcheck
+    # - staticcheck
     - structcheck
     - stylecheck
     - typecheck
