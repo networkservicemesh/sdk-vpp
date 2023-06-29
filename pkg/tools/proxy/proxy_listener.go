@@ -26,7 +26,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"
 
