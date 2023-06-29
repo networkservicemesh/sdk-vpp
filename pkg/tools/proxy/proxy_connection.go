@@ -25,7 +25,7 @@ import (
 	"net"
 	"syscall"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 
