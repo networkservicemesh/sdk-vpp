@@ -94,5 +94,5 @@ func (v *pinholeClient) Request(ctx context.Context, request *networkservice.Net
 }
 
 func (v *pinholeClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	return next.Client(ctx).Close(ctx, conn)
+	return next.Client(ctx).Close(ctx, conn, opts...)
 }
