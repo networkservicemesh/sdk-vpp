@@ -1,6 +1,6 @@
 module github.com/networkservicemesh/sdk-vpp
 
-go 1.18
+go 1.20
 
 require (
 	git.fd.io/govpp.git v0.3.6-0.20210927044411-385ccc0d8ba9
