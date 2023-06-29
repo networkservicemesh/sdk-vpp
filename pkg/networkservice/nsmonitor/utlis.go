@@ -21,7 +21,6 @@ package nsmonitor
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -36,7 +35,7 @@ func resolveProcByInodeURL(inodeURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	candidates, err := ioutil.ReadDir("/proc")
+	candidates, err := os.ReadDir("/proc")
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read directory /proc")
 	}
@@ -61,7 +60,7 @@ func resolveProcByInodeURL(inodeURL string) (string, error) {
 }
 
 func getProcName(pid uint64) (string, error) {
-	bytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%v/stat", pid))
+	bytes, err := os.ReadFile(fmt.Sprintf("/proc/%v/stat", pid))
 	if err != nil {
 		return "", err
 	}

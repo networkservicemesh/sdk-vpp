@@ -65,6 +65,6 @@ func (u *unnumberedServer) Request(ctx context.Context, request *networkservice.
 }
 
 func (u *unnumberedServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	delete(ctx, metadata.IsClient(u))
+	deleteFromMap(ctx, metadata.IsClient(u))
 	return next.Server(ctx).Close(ctx, conn)
 }
