@@ -56,7 +56,6 @@ import (
 
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/pinggrouprange"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/afxdppinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/connectioncontext/mtu"
@@ -123,7 +122,6 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		l2bridgedomain.NewServer(vppConn),
 		connectioncontextkernel.NewServer(),
 		ethernetcontext.NewVFServer(),
-		pinggrouprange.NewServer(),
 		tag.NewServer(ctx, vppConn),
 		mtu.NewServer(vppConn),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
@@ -148,7 +146,6 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						cleanup.NewClient(ctx, opts.cleanupOpts...),
 						mechanismtranslation.NewClient(),
 						connectioncontextkernel.NewClient(),
-						pinggrouprange.NewClient(),
 						stats.NewClient(ctx, opts.statsOpts...),
 						up.NewClient(ctx, vppConn),
 						mtu.NewClient(vppConn),
