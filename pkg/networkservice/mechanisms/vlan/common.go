@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"git.fd.io/govpp.git/api"
+	"go.fd.io/govpp/api"
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"

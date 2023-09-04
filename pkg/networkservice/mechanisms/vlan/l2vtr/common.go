@@ -22,9 +22,9 @@ import (
 	"context"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/l2"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	vlanmech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vlan"

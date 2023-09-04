@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/acl"
 	"github.com/networkservicemesh/govpp/binapi/acl_types"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 

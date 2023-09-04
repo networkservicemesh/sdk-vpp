@@ -26,9 +26,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	memifMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/memif"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/payload"
@@ -36,6 +36,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"
+	"go.fd.io/govpp/api"
 	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
@@ -244,8 +245,11 @@ func getVppSocketFilename(mechanism *memifMech.Mechanism, netNS netns.NsHandle) 
 	}
 	defer func() { _ = targetNetNS.Close() }()
 
+	// VPP uses "abstract:" notation to create an abstract socket. But once created on Unix, it has "@" prefix.
+	// According to the VPP API we have to replace "@" with "abstract:"
+	vppSocketFilename := strings.ReplaceAll(mechanism.GetSocketFilename(), "@", "abstract:")
 	if !targetNetNS.Equal(netNS) {
-		return "@netns:" + u.Path + mechanism.GetSocketFilename(), nil
+		return fmt.Sprintf("%s,netns_name=%s", vppSocketFilename, u.Path), nil
 	}
-	return mechanism.GetSocketFilename(), nil
+	return vppSocketFilename, nil
 }

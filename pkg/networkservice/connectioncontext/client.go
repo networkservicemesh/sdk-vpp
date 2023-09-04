@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,8 +20,8 @@
 package connectioncontext
 
 import (
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 

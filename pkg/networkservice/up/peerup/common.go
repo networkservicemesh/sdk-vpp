@@ -23,10 +23,10 @@ import (
 	"os"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/govpp/binapi/wireguard"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 

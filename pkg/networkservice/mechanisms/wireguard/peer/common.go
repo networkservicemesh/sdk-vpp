@@ -22,8 +22,8 @@ import (
 	"context"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/networkservicemesh/govpp/binapi/ip_types"
