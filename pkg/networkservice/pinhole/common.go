@@ -23,7 +23,6 @@ import (
 	"net"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/acl"
 	"github.com/networkservicemesh/govpp/binapi/acl_types"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
@@ -31,6 +30,7 @@ import (
 	"github.com/networkservicemesh/govpp/binapi/ip"
 	"github.com/networkservicemesh/govpp/binapi/ip_types"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 

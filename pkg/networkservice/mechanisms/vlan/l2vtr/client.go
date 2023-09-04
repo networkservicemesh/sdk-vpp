@@ -1,5 +1,7 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +21,9 @@ package l2vtr
 import (
 	"context"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"

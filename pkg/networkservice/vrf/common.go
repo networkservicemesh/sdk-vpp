@@ -22,10 +22,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"git.fd.io/govpp.git/api"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/govpp/binapi/ip"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 

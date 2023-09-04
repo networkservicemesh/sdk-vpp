@@ -24,8 +24,8 @@ import (
 	"net"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"

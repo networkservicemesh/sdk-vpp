@@ -32,7 +32,6 @@ import (
 	"path"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/ikev2_types"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
@@ -40,6 +39,7 @@ import (
 	"github.com/networkservicemesh/govpp/binapi/ip_types"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"

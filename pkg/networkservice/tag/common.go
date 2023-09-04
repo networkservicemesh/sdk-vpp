@@ -20,11 +20,11 @@ import (
 	"context"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )

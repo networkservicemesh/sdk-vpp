@@ -24,10 +24,10 @@ import (
 	"context"
 	"time"
 
-	"git.fd.io/govpp.git/api"
-	"git.fd.io/govpp.git/binapi/vpe"
 	"github.com/networkservicemesh/govpp/binapi/vxlan"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
+	"go.fd.io/govpp/binapi/vlib"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	vxlanMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vxlan"
@@ -59,19 +59,19 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 		now := time.Now()
 
-		addNextNode := &vpe.AddNodeNext{
+		addNextNode := &vlib.AddNodeNext{
 			NodeName: "vxlan4-input",
 			NextName: "ethernet-input",
 		}
 
 		if mechanism.SrcIP().To4() == nil {
-			addNextNode = &vpe.AddNodeNext{
+			addNextNode = &vlib.AddNodeNext{
 				NodeName: "vxlan6-input",
 				NextName: "ethernet-input",
 			}
 		}
 
-		addNextNodeRsp, err := vpe.NewServiceClient(vppConn).AddNodeNext(ctx, addNextNode)
+		addNextNodeRsp, err := vlib.NewServiceClient(vppConn).AddNodeNext(ctx, addNextNode)
 		if err != nil {
 			return errors.Wrap(err, "vppapi AddNodeNext returned error")
 		}

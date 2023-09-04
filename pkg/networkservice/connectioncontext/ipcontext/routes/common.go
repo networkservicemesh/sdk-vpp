@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/govpp/binapi/fib_types"

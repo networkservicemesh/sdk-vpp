@@ -22,8 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"git.fd.io/govpp.git/api"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
+	"go.fd.io/govpp/api"
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 
