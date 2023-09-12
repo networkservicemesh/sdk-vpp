@@ -45,6 +45,11 @@ func (e *Endpoint) Equals(endpoint *Endpoint) bool {
 	return e.IP.Equal(endpoint.IP) && e.Port == endpoint.Port
 }
 
+// String returns the string form of the Endpoint
+func (e *Endpoint) String() string {
+	return fmt.Sprintf("%s:%d", e.IP.String(), e.Port)
+}
+
 // Handler works with load balancer servers. It is based on CNAT VPP-plugin
 type Handler struct {
 	vppConn    api.Connection
@@ -90,6 +95,10 @@ func (c *Handler) AddServers(ctx context.Context, vl3NSEName string, add map[str
 		if endpoint, ok := realServers.Load(k); !ok || !endpoint.Equals(v) {
 			realServers.Store(k, v)
 			updateRequired = true
+			log.FromContext(ctx).WithField("vl3lb", "AddServers").
+				WithField("vL3NSE", vl3NSEName).
+				WithField("serverID", k).
+				WithField("server", v.String()).Debugf("completed")
 		}
 	}
 
@@ -111,6 +120,9 @@ func (c *Handler) DeleteServers(ctx context.Context, vl3NSEName string, del []st
 	for _, id := range del {
 		realServers.Delete(id)
 		updateRequired = true
+		log.FromContext(ctx).WithField("vl3lb", "DeleteServers").
+			WithField("vL3NSE", vl3NSEName).
+			WithField("serverID", id).Debugf("completed")
 	}
 
 	if updateRequired {
@@ -121,8 +133,9 @@ func (c *Handler) DeleteServers(ctx context.Context, vl3NSEName string, del []st
 		})
 
 		if length == 0 {
-			log.FromContext(ctx).WithField("vl3Loadbalancer", "DeleteServers").Infof("Delete VL3NSE: %s ", vl3NSEName)
 			c.servers.Delete(vl3NSEName)
+			log.FromContext(ctx).WithField("vl3lb", "DeleteServers").
+				WithField("vL3NSE", vl3NSEName).Debug("vL3NSE entry was deleted")
 		}
 
 		err = c.updateVPPCnat(ctx)
