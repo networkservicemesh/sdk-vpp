@@ -22,7 +22,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/edwarnicke/serialize"
+	"github.com/edwarnicke/genericsync"
 	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/govpp/binapi/cnat"
@@ -55,8 +55,7 @@ type Handler struct {
 
 	// [vl3-NSE] --> [connID]*Endpoint
 	// We store it this way because the plugin does not add, but only updates existing entries. Therefore, to add/delete one entry, we must also pass the old ones.
-	servers  map[string]map[string]*Endpoint
-	executor serialize.Executor
+	servers genericsync.Map[string, *genericsync.Map[string, *Endpoint]]
 }
 
 // NewHandler creates a Handler.
@@ -72,7 +71,6 @@ func NewHandler(vppConn api.Connection, endpoint *Endpoint, proto ip_types.IPPro
 		proto:    proto,
 		isRealIP: 1,
 		lbType:   cnat.CNAT_LB_TYPE_MAGLEV,
-		servers:  make(map[string]map[string]*Endpoint),
 	}
 }
 
@@ -85,51 +83,50 @@ func cnatTranslationString(c *cnat.CnatTranslation) string {
 }
 
 // AddServers adds the real servers to the VPP plugin
-func (c *Handler) AddServers(ctx context.Context, vl3NSEName string, add map[string]*Endpoint) error {
-	var err error
-	<-c.executor.AsyncExec(func() {
-		if _, ok := c.servers[vl3NSEName]; !ok {
-			c.servers[vl3NSEName] = make(map[string]*Endpoint)
+func (c *Handler) AddServers(ctx context.Context, vl3NSEName string, add map[string]*Endpoint) (err error) {
+	updateRequired := false
+	realServers, _ := c.servers.LoadOrStore(vl3NSEName, new(genericsync.Map[string, *Endpoint]))
+	for k, v := range add {
+		if endpoint, ok := realServers.Load(k); !ok || !endpoint.Equals(v) {
+			realServers.Store(k, v)
+			updateRequired = true
 		}
+	}
 
-		updateRequired := false
-		for k, v := range add {
-			if endpoint, ok := c.servers[vl3NSEName][k]; !ok || !endpoint.Equals(v) {
-				c.servers[vl3NSEName][k] = v
-				updateRequired = true
-			}
-		}
-
-		if updateRequired {
-			err = c.updateVPPCnat(ctx)
-		}
-	})
+	if updateRequired {
+		err = c.updateVPPCnat(ctx)
+	}
 
 	return err
 }
 
 // DeleteServers deletes the real servers from the VPP plugin
-func (c *Handler) DeleteServers(ctx context.Context, vl3NSEName string, del []string) error {
-	var err error
-	<-c.executor.AsyncExec(func() {
-		if _, ok := c.servers[vl3NSEName]; !ok {
-			return
-		}
+func (c *Handler) DeleteServers(ctx context.Context, vl3NSEName string, del []string) (err error) {
+	realServers, ok := c.servers.Load(vl3NSEName)
+	if !ok {
+		return nil
+	}
 
-		updateRequired := false
-		for _, id := range del {
-			delete(c.servers[vl3NSEName], id)
-			updateRequired = true
-		}
-		if len(c.servers[vl3NSEName]) == 0 {
+	updateRequired := false
+	for _, id := range del {
+		realServers.Delete(id)
+		updateRequired = true
+	}
+
+	if updateRequired {
+		var length int
+		realServers.Range(func(key string, value *Endpoint) bool {
+			length++
+			return true
+		})
+
+		if length == 0 {
 			log.FromContext(ctx).WithField("vl3Loadbalancer", "DeleteServers").Infof("Delete VL3NSE: %s ", vl3NSEName)
-			delete(c.servers, vl3NSEName)
+			c.servers.Delete(vl3NSEName)
 		}
 
-		if updateRequired {
-			err = c.updateVPPCnat(ctx)
-		}
-	})
+		err = c.updateVPPCnat(ctx)
+	}
 
 	return err
 }
@@ -137,19 +134,20 @@ func (c *Handler) DeleteServers(ctx context.Context, vl3NSEName string, del []st
 // GetServerIDsByVL3Name returns the list of the servers belonging to the vl3-NSE
 func (c *Handler) GetServerIDsByVL3Name(vl3NSEName string) []string {
 	var list []string
-	<-c.executor.AsyncExec(func() {
-		for id := range c.servers[vl3NSEName] {
-			list = append(list, id)
-		}
-	})
+	realServers, loaded := c.servers.Load(vl3NSEName)
+	if loaded {
+		realServers.Range(func(key string, value *Endpoint) bool {
+			list = append(list, key)
+			return true
+		})
+	}
 	return list
 }
 
-// should work under executor
 func (c *Handler) updateVPPCnat(ctx context.Context) error {
 	var paths []cnat.CnatEndpointTuple
-	for _, vl3Servers := range c.servers {
-		for _, s := range vl3Servers {
+	c.servers.Range(func(key string, realServers *genericsync.Map[string, *Endpoint]) bool {
+		realServers.Range(func(key string, s *Endpoint) bool {
 			paths = append(paths, cnat.CnatEndpointTuple{
 				DstEp: cnat.CnatEndpoint{
 					Addr:      types.ToVppAddress(s.IP),
@@ -161,8 +159,11 @@ func (c *Handler) updateVPPCnat(ctx context.Context) error {
 					SwIfIndex: interface_types.InterfaceIndex(^uint32(0)),
 				},
 			})
-		}
-	}
+			return true
+		})
+		return true
+	})
+
 	if len(paths) == 0 {
 		now := time.Now()
 		cnatTranslationDel := cnat.CnatTranslationDel{ID: 0}
