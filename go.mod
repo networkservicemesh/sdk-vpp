@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/cilium/ebpf v0.10.0
+	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29
 	github.com/edwarnicke/serialize v1.0.7
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
@@ -32,7 +33,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/edwarnicke/exechelper v1.0.2 // indirect
-	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29 // indirect
 	github.com/edwarnicke/grpcfd v1.1.2 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/ftrvxmtrx/fd v0.0.0-20150925145434-c6d800382fff // indirect
