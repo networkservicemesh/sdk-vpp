@@ -14,5 +14,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vl3lb provides utilities for load balancing
+// Package vl3lb provides vl3 load balancing chain element
 package vl3lb
