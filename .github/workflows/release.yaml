@@ -47,6 +47,7 @@ jobs:
         "cmd-nse-firewall-vpp",
         "cmd-nse-vl3-vpp",
         "cmd-nse-simple-vl3-docker",
-        "cmd-nsc-simple-docker"]
+        "cmd-nsc-simple-docker",
+        "cmd-lb-vl3-vpp"]
     secrets:
       token: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}
