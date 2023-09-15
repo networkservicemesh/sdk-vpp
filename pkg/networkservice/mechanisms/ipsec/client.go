@@ -18,7 +18,9 @@ package ipsec
 
 import (
 	"context"
+	"crypto/rsa"
 	"net"
+	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -32,6 +34,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/ipsec/mtu"
@@ -41,14 +44,38 @@ import (
 type ipsecClient struct {
 	vppConn  api.Connection
 	tunnelIP net.IP
+
+	privateKeyFileName string
+	privateKey         *rsa.PrivateKey
+	onceInit           sync.Once
 }
 
 // NewClient - returns a new client for the IPSec remote mechanism
-func NewClient(vppConn api.Connection, tunnelIP net.IP) networkservice.NetworkServiceClient {
+func NewClient(vppConn api.Connection, tunnelIP net.IP, options ...Option) networkservice.NetworkServiceClient {
+	opts := &ipsecOptions{}
+	for _, opt := range options {
+		opt(opts)
+	}
+
+	if opts.privateKeyFileName == "" {
+		var err error
+		opts.privateKeyFileName, err = GenerateRSAKey()
+		if err != nil {
+			log.FromContext(context.Background()).Fatalf("ipsecClient GenerateRSAKey error: %v", err)
+		}
+	}
+
+	privateKey, err := privateKeyFromFile(opts.privateKeyFileName)
+	if err != nil {
+		log.FromContext(context.Background()).Fatalf("ipsecClient privateKeyFromFile error: %v", err)
+	}
+
 	return chain.NewNetworkServiceClient(
 		&ipsecClient{
-			vppConn:  vppConn,
-			tunnelIP: tunnelIP,
+			vppConn:            vppConn,
+			tunnelIP:           tunnelIP,
+			privateKeyFileName: opts.privateKeyFileName,
+			privateKey:         privateKey,
 		},
 		mtu.NewClient(vppConn, tunnelIP),
 	)
@@ -58,12 +85,15 @@ func (i *ipsecClient) Request(ctx context.Context, request *networkservice.Netwo
 	if request.GetConnection().GetPayload() != payload.IP {
 		return next.Client(ctx).Request(ctx, request, opts...)
 	}
-
-	rsaKey, err := generateRSAKey()
+	var err error
+	i.onceInit.Do(func() {
+		err = setIKEv2LocalKey(ctx, i.vppConn, i.privateKeyFileName)
+	})
 	if err != nil {
 		return nil, err
 	}
-	publicKey, err := createCertBase64(rsaKey, metadata.IsClient(i))
+
+	certificate, err := createCertBase64(i.privateKey, metadata.IsClient(i))
 	if err != nil {
 		return nil, err
 	}
@@ -71,15 +101,16 @@ func (i *ipsecClient) Request(ctx context.Context, request *networkservice.Netwo
 	// else create a new one and store it after successful interface creation
 	if mechanism := ipsecMech.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil {
 		// If there is a key in mechanism then we can use it
-		publicKey = mechanism.SrcPublicKey()
+		certificate = mechanism.SrcPublicKey()
 	}
+
 	mechanism := &networkservice.Mechanism{
 		Cls:        cls.REMOTE,
 		Type:       ipsecMech.MECHANISM,
 		Parameters: make(map[string]string),
 	}
 	ipsecMech.ToMechanism(mechanism).
-		SetSrcPublicKey(publicKey).
+		SetSrcPublicKey(certificate).
 		SetSrcIP(i.tunnelIP).
 		SetSrcPort(ikev2DefaultPort)
 
@@ -95,7 +126,7 @@ func (i *ipsecClient) Request(ctx context.Context, request *networkservice.Netwo
 		return nil, err
 	}
 
-	if err = create(ctx, conn, i.vppConn, rsaKey, metadata.IsClient(i)); err != nil {
+	if err = create(ctx, conn, i.vppConn, metadata.IsClient(i)); err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 

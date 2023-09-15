@@ -30,7 +30,10 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/networkservicemesh/govpp/binapi/ikev2_types"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
@@ -51,7 +54,7 @@ import (
 )
 
 // create - creates IPSEC with IKEv2
-func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, privateKey *rsa.PrivateKey, isClient bool) error {
+func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
 	if mechanism := ipsec.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		_, ok := ifindex.Load(ctx, isClient)
 		if ok {
@@ -78,7 +81,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 
 		// *** SET KEYS *** //
-		err = setKeys(ctx, vppConn, profileName, mechanism, privateKey, isClient)
+		err = setKeys(ctx, vppConn, profileName, mechanism, isClient)
 		if err != nil {
 			return err
 		}
@@ -254,22 +257,16 @@ func setUDPEncap(ctx context.Context, vppConn api.Connection, profileName string
 	return nil
 }
 
-func setKeys(ctx context.Context, vppConn api.Connection, profileName string, mechanism *ipsec.Mechanism, privateKey *rsa.PrivateKey, isClient bool) error {
+func setKeys(ctx context.Context, vppConn api.Connection, profileName string, mechanism *ipsec.Mechanism, isClient bool) error {
 	publicKeyBase64 := mechanism.SrcPublicKey()
 	if isClient {
 		publicKeyBase64 = mechanism.DstPublicKey()
 	}
-	publicKeyFileName, err := dumpCertBase64ToFile(publicKeyBase64, profileName, isClient)
+	publicKeyFileName, err := dumpCertBase64ToFile(publicKeyBase64, profileName)
 	if err != nil {
 		return err
 	}
 	log.FromContext(ctx).WithField("operation", "dumpCertBase64ToFile").Debug("completed")
-
-	privateKeyFileName, err := dumpPrivateKeyToFile(privateKey, profileName, isClient)
-	if err != nil {
-		return err
-	}
-	log.FromContext(ctx).WithField("operation", "dumpPrivateKeyToFile").Debug("completed")
 
 	now := time.Now()
 	_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetAuth(ctx, &ikev2.Ikev2ProfileSetAuth{
@@ -286,8 +283,12 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2ProfileSetAuth").Debug("completed")
 
-	now = time.Now()
-	_, err = ikev2.NewServiceClient(vppConn).Ikev2SetLocalKey(ctx, &ikev2.Ikev2SetLocalKey{
+	return nil
+}
+
+func setIKEv2LocalKey(ctx context.Context, vppConn api.Connection, privateKeyFileName string) error {
+	now := time.Now()
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetLocalKey(ctx, &ikev2.Ikev2SetLocalKey{
 		KeyFile: privateKeyFileName,
 	})
 	if err != nil {
@@ -296,7 +297,6 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2SetLocalKey").Debug("completed")
-
 	return nil
 }
 
@@ -527,9 +527,9 @@ func generateRSAKey() (*rsa.PrivateKey, error) {
 	return key, nil
 }
 
-func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, profileName string, isClient bool) (string, error) {
-	dir := path.Join(os.TempDir(), profileName)
-	err := os.Mkdir(dir, 0o700)
+func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, folderName string) (string, error) {
+	dir := path.Join(os.TempDir(), "networkservicemesh", folderName)
+	err := os.MkdirAll(dir, 0o700)
 	if err != nil && !os.IsExist(err) {
 		return "", errors.Wrapf(err, "failed to create directory %s", dir)
 	}
@@ -540,9 +540,10 @@ func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, profileName string, isClie
 		Bytes: privateKeyBytes,
 	}
 
-	file, err := os.Create(path.Clean(path.Join(dir, isClientPrefix(isClient)+"-key.pem")))
+	keyName := "private.pem"
+	file, err := os.Create(path.Clean(path.Join(dir, keyName)))
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, isClientPrefix(isClient)+"-key.pem")))
+		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, keyName)))
 	}
 	err = pem.Encode(file, privateKeyBlock)
 	if err != nil {
@@ -550,6 +551,24 @@ func dumpPrivateKeyToFile(privatekey *rsa.PrivateKey, profileName string, isClie
 	}
 
 	return file.Name(), nil
+}
+
+func privateKeyFromFile(f string) (*rsa.PrivateKey, error) {
+	bytes, err := os.ReadFile(filepath.Clean(f))
+	if err != nil {
+		return nil, err
+	}
+
+	pemBlock, _ := pem.Decode(bytes)
+	if pemBlock == nil {
+		return nil, errors.New("pem decode error")
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey, nil
 }
 
 func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error) {
@@ -566,8 +585,6 @@ func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error)
 		Subject: pkix.Name{
 			CommonName: isClientPrefix(isClient),
 		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Minute * 5),
 	}
 	certbytes, err := x509.CreateCertificate(rand.Reader, template, template, &privatekey.PublicKey, privatekey)
 	if err != nil {
@@ -576,9 +593,9 @@ func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error)
 	return base64.StdEncoding.EncodeToString(certbytes), nil
 }
 
-func dumpCertBase64ToFile(base64key, profileName string, isClient bool) (string, error) {
-	dir := path.Join(os.TempDir(), profileName)
-	err := os.Mkdir(dir, 0o700)
+func dumpCertBase64ToFile(base64key, folderName string) (string, error) {
+	dir := path.Join(os.TempDir(), "networkservicemesh", folderName)
+	err := os.MkdirAll(dir, 0o700)
 	if err != nil && !os.IsExist(err) {
 		return "", errors.Wrapf(err, "failed to create directory %s", dir)
 	}
@@ -593,9 +610,9 @@ func dumpCertBase64ToFile(base64key, profileName string, isClient bool) (string,
 		Bytes: certbytes,
 	}
 
-	file, err := os.Create(path.Clean(path.Join(dir, isClientPrefix(!isClient)+"-cert.pem")))
+	file, err := os.Create(path.Clean(path.Join(dir, "cert.pem")))
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, isClientPrefix(!isClient)+"-cert.pem")))
+		return "", errors.Wrapf(err, "failed to create file %s", path.Clean(path.Join(dir, "cert.pem")))
 	}
 	err = pem.Encode(file, publicKeyBlock)
 	if err != nil {
@@ -610,4 +627,22 @@ func isClientPrefix(isClient bool) string {
 		return "client"
 	}
 	return "server"
+}
+
+// GenerateRSAKey generates RSA private key
+func GenerateRSAKey() (privateKeyFileName string, err error) {
+	var privateKey *rsa.PrivateKey
+	privateKey, err = generateRSAKey()
+	if err != nil {
+		return
+	}
+
+	folderName := "ikev2_" + uuid.New().String()[:8]
+	var privKeyFileName string
+	privKeyFileName, err = dumpPrivateKeyToFile(privateKey, folderName)
+	if err != nil {
+		return
+	}
+
+	return privKeyFileName, err
 }
