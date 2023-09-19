@@ -47,6 +47,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/sendfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	authmonitor "github.com/networkservicemesh/sdk/pkg/tools/monitorconnection/authorize"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
@@ -109,6 +110,10 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		registryclient.WithClientURL(opts.clientURL),
 		registryclient.WithDialOptions(opts.dialOpts...))
 
+	ikev2Key, err := ipsec.GenerateRSAKey()
+	if err != nil {
+		log.FromContext(ctx).Fatalf("error ipsec.GenerateRSAKey: %v", err.Error())
+	}
 	rv := &xconnectNSServer{}
 	pinholeMutex := new(sync.Mutex)
 	additionalFunctionality := []networkservice.NetworkServiceServer{
@@ -131,7 +136,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			kernel.MECHANISM:    kernel.NewServer(vppConn),
 			vxlan.MECHANISM:     vxlan.NewServer(vppConn, tunnelIP, opts.vxlanOpts...),
 			wireguard.MECHANISM: wireguard.NewServer(vppConn, tunnelIP),
-			ipsecapi.MECHANISM:  ipsec.NewServer(vppConn, tunnelIP),
+			ipsecapi.MECHANISM:  ipsec.NewServer(vppConn, tunnelIP, ipsec.WithIKEv2PrivateKey(ikev2Key)),
 		}),
 		afxdppinhole.NewServer(),
 		pinhole.NewServer(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
@@ -157,7 +162,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						kernel.NewClient(vppConn),
 						vxlan.NewClient(vppConn, tunnelIP, opts.vxlanOpts...),
 						wireguard.NewClient(vppConn, tunnelIP),
-						ipsec.NewClient(vppConn, tunnelIP),
+						ipsec.NewClient(vppConn, tunnelIP, ipsec.WithIKEv2PrivateKey(ikev2Key)),
 						vlan.NewClient(vppConn, opts.domain2Device),
 						filtermechanisms.NewClient(),
 						mechanismpriority.NewClient(opts.mechanismPrioriyList...),
