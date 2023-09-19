@@ -53,20 +53,24 @@ func waitForResponses(responseCh <-chan error) bool {
 	}
 }
 
-func getAPIChannel(ctx context.Context, vppConn vpphelper.Connection, in *ping.WantPingEvents) (api.Channel, error) {
+func getAPIChannel(
+	ctx context.Context,
+	vppConn vpphelper.Connection,
+	dstIP ip_types.Address,
+	interval float64,
+	repeat uint32) (api.Channel, error) {
 	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
-	now := time.Now()
-	if _, err = ping.NewServiceClient(vppConn).WantPingEvents(ctx, in); err != nil {
+	if _, err = ping.NewServiceClient(vppConn).WantPingEvents(ctx, &ping.WantPingEvents{
+		Address:  dstIP,
+		Interval: interval,
+		Repeat:   repeat,
+	}); err != nil {
 		apiChannel.Close()
 		return nil, errors.Wrap(err, "vppapi WantPingEvents returned error")
 	}
-	log.FromContext(ctx).
-		WithField("duration", time.Since(now)).
-		WithField("vppapi", "WantPingEvents").Info("completed")
-
 	go func() {
 		<-ctx.Done()
 		apiChannel.Close()
@@ -74,14 +78,16 @@ func getAPIChannel(ctx context.Context, vppConn vpphelper.Connection, in *ping.W
 	return apiChannel, nil
 }
 
-func doPing(deadlineCtx context.Context, vppConn vpphelper.Connection, srcIP, dstIP ip_types.Address, interval float64, responseCh chan<- error) {
+func doPing(
+	deadlineCtx context.Context,
+	vppConn vpphelper.Connection,
+	srcIP, dstIP ip_types.Address,
+	interval float64,
+	repeat uint32,
+	responseCh chan error) {
 	logger := log.FromContext(deadlineCtx).WithField("srcIP", srcIP.String()).WithField("dstIP", dstIP.String())
 
-	var msg ping.WantPingEvents
-	msg.Address = dstIP
-	msg.Interval = interval
-
-	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, &msg)
+	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, dstIP, interval, packetCount)
 	if err != nil {
 		responseCh <- nil
 		return
@@ -99,7 +105,7 @@ func doPing(deadlineCtx context.Context, vppConn vpphelper.Connection, srcIP, ds
 	for {
 		select {
 		case <-deadlineCtx.Done():
-			responseCh <- nil
+			return
 		case rawMsg := <-notifCh:
 			if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
 				if msg.ReplyCount == 0 {
@@ -157,7 +163,7 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 		defer close(responseCh)
 		for _, srcIP := range srcIPs {
 			for _, dstIP := range dstIPs {
-				go doPing(deadlineCtx, vppConn, srcIP, dstIP, interval, responseCh)
+				go doPing(deadlineCtx, vppConn, srcIP, dstIP, interval, packetCount, responseCh)
 			}
 		}
 
