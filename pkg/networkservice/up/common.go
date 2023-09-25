@@ -136,6 +136,6 @@ func initFunc(ctx context.Context, vppConn api.Connection) error {
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "WantInterfaceEvents").Info("completed")
+		WithField("vppapi", "WantInterfaceEvents").Debug("completed")
 	return nil
 }

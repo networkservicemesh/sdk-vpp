@@ -118,7 +118,7 @@ func getAPIChannel(ctx context.Context, vppConn Connection, peerIndex uint32) (a
 	}
 	log.FromContext(ctx).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "WantWireguardPeerEvents").Info("completed")
+		WithField("vppapi", "WantWireguardPeerEvents").Debug("completed")
 
 	go func() {
 		<-ctx.Done()

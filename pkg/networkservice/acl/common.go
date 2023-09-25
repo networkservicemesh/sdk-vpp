@@ -20,7 +20,6 @@ package acl
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/networkservicemesh/govpp/binapi/acl"
@@ -42,10 +41,9 @@ func create(ctx context.Context, vppConn api.Connection, tag string, isClient bo
 
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
-		logger.Info("swIfIndex not found")
 		return nil, errors.New("swIfIndex not found")
 	}
-	logger.Infof(fmt.Sprintf("swIfIndex=%v", swIfIndex))
+	logger.Debugf("swIfIndex=%v", swIfIndex)
 
 	interfaceACLList := &acl.ACLInterfaceSetACLList{
 		SwIfIndex: swIfIndex,
@@ -54,14 +52,14 @@ func create(ctx context.Context, vppConn api.Connection, tag string, isClient bo
 	var err error
 	interfaceACLList.Acls, err = addACLToACLList(ctx, vppConn, tag, false, aRules)
 	if err != nil {
-		logger.Info("error adding acl to acl list ingress")
+		logger.Debug("error adding acl to acl list ingress")
 		return nil, err
 	}
 	interfaceACLList.NInput = uint8(len(interfaceACLList.Acls))
 
 	egressACLIndeces, err := addACLToACLList(ctx, vppConn, tag, true, aRules)
 	if err != nil {
-		logger.Info("error adding acl to acl list egress")
+		logger.Debug("error adding acl to acl list egress")
 		return nil, err
 	}
 	interfaceACLList.Acls = append(interfaceACLList.Acls, egressACLIndeces...)
@@ -69,7 +67,6 @@ func create(ctx context.Context, vppConn api.Connection, tag string, isClient bo
 
 	_, err = acl.NewServiceClient(vppConn).ACLInterfaceSetACLList(ctx, interfaceACLList)
 	if err != nil {
-		logger.Info("error setting acl list for interface")
 		return nil, errors.Wrap(err, "vppapi ACLInterfaceSetACLList returned error")
 	}
 	return interfaceACLList.Acls, nil

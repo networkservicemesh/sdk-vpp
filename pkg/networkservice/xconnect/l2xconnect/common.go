@@ -47,7 +47,7 @@ func addDel(ctx context.Context, vppConn api.Connection, addDel bool) error {
 	vlanID, ok := vlan.Load(ctx, true)
 	if ok {
 		log.FromContext(ctx).
-			WithField("VLAN-ID", vlanID).Info("bridge is used instead of xconnect")
+			WithField("VLAN-ID", vlanID).Debug("bridge is used instead of xconnect")
 		return nil
 	}
 

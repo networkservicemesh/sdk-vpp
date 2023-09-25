@@ -80,7 +80,7 @@ func routeAddDel(ctx context.Context, vppConn api.Connection, swIfIndex interfac
 		WithField("tableID", tableID).
 		WithField("isAdd", isAdd).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "IPRouteAddDel").Info("completed")
+		WithField("vppapi", "IPRouteAddDel").Debug("completed")
 	return nil
 }
 
