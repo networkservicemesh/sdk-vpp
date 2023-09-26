@@ -33,6 +33,7 @@ import (
 const (
 	defaultTimeout = time.Second
 	packetCount    = 4
+	intervalFactor = 0.85
 )
 
 func waitForResponses(responseCh <-chan error) bool {
@@ -63,7 +64,7 @@ func getAPIChannel(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
 	}
-	if _, err = ping.NewServiceClient(vppConn).WantPingEvents(ctx, &ping.WantPingEvents{
+	if _, err = ping.NewServiceClient(vppConn).WantPingFinishedEvents(ctx, &ping.WantPingFinishedEvents{
 		Address:  dstIP,
 		Interval: interval,
 		Repeat:   repeat,
@@ -128,7 +129,7 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 			deadline = time.Now().Add(defaultTimeout)
 		}
 		timeout := time.Until(deadline)
-		interval := timeout.Seconds() / float64(packetCount) * 0.85
+		interval := timeout.Seconds() / float64(packetCount) * intervalFactor
 		ipContext := conn.GetContext().GetIpContext()
 
 		// Parse all source ips
