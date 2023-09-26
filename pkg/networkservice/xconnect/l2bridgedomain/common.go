@@ -22,6 +22,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/edwarnicke/genericsync"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
 	"github.com/networkservicemesh/govpp/binapi/l2"
@@ -46,7 +47,7 @@ type bridgeDomainKey struct {
 	clientIfIndex interface_types.InterfaceIndex
 }
 
-func addBridgeDomain(ctx context.Context, vppConn api.Connection, bridges *l2BridgeDomain, vlanID uint32) error {
+func addBridgeDomain(ctx context.Context, vppConn api.Connection, bridges *genericsync.Map[bridgeDomainKey, *bridgeDomain], vlanID uint32) error {
 	clientIfIndex, ok := ifindex.Load(ctx, true)
 	if !ok {
 		return nil
@@ -92,7 +93,7 @@ func addBridgeDomain(ctx context.Context, vppConn api.Connection, bridges *l2Bri
 	return nil
 }
 
-func delBridgeDomain(ctx context.Context, vppConn api.Connection, bridges *l2BridgeDomain, vlanID uint32) error {
+func delBridgeDomain(ctx context.Context, vppConn api.Connection, bridges *genericsync.Map[bridgeDomainKey, *bridgeDomain], vlanID uint32) error {
 	if clientIfIndex, ok := ifindex.Load(ctx, true); ok {
 		key := bridgeDomainKey{
 			vlanID:        vlanID,
