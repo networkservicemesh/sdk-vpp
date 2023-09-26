@@ -88,7 +88,7 @@ func doPing(
 	responseCh chan error) {
 	logger := log.FromContext(deadlineCtx).WithField("srcIP", srcIP.String()).WithField("dstIP", dstIP.String())
 
-	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, dstIP, interval, packetCount)
+	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, dstIP, interval, repeat)
 	if err != nil {
 		responseCh <- nil
 		return
