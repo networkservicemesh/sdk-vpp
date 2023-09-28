@@ -97,7 +97,7 @@ func (lb *vl3lbClient) balanceNSE(ctx context.Context, loggerLb log.Logger, lbVp
 		logger.Errorf("failed to dial: %v, URL: %v, err: %v", nse.Name, urlNSE.String(), err.Error())
 		return
 	}
-	logger.Info("connected")
+	logger.Debug("connected")
 
 	// 3. Monitor all connections containing the vl3-NSE name
 	monitorClientNse := networkservice.NewMonitorConnectionClient(ccMonitor)

@@ -154,7 +154,7 @@ func addDelVppBridgeDomain(ctx context.Context, vppConn api.Connection, bridgeID
 		WithField("bridgeID", rsp.BdID).
 		WithField("isAdd", isAdd).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "BridgeDomainAddDelV2").Info("completed")
+		WithField("vppapi", "BridgeDomainAddDelV2").Debug("completed")
 	return rsp.BdID, nil
 }
 
@@ -175,7 +175,7 @@ func addDelVppInterfaceBridgeDomain(ctx context.Context, vppConn api.Connection,
 		WithField("isAdd", isAdd).
 		WithField("shg", shg).
 		WithField("duration", time.Since(now)).
-		WithField("vppapi", "SwInterfaceSetL2Bridge").Info("completed")
+		WithField("vppapi", "SwInterfaceSetL2Bridge").Debug("completed")
 	return nil
 }
 

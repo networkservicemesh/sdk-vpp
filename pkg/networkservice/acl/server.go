@@ -82,7 +82,7 @@ func (a *aclServer) Close(ctx context.Context, conn *networkservice.Connection) 
 	for ind := range indices {
 		_, err := acl.NewServiceClient(a.vppConn).ACLDel(ctx, &acl.ACLDel{ACLIndex: uint32(ind)})
 		if err != nil {
-			log.FromContext(ctx).Infof("ACL_SERVER: error deleting acls")
+			log.FromContext(ctx).Debug("ACL_SERVER: error deleting acls")
 		}
 	}
 
