@@ -23,6 +23,7 @@ import (
 
 	"go.fd.io/govpp/api"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 
@@ -37,7 +38,7 @@ import (
 
 type l2BridgeDomainServer struct {
 	vppConn api.Connection
-	b       l2BridgeDomain
+	b       genericsync.Map[bridgeDomainKey, *bridgeDomain]
 }
 
 // NewServer returns a Client chain element that will add client and server vpp interface (if present) to a dridge domain

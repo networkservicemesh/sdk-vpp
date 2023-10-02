@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"go.fd.io/govpp/api"
@@ -32,8 +33,8 @@ import (
 )
 
 type pinholeServer struct {
-	vppConn api.Connection
-	ipPortMap
+	vppConn   api.Connection
+	ipPortMap genericsync.Map[IPPort, struct{}]
 
 	// We need to protect ACL rules applying with a mutex.
 	// Because adding new entries is based on a dump and applying modified data.

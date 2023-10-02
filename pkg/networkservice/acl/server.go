@@ -22,6 +22,7 @@ package acl
 import (
 	"context"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/govpp/binapi/acl"
 	"github.com/networkservicemesh/govpp/binapi/acl_types"
@@ -38,7 +39,7 @@ import (
 type aclServer struct {
 	vppConn    api.Connection
 	aclRules   []acl_types.ACLRule
-	aclIndices aclIndicesMap
+	aclIndices genericsync.Map[string, []uint32]
 }
 
 // NewServer creates a NetworkServiceServer chain element to set the ACL on a vpp interface

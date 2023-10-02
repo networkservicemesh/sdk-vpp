@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
@@ -38,7 +39,7 @@ import (
 
 type mtuClient struct {
 	vppConn     api.Connection
-	mtu         mtuMap
+	mtu         genericsync.Map[string, uint32]
 	deviceNames map[string]string
 }
 
