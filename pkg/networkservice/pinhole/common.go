@@ -207,7 +207,6 @@ func tunnelIPSwIfIndex(ctx context.Context, vppConn api.Connection, tunnelIP net
 		swIfDetails, swIfDumpErr = swIfDumpClient.Recv()
 	}
 	log.FromContext(ctx).
-		WithField("swIfIndex", swIfDetails.SwIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "SwInterfaceDump").Debugf("did not find interface with ip %s", tunnelIP)
 	return 0, errors.Errorf("unable to find tunnelIP (%s) on any vpp interface", tunnelIP)
