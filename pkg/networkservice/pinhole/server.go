@@ -73,20 +73,28 @@ func (v *pinholeServer) Request(ctx context.Context, request *networkservice.Net
 		if key == nil {
 			continue
 		}
-		if _, ok := v.ipPortMap.LoadOrStore(*key, struct{}{}); !ok {
+		// Check if this ACL rule has been added
+		if _, ok := v.ipPortMap.Load(*key); !ok {
+			var err error
+
 			v.mutex.Lock()
-			if err := create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err != nil {
+			// Double check after mutex
+			if _, ok := v.ipPortMap.Load(*key); !ok {
+				if err = create(ctx, v.vppConn, key.IP(), key.Port(), fmt.Sprintf("%s port %d", aclTag, key.port)); err == nil {
+					v.ipPortMap.Store(*key, struct{}{})
+				}
+			}
+			v.mutex.Unlock()
+
+			if err != nil {
 				closeCtx, cancelClose := postponeCtxFunc()
 				defer cancelClose()
 
 				if _, closeErr := v.Close(closeCtx, conn); closeErr != nil {
 					err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 				}
-
-				v.mutex.Unlock()
 				return nil, err
 			}
-			v.mutex.Unlock()
 		}
 	}
 
