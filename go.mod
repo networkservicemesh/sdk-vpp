@@ -21,7 +21,7 @@ require (
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
 	go.fd.io/govpp v0.8.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/sys v0.14.0
+	golang.org/x/sys v0.14.1-0.20231113162313-11eadc05e9bf
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
