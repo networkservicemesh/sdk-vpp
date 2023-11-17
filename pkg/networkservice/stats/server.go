@@ -29,19 +29,21 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"go.fd.io/govpp/api"
 	"go.fd.io/govpp/core"
 )
 
 type statsServer struct {
 	chainCtx  context.Context
 	statsConn *core.StatsConnection
+	vppConn   api.Connection
 	statsSock string
 	once      sync.Once
 	initErr   error
 }
 
 // NewServer provides a NetworkServiceServer chain elements that retrieves vpp interface metrics.
-func NewServer(ctx context.Context, options ...Option) networkservice.NetworkServiceServer {
+func NewServer(ctx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
 	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)
@@ -49,6 +51,7 @@ func NewServer(ctx context.Context, options ...Option) networkservice.NetworkSer
 
 	return &statsServer{
 		chainCtx:  ctx,
+		vppConn:   vppConn,
 		statsSock: opts.socket,
 	}
 }
@@ -64,7 +67,7 @@ func (s *statsServer) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], false)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false)
 	return conn, nil
 }
 
@@ -74,7 +77,7 @@ func (s *statsServer) Close(ctx context.Context, conn *networkservice.Connection
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], false)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false)
 	return &empty.Empty{}, nil
 }
 
