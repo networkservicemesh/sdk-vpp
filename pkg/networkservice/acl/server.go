@@ -21,6 +21,7 @@ package acl
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/edwarnicke/genericsync"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -61,7 +62,7 @@ func (a *aclServer) Request(ctx context.Context, request *networkservice.Network
 	_, loaded := a.aclIndices.Load(conn.GetId())
 	if !loaded && len(a.aclRules) > 0 {
 		var indices []uint32
-		if indices, err = create(ctx, a.vppConn, aclTag, metadata.IsClient(a), a.aclRules); err != nil {
+		if indices, err = create(ctx, a.vppConn, fmt.Sprintf("%s-%s", aclTag, conn.GetId()), metadata.IsClient(a), a.aclRules); err != nil {
 			closeCtx, cancelClose := postponeCtxFunc()
 			defer cancelClose()
 
