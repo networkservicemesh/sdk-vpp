@@ -90,11 +90,14 @@ func addACLToACLList(ctx context.Context, vppConn api.Connection, tag string, eg
 }
 
 func aclAdd(tag string, egress bool, aRules []acl_types.ACLRule) *acl.ACLAddReplace {
+	aRulesCopy := make([]acl_types.ACLRule, len(aRules))
+	copy(aRulesCopy, aRules)
+
 	aclAddReplace := &acl.ACLAddReplace{
 		ACLIndex: ^uint32(0),
 		Tag:      tag,
-		Count:    uint32(len(aRules)),
-		R:        aRules,
+		Count:    uint32(len(aRulesCopy)),
+		R:        aRulesCopy,
 	}
 	if egress {
 		for i := range aclAddReplace.R {
