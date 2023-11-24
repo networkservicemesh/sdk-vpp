@@ -36,12 +36,13 @@ import (
 )
 
 type statsClient struct {
-	chainCtx  context.Context
-	statsConn *core.StatsConnection
-	vppConn   api.Connection
-	statsSock string
-	once      sync.Once
-	initErr   error
+	chainCtx        context.Context
+	statsConn       *core.StatsConnection
+	vppConn         api.Connection
+	statsSock       string
+	once            sync.Once
+	isInterfaceOnly bool
+	initErr         error
 }
 
 // NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics.
@@ -52,9 +53,10 @@ func NewClient(ctx context.Context, vppConn api.Connection, options ...Option) n
 	}
 
 	return &statsClient{
-		chainCtx:  ctx,
-		vppConn:   vppConn,
-		statsSock: opts.socket,
+		chainCtx:        ctx,
+		vppConn:         vppConn,
+		statsSock:       opts.socket,
+		isInterfaceOnly: opts.isInterfaceOnly,
 	}
 }
 
@@ -69,7 +71,8 @@ func (s *statsClient) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
+
 	return conn, nil
 }
 
@@ -79,7 +82,8 @@ func (s *statsClient) Close(ctx context.Context, conn *networkservice.Connection
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
+
 	return &empty.Empty{}, nil
 }
 

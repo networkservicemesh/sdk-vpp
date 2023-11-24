@@ -34,12 +34,13 @@ import (
 )
 
 type statsServer struct {
-	chainCtx  context.Context
-	statsConn *core.StatsConnection
-	vppConn   api.Connection
-	statsSock string
-	once      sync.Once
-	initErr   error
+	chainCtx        context.Context
+	statsConn       *core.StatsConnection
+	vppConn         api.Connection
+	statsSock       string
+	once            sync.Once
+	isInterfaceOnly bool
+	initErr         error
 }
 
 // NewServer provides a NetworkServiceServer chain elements that retrieves vpp interface metrics.
@@ -50,9 +51,10 @@ func NewServer(ctx context.Context, vppConn api.Connection, options ...Option) n
 	}
 
 	return &statsServer{
-		chainCtx:  ctx,
-		vppConn:   vppConn,
-		statsSock: opts.socket,
+		chainCtx:        ctx,
+		vppConn:         vppConn,
+		statsSock:       opts.socket,
+		isInterfaceOnly: opts.isInterfaceOnly,
 	}
 }
 
@@ -67,7 +69,8 @@ func (s *statsServer) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false, s.isInterfaceOnly)
+
 	return conn, nil
 }
 
@@ -77,7 +80,8 @@ func (s *statsServer) Close(ctx context.Context, conn *networkservice.Connection
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, false, s.isInterfaceOnly)
+
 	return &empty.Empty{}, nil
 }
 

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"go.fd.io/govpp/adapter"
 	"go.fd.io/govpp/adapter/statsclient"
@@ -35,28 +36,22 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 type interfacesInfo struct {
-	interfaceName    string
-	interfaceFwdName string
-	interfaceType    string
+	interfaceName string
+	interfaceType string
 }
 
 func (i *interfacesInfo) getInterfaceDetails() string {
-	return combineDetails(i.interfaceType, i.interfaceName)
-}
-
-func (i *interfacesInfo) getInterfaceFwdDetails() string {
-	return combineDetails(i.interfaceType, i.interfaceFwdName)
+	return fmt.Sprintf("%s/%s", i.interfaceType, i.interfaceName)
 }
 
 // Save retrieved vpp interface metrics in pathSegment
-func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppConn api.Connection, conn *networkservice.Connection, isClient bool) {
+func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppConn api.Connection, conn *networkservice.Connection, isClient, isInterfaceOnly bool) {
 	segment := conn.Path.PathSegments[conn.Path.Index]
 
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
@@ -65,13 +60,11 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppCo
 	}
 	stats := new(api.InterfaceStats)
 	if err := statsConn.GetInterfaceStats(stats); err != nil {
-		log.FromContext(ctx).Errorf("getting interface stats failed:", err)
 		return
 	}
 
-	info, err := getInterfacesInfo(ctx, vppConn, conn, swIfIndex)
+	info, err := getInterfacesInfo(ctx, vppConn, swIfIndex)
 	if err != nil {
-		log.FromContext(ctx).Errorf("getting interfaces info failed:", err)
 		return
 	}
 
@@ -88,13 +81,16 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppCo
 		if segment.Metrics == nil {
 			segment.Metrics = make(map[string]string)
 		}
-		segment.Metrics[addName+"rx_bytes"] = strconv.FormatUint(iface.Rx.Bytes, 10)
-		segment.Metrics[addName+"tx_bytes"] = strconv.FormatUint(iface.Tx.Bytes, 10)
-		segment.Metrics[addName+"rx_packets"] = strconv.FormatUint(iface.Rx.Packets, 10)
-		segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
+
+		if !isInterfaceOnly {
+			segment.Metrics[addName+"rx_bytes"] = strconv.FormatUint(iface.Rx.Bytes, 10)
+			segment.Metrics[addName+"tx_bytes"] = strconv.FormatUint(iface.Tx.Bytes, 10)
+			segment.Metrics[addName+"rx_packets"] = strconv.FormatUint(iface.Rx.Packets, 10)
+			segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
+			segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
+		}
+
 		segment.Metrics[addName+"interface"] = info.getInterfaceDetails()
-		segment.Metrics[addName+"interface_fwd"] = info.getInterfaceFwdDetails()
-		segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
 		break
 	}
 }
@@ -114,11 +110,7 @@ func initFunc(chainCtx context.Context, statsSocket string) (*core.StatsConnecti
 	return statsConn, nil
 }
 
-func getInterfacesInfo(ctx context.Context, vppConn api.Connection, conn *networkservice.Connection, swIfIndex interface_types.InterfaceIndex) (*interfacesInfo, error) {
-	info := &interfacesInfo{
-		interfaceName: conn.Mechanism.Parameters["name"],
-	}
-
+func getInterfacesInfo(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (*interfacesInfo, error) {
 	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
 		SwIfIndex: swIfIndex,
 	})
@@ -127,6 +119,7 @@ func getInterfacesInfo(ctx context.Context, vppConn api.Connection, conn *networ
 		return nil, err
 	}
 
+	info := &interfacesInfo{}
 	for {
 		details, err := client.Recv()
 		if err == io.EOF {
@@ -137,13 +130,9 @@ func getInterfacesInfo(ctx context.Context, vppConn api.Connection, conn *networ
 			return nil, err
 		}
 
-		info.interfaceFwdName = details.InterfaceName
-		info.interfaceType = details.InterfaceDevType
+		info.interfaceName = details.InterfaceName
+		info.interfaceType = strings.ToUpper(details.InterfaceDevType)
 	}
 
 	return info, nil
-}
-
-func combineDetails(iType, iName string) string {
-	return fmt.Sprintf("%s/%s", iType, iName)
 }
