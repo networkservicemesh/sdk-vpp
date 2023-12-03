@@ -9,10 +9,10 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985
+	github.com/networkservicemesh/api v1.11.2-rc.2
 	github.com/networkservicemesh/govpp v0.0.0-20231108193829-2484aa7cd5d9
-	github.com/networkservicemesh/sdk v0.5.1-0.20231128120626-c1f9028d2803
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20231128120935-d39fc2d4950b
+	github.com/networkservicemesh/sdk v1.11.2-rc.2
+	github.com/networkservicemesh/sdk-kernel v1.11.2-rc.2
 	github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
