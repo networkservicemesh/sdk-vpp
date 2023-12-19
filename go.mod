@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985
-	github.com/networkservicemesh/govpp v0.0.0-20231216233431-9c82b2963820
+	github.com/networkservicemesh/govpp v0.0.0-20231212083525-5ecb386aa377
 	github.com/networkservicemesh/sdk v0.5.1-0.20231212103212-1979cc1d932c
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20231212103506-9e8fd0d59366
 	github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb
