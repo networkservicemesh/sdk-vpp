@@ -147,10 +147,10 @@ github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985 h1:uiWxB
 github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985/go.mod h1:E2yBac48+mMkMh6ODnsNyah4EE6rI08SMR9n+86Emxs=
 github.com/networkservicemesh/govpp v0.0.0-20231225111845-22983cadafe7 h1:/sH3EuMzjgMb0FiaF2oGJDSziXjGLm38+DVP4B8lFN8=
 github.com/networkservicemesh/govpp v0.0.0-20231225111845-22983cadafe7/go.mod h1:qsoLtPgOdSCTBUFOhS3jAdZkk1u4URf55akKOHn4f34=
-github.com/networkservicemesh/sdk v0.5.1-0.20231225110034-429d553e55ff h1:pwAnTNTRuLP/CanzxHC415jd3/npPKv6Sd1m+l61weA=
-github.com/networkservicemesh/sdk v0.5.1-0.20231225110034-429d553e55ff/go.mod h1:t0gOsubf+efkL9Ncy3+PvVKfr/xMGP0tA8HlFFJYz/s=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20231225110323-9e10e0ef6bb5 h1:7DfyDiunXTUYat/OXg+nHx79rWp2A8Y9yC2DSd6D4aw=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20231225110323-9e10e0ef6bb5/go.mod h1:OaFpBGCQ7iVdJcTvM8nvEJ+GMKP3vVECxspBo3v+2i4=
+github.com/networkservicemesh/sdk v0.5.1-0.20231226075604-9c02db4bfa70 h1:3+87/HItNgtbG4+ig1HA2dqTJJ3sMKplQutxfB6wIfA=
+github.com/networkservicemesh/sdk v0.5.1-0.20231226075604-9c02db4bfa70/go.mod h1:t0gOsubf+efkL9Ncy3+PvVKfr/xMGP0tA8HlFFJYz/s=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20231226075837-dc0b88acf9e5 h1:T6ekYwM19Lm1Akswvnx1Ed4HNRZLxk7vS0sxMAe3Fx4=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20231226075837-dc0b88acf9e5/go.mod h1:Z9T5Moy6F4FuhC73fZbcustmgYDKBl6R4+ktT7NRDQw=
 github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb h1:SETtZ12eYPkUGafW1DwGb8kSOR8O4OniSuZnqn2bOOw=
 github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb/go.mod h1:gHuTaUs1uFvyOY0Cy9DXvyAR2MtwmlPD2NTyYfr6kLc=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
