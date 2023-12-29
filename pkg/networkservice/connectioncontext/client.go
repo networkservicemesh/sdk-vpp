@@ -20,6 +20,9 @@
 package connectioncontext
 
 import (
+	"time"
+
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/retry"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"go.fd.io/govpp/api"
 
@@ -55,7 +58,7 @@ import (
 func NewClient(vppConn api.Connection) networkservice.NetworkServiceClient {
 	return chain.NewNetworkServiceClient(
 		mtu.NewClient(vppConn),
-		routes.NewClient(vppConn),
+		retry.NewClient(routes.NewClient(vppConn), retry.WithInterval(time.Millisecond*100), retry.WithTryTimeout(time.Second*2)),
 		ipaddress.NewClient(vppConn),
 	)
 }

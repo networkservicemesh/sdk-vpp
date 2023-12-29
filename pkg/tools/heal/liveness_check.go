@@ -106,6 +106,7 @@ func doPing(
 	for {
 		select {
 		case <-deadlineCtx.Done():
+			responseCh <- deadlineCtx.Err()
 			return
 		case rawMsg := <-notifCh:
 			if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
