@@ -36,20 +36,25 @@ const (
 	intervalFactor = 0.85
 )
 
-func waitForResponses(responseCh <-chan error) bool {
+func waitForResponses(ctx context.Context, responseCh <-chan error) bool {
 	respCount := cap(responseCh)
 	success := true
 	for {
-		resp, ok := <-responseCh
-		if !ok {
+		select {
+		case <-ctx.Done():
 			return false
-		}
-		if resp != nil {
-			success = false
-		}
-		respCount--
-		if respCount == 0 {
-			return success
+		case resp, ok := <-responseCh:
+			if !ok {
+				return false
+			}
+			if resp != nil {
+				success = false
+			}
+			respCount--
+			if respCount == 0 {
+				return success
+			}
+
 		}
 	}
 }
@@ -103,23 +108,21 @@ func doPing(
 	}
 	defer func() { _ = subscription.Unsubscribe() }()
 
-	for {
-		select {
-		case <-deadlineCtx.Done():
-			responseCh <- deadlineCtx.Err()
-			return
-		case rawMsg := <-notifCh:
-			if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
-				if msg.ReplyCount == 0 {
-					err = errors.New("No packets received")
-					logger.Errorf(err.Error())
-					responseCh <- err
-					return
-				}
-				responseCh <- nil
+	select {
+	case <-deadlineCtx.Done():
+		return
+	case rawMsg := <-notifCh:
+		if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
+			if msg.ReplyCount == 0 {
+				err = errors.New("No packets received")
+				logger.Errorf(err.Error())
+				responseCh <- err
+				return
 			}
+			responseCh <- nil
 		}
 	}
+
 }
 
 // VPPLivenessCheck return a liveness check function which uses VPP ping to check VPP dataplane
@@ -170,6 +173,6 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 		}
 
 		// Waiting for all ping results. If at least one fails - return false
-		return waitForResponses(responseCh)
+		return waitForResponses(deadlineCtx, responseCh)
 	}
 }
