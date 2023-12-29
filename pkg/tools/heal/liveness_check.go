@@ -54,7 +54,6 @@ func waitForResponses(ctx context.Context, responseCh <-chan error) bool {
 			if respCount == 0 {
 				return success
 			}
-
 		}
 	}
 }
@@ -122,7 +121,6 @@ func doPing(
 			responseCh <- nil
 		}
 	}
-
 }
 
 // VPPLivenessCheck return a liveness check function which uses VPP ping to check VPP dataplane
