@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"go.fd.io/govpp/api"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
@@ -84,9 +83,6 @@ func (r *routesClient) Request(ctx context.Context, request *networkservice.Netw
 }
 
 func (r *routesClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	err := addDel(ctx, conn, r.vppConn, metadata.IsClient(r), false)
-	if err != nil {
-		return &emptypb.Empty{}, err
-	}
+	_ = addDel(ctx, conn, r.vppConn, metadata.IsClient(r), false)
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
