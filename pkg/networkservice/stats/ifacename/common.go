@@ -1,6 +1,4 @@
-// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
-//
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,13 +17,12 @@
 //go:build linux
 // +build linux
 
-package stats
+package ifacename
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"go.fd.io/govpp/adapter"
@@ -50,8 +47,8 @@ func (i *interfacesInfo) getInterfaceDetails() string {
 	return fmt.Sprintf("%s/%s", i.interfaceType, i.interfaceName)
 }
 
-// Save retrieved vpp interface metrics in pathSegment
-func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppConn api.Connection, conn *networkservice.Connection, isClient, isInterfaceOnly bool) {
+// Save retrieved vpp interface names in pathSegment
+func retrieveIfaceNames(ctx context.Context, statsConn *core.StatsConnection, vppConn api.Connection, conn *networkservice.Connection, isClient bool) {
 	segment := conn.Path.PathSegments[conn.Path.Index]
 
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
@@ -80,14 +77,6 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, vppCo
 
 		if segment.Metrics == nil {
 			segment.Metrics = make(map[string]string)
-		}
-
-		if !isInterfaceOnly {
-			segment.Metrics[addName+"rx_bytes"] = strconv.FormatUint(iface.Rx.Bytes, 10)
-			segment.Metrics[addName+"tx_bytes"] = strconv.FormatUint(iface.Tx.Bytes, 10)
-			segment.Metrics[addName+"rx_packets"] = strconv.FormatUint(iface.Rx.Packets, 10)
-			segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
-			segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
 		}
 
 		segment.Metrics[addName+"interface"] = info.getInterfaceDetails()

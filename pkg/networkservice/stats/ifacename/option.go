@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 Cisco and/or its affiliates.
+// Copyright (c) 2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,18 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stats
+package ifacename
 
-type statsOptions struct {
-	socket string
+type ifacenameOptions struct {
+	Socket string
 }
 
-// Option is an option pattern for stats server/client
-type Option func(o *statsOptions)
+// Option is an option pattern for ifacename server/client
+type Option func(o *ifacenameOptions)
 
 // WithSocket sets stats socket name
 func WithSocket(socket string) Option {
-	return func(o *statsOptions) {
-		o.socket = socket
+	return func(o *ifacenameOptions) {
+		o.Socket = socket
 	}
 }

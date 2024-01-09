@@ -1,6 +1,4 @@
-// Copyright (c) 2021-2023 Doc.ai and/or its affiliates.
-//
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,77 +17,30 @@
 //go:build linux
 // +build linux
 
+// Package stats provides chain elements for retrieving statistics from vpp
 package stats
 
 import (
 	"context"
-	"sync"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"go.fd.io/govpp/api"
-	"go.fd.io/govpp/core"
-	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats/ifacename"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats/metrics"
 )
 
-type statsClient struct {
-	chainCtx        context.Context
-	statsConn       *core.StatsConnection
-	vppConn         api.Connection
-	statsSock       string
-	once            sync.Once
-	isInterfaceOnly bool
-	initErr         error
-}
-
-// NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics.
+// NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics and names.
 func NewClient(ctx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
 	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)
 	}
 
-	return &statsClient{
-		chainCtx:        ctx,
-		vppConn:         vppConn,
-		statsSock:       opts.socket,
-		isInterfaceOnly: opts.isInterfaceOnly,
-	}
-}
-
-func (s *statsClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	initErr := s.init()
-	if initErr != nil {
-		log.FromContext(ctx).Errorf("%v", initErr)
-	}
-
-	conn, err := next.Client(ctx).Request(ctx, request, opts...)
-	if err != nil || initErr != nil {
-		return conn, err
-	}
-
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
-
-	return conn, nil
-}
-
-func (s *statsClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
-	if err != nil || s.initErr != nil {
-		return rv, err
-	}
-
-	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
-
-	return &empty.Empty{}, nil
-}
-
-func (s *statsClient) init() error {
-	s.once.Do(func() {
-		s.statsConn, s.initErr = initFunc(s.chainCtx, s.statsSock)
-	})
-	return s.initErr
+	return chain.NewNetworkServiceClient(
+		metrics.NewClient(ctx, metrics.WithSocket(opts.socket)),
+		ifacename.NewClient(ctx, vppConn, ifacename.WithSocket(opts.socket)),
+	)
 }
