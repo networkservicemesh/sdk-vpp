@@ -17,8 +17,8 @@
 //go:build linux
 // +build linux
 
-// Package stats provides chain elements for retrieving statistics from vpp
-package stats
+// Package metrics provides chain elements for retrieving metrics from vpp
+package metrics
 
 import (
 	"context"
@@ -28,19 +28,19 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats/ifacename"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats/metrics"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics/ifacename"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics/stats"
 )
 
 // NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics and names.
 func NewClient(ctx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
-	opts := &statsOptions{}
+	opts := &metricsOptions{}
 	for _, opt := range options {
 		opt(opts)
 	}
 
 	return chain.NewNetworkServiceClient(
-		metrics.NewClient(ctx, metrics.WithSocket(opts.socket)),
+		stats.NewClient(ctx, stats.WithSocket(opts.socket)),
 		ifacename.NewClient(ctx, vppConn, ifacename.WithSocket(opts.socket)),
 	)
 }

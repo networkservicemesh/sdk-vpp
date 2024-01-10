@@ -19,20 +19,22 @@
 //go:build linux
 // +build linux
 
-package metrics
+package stats
 
 import (
 	"context"
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"go.fd.io/govpp/core"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"go.fd.io/govpp/core"
 )
 
-type statsServer struct {
+type statsClient struct {
 	chainCtx  context.Context
 	statsConn *core.StatsConnection
 	statsSock string
@@ -40,45 +42,45 @@ type statsServer struct {
 	initErr   error
 }
 
-// NewServer provides a NetworkServiceServer chain elements that retrieves vpp interface metrics.
-func NewServer(ctx context.Context, options ...Option) networkservice.NetworkServiceServer {
-	opts := &metricsOptions{}
+// NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics.
+func NewClient(ctx context.Context, options ...Option) networkservice.NetworkServiceClient {
+	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)
 	}
 
-	return &statsServer{
+	return &statsClient{
 		chainCtx:  ctx,
 		statsSock: opts.socket,
 	}
 }
 
-func (s *statsServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (s *statsClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	initErr := s.init()
 	if initErr != nil {
 		log.FromContext(ctx).Errorf("%v", initErr)
 	}
 
-	conn, err := next.Server(ctx).Request(ctx, request)
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil || initErr != nil {
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], false)
+	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
 	return conn, nil
 }
 
-func (s *statsServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	rv, err := next.Server(ctx).Close(ctx, conn)
+func (s *statsClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
 	if err != nil || s.initErr != nil {
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], false)
+	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
 	return &empty.Empty{}, nil
 }
 
-func (s *statsServer) init() error {
+func (s *statsClient) init() error {
 	s.once.Do(func() {
 		s.statsConn, s.initErr = initFunc(s.chainCtx, s.statsSock)
 	})

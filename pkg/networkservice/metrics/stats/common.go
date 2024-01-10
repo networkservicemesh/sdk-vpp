@@ -19,7 +19,7 @@
 //go:build linux
 // +build linux
 
-package metrics
+package stats
 
 import (
 	"context"
