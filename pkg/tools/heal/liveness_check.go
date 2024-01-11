@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,24 +36,20 @@ const (
 	intervalFactor = 0.85
 )
 
-func waitForResponses(ctx context.Context, responseCh <-chan error) bool {
+func waitForResponses(responseCh <-chan bool) bool {
 	respCount := cap(responseCh)
 	success := true
 	for {
-		select {
-		case <-ctx.Done():
+		resp, ok := <-responseCh
+		if !ok {
 			return false
-		case resp, ok := <-responseCh:
-			if !ok {
-				return false
-			}
-			if resp != nil {
-				success = false
-			}
-			respCount--
-			if respCount == 0 {
-				return success
-			}
+		}
+		if !resp {
+			success = false
+		}
+		respCount--
+		if respCount == 0 {
+			return success
 		}
 	}
 }
@@ -89,12 +85,12 @@ func doPing(
 	srcIP, dstIP ip_types.Address,
 	interval float64,
 	repeat uint32,
-	responseCh chan error) {
+	responseCh chan bool) {
 	logger := log.FromContext(deadlineCtx).WithField("srcIP", srcIP.String()).WithField("dstIP", dstIP.String())
 
 	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, dstIP, interval, repeat)
 	if err != nil {
-		responseCh <- nil
+		responseCh <- true
 		return
 	}
 
@@ -102,23 +98,23 @@ func doPing(
 	subscription, err := apiChannel.SubscribeNotification(notifCh, &ping.PingFinishedEvent{})
 	if err != nil {
 		logger.Error(errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel").Error())
-		responseCh <- nil
+		responseCh <- true
 		return
 	}
 	defer func() { _ = subscription.Unsubscribe() }()
 
 	select {
 	case <-deadlineCtx.Done():
+		responseCh <- true
 		return
 	case rawMsg := <-notifCh:
 		if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
 			if msg.ReplyCount == 0 {
-				err = errors.New("No packets received")
-				logger.Errorf(err.Error())
-				responseCh <- err
+				logger.Errorf("No packets received")
+				responseCh <- false
 				return
 			}
-			responseCh <- nil
+			responseCh <- true
 		}
 	}
 }
@@ -162,7 +158,7 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 			return true
 		}
 
-		responseCh := make(chan error, combinationCount)
+		responseCh := make(chan bool, combinationCount)
 		defer close(responseCh)
 		for _, srcIP := range srcIPs {
 			for _, dstIP := range dstIPs {
@@ -171,6 +167,6 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 		}
 
 		// Waiting for all ping results. If at least one fails - return false
-		return waitForResponses(deadlineCtx, responseCh)
+		return waitForResponses(responseCh)
 	}
 }
