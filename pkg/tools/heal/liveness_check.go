@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,7 +36,7 @@ const (
 	intervalFactor = 0.85
 )
 
-func waitForResponses(ctx context.Context, responseCh <-chan bool) bool {
+func waitForResponses(responseCh <-chan bool) bool {
 	respCount := cap(responseCh)
 	success := true
 	for {
@@ -167,6 +167,6 @@ func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Con
 		}
 
 		// Waiting for all ping results. If at least one fails - return false
-		return waitForResponses(deadlineCtx, responseCh)
+		return waitForResponses(responseCh)
 	}
 }
