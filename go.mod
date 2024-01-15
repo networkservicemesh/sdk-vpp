@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985
-	github.com/networkservicemesh/govpp v0.0.0-20231225111845-22983cadafe7
+	github.com/networkservicemesh/govpp v0.0.0-20240115135805-9d7177f85ad9
 	github.com/networkservicemesh/sdk v0.5.1-0.20240111113458-792b7fb5104e
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20240111113759-cd0e91a5bd1e
 	github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb
@@ -19,7 +19,7 @@ require (
 	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
-	go.fd.io/govpp v0.9.0-alpha.0.20231212074705-4ae974bc6248
+	go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524
 	go.uber.org/goleak v1.3.0
 	golang.org/x/sys v0.16.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
