@@ -145,8 +145,8 @@ github.com/mitchellh/go-ps v1.0.0/go.mod h1:J4lOc8z8yJs6vUwklHw2XEIiT4z4C40KtWVN
 github.com/moby/term v0.5.0/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
 github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985 h1:uiWxBSamqODTzO/uobmjjqWAhi93+bpIDQ+OpV3uU58=
 github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985/go.mod h1:E2yBac48+mMkMh6ODnsNyah4EE6rI08SMR9n+86Emxs=
-github.com/networkservicemesh/govpp v0.0.0-20231225111845-22983cadafe7 h1:/sH3EuMzjgMb0FiaF2oGJDSziXjGLm38+DVP4B8lFN8=
-github.com/networkservicemesh/govpp v0.0.0-20231225111845-22983cadafe7/go.mod h1:qsoLtPgOdSCTBUFOhS3jAdZkk1u4URf55akKOHn4f34=
+github.com/networkservicemesh/govpp v0.0.0-20240115135805-9d7177f85ad9 h1:4zO/QJxQDvo/YcRWP8D4XGU8vQCG/Nq8SNlGpBk+4/M=
+github.com/networkservicemesh/govpp v0.0.0-20240115135805-9d7177f85ad9/go.mod h1:CwikXQ3p/y3j6+HbQQWXKv0f4LPyUd2vKTiViG93qWA=
 github.com/networkservicemesh/sdk v0.5.1-0.20240111113458-792b7fb5104e h1:eZKNfLKZIPQ18IiC5m0RFppuPAxWfgx3qL5ibrStlcY=
 github.com/networkservicemesh/sdk v0.5.1-0.20240111113458-792b7fb5104e/go.mod h1:rw2ug2AngItEh13ectyCGrxRhGTt/yvJt2SrysoU/Dc=
 github.com/networkservicemesh/sdk-kernel v0.0.0-20240111113759-cd0e91a5bd1e h1:2vEW0gD4nfv14+MnMPtLJ/ewanlQX4Ar1v3lnL7Z0r0=
@@ -226,8 +226,8 @@ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5t
 github.com/zeebo/errs v1.2.2 h1:5NFypMTuSdoySVTqlNs1dEoU21QVamMQJxW/Fii5O7g=
 github.com/zeebo/errs v1.2.2/go.mod h1:sgbWHsvVuTPHcqJJGQ1WhI5KbWlHYz+2+2C/LSEtCw4=
 go.fd.io/govpp v0.8.0/go.mod h1:nuMKRRm5/uknVTKrRDhncrNJu0F+1AjMxLuC/+g+Z1k=
-go.fd.io/govpp v0.9.0-alpha.0.20231212074705-4ae974bc6248 h1:ro0LD0R76a/RoGZ55dKcH5evSAObgWIhZ1u4VcOUHjg=
-go.fd.io/govpp v0.9.0-alpha.0.20231212074705-4ae974bc6248/go.mod h1:9QoqjEbvfuuXNfjHS0A7YS+7QQVVaQ9cMioOWpSM4rY=
+go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524 h1:Dja0i7Ln/aUAc10VN4Pp3SibYTfNKS1CPkM5TSGL5jk=
+go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524/go.mod h1:9QoqjEbvfuuXNfjHS0A7YS+7QQVVaQ9cMioOWpSM4rY=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0 h1:PzIubN4/sjByhDRHLviCjJuweBXWFZWhghjg7cS28+M=
 go.opentelemetry.io/otel v1.20.0 h1:vsb/ggIY+hUjD/zCAQHpzTmndPqv/ml2ArbsbfBYTAc=
