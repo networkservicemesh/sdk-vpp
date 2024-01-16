@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,7 +17,8 @@
 package stats
 
 type statsOptions struct {
-	socket string
+	socket          string
+	isInterfaceOnly bool
 }
 
 // Option is an option pattern for stats server/client
@@ -27,5 +28,12 @@ type Option func(o *statsOptions)
 func WithSocket(socket string) Option {
 	return func(o *statsOptions) {
 		o.socket = socket
+	}
+}
+
+// InterfaceOnly allows to print only interface details for server/client
+func InterfaceOnly(isInterfaceOnly bool) Option {
+	return func(o *statsOptions) {
+		o.isInterfaceOnly = isInterfaceOnly
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"go.fd.io/govpp/api"
 	"go.fd.io/govpp/core"
 	"google.golang.org/grpc"
 
@@ -35,23 +36,27 @@ import (
 )
 
 type statsClient struct {
-	chainCtx  context.Context
-	statsConn *core.StatsConnection
-	statsSock string
-	once      sync.Once
-	initErr   error
+	chainCtx        context.Context
+	statsConn       *core.StatsConnection
+	vppConn         api.Connection
+	statsSock       string
+	once            sync.Once
+	isInterfaceOnly bool
+	initErr         error
 }
 
 // NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics.
-func NewClient(ctx context.Context, options ...Option) networkservice.NetworkServiceClient {
+func NewClient(ctx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
 	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)
 	}
 
 	return &statsClient{
-		chainCtx:  ctx,
-		statsSock: opts.socket,
+		chainCtx:        ctx,
+		vppConn:         vppConn,
+		statsSock:       opts.socket,
+		isInterfaceOnly: opts.isInterfaceOnly,
 	}
 }
 
@@ -66,7 +71,8 @@ func (s *statsClient) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
+
 	return conn, nil
 }
 
@@ -76,7 +82,8 @@ func (s *statsClient) Close(ctx context.Context, conn *networkservice.Connection
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
+	retrieveMetrics(ctx, s.statsConn, s.vppConn, conn, true, s.isInterfaceOnly)
+
 	return &empty.Empty{}, nil
 }
 
