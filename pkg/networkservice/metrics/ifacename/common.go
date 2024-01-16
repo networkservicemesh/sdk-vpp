@@ -1,6 +1,4 @@
-// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
-//
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,11 +17,13 @@
 //go:build linux
 // +build linux
 
-package stats
+package ifacename
 
 import (
 	"context"
-	"strconv"
+	"fmt"
+	"io"
+	"strings"
 
 	"go.fd.io/govpp/adapter"
 	"go.fd.io/govpp/adapter/statsclient"
@@ -31,21 +31,37 @@ import (
 	"go.fd.io/govpp/core"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
+	"github.com/networkservicemesh/govpp/binapi/interface_types"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-// Save retrieved vpp interface metrics in pathSegment
-func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segment *networkservice.PathSegment, isClient bool) {
+type interfacesInfo struct {
+	interfaceName string
+	interfaceType string
+}
+
+func (i *interfacesInfo) getInterfaceDetails() string {
+	return fmt.Sprintf("%s/%s", i.interfaceType, i.interfaceName)
+}
+
+// Save retrieved vpp interface names in pathSegment
+func retrieveIfaceNames(ctx context.Context, statsConn *core.StatsConnection, vppConn api.Connection, conn *networkservice.Connection, isClient bool) {
+	segment := conn.Path.PathSegments[conn.Path.Index]
+
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return
 	}
 	stats := new(api.InterfaceStats)
-	if e := statsConn.GetInterfaceStats(stats); e != nil {
-		log.FromContext(ctx).Errorf("getting interface stats failed:", e)
+	if err := statsConn.GetInterfaceStats(stats); err != nil {
+		return
+	}
+
+	info, err := getInterfacesInfo(ctx, vppConn, swIfIndex)
+	if err != nil {
 		return
 	}
 
@@ -62,11 +78,8 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 		if segment.Metrics == nil {
 			segment.Metrics = make(map[string]string)
 		}
-		segment.Metrics[addName+"rx_bytes"] = strconv.FormatUint(iface.Rx.Bytes, 10)
-		segment.Metrics[addName+"tx_bytes"] = strconv.FormatUint(iface.Tx.Bytes, 10)
-		segment.Metrics[addName+"rx_packets"] = strconv.FormatUint(iface.Rx.Packets, 10)
-		segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
-		segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
+
+		segment.Metrics[addName+"interface"] = info.getInterfaceDetails()
 		break
 	}
 }
@@ -84,4 +97,31 @@ func initFunc(chainCtx context.Context, statsSocket string) (*core.StatsConnecti
 		statsConn.Disconnect()
 	}()
 	return statsConn, nil
+}
+
+func getInterfacesInfo(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) (*interfacesInfo, error) {
+	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
+		SwIfIndex: swIfIndex,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	info := &interfacesInfo{}
+	for {
+		details, err := client.Recv()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		info.interfaceName = details.InterfaceName
+		info.interfaceType = strings.ToUpper(details.InterfaceDevType)
+	}
+
+	return info, nil
 }

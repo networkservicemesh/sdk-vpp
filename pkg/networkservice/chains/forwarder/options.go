@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -29,7 +29,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/cleanup"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics"
 )
 
 type forwarderOptions struct {
@@ -40,7 +40,7 @@ type forwarderOptions struct {
 	dialTimeout                      time.Duration
 	domain2Device                    map[string]string
 	mechanismPrioriyList             []string
-	statsOpts                        []stats.Option
+	statsOpts                        []metrics.Option
 	cleanupOpts                      []cleanup.Option
 	vxlanOpts                        []vxlan.Option
 	dialOpts                         []grpc.DialOption
@@ -105,8 +105,8 @@ func WithMechanismPriority(priorityList []string) Option {
 	}
 }
 
-// WithStatsOptions sets stats options
-func WithStatsOptions(opts ...stats.Option) Option {
+// WithStatsOptions sets metrics options
+func WithStatsOptions(opts ...metrics.Option) Option {
 	return func(o *forwarderOptions) {
 		o.statsOpts = opts
 	}

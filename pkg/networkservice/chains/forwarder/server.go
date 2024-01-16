@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2021-2023 Nordix Foundation.
 //
+// Copyright (c) 2024 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,9 +68,9 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/nsmonitor"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/stats"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect"
@@ -121,7 +123,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		sendfd.NewServer(),
 		discover.NewServer(nsClient, nseClient),
 		roundrobin.NewServer(),
-		stats.NewServer(ctx, opts.statsOpts...),
+		metrics.NewServer(ctx, vppConn, opts.statsOpts...),
 		up.NewServer(ctx, vppConn),
 		xconnect.NewServer(vppConn),
 		l2bridgedomain.NewServer(vppConn),
@@ -151,7 +153,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						cleanup.NewClient(ctx, opts.cleanupOpts...),
 						mechanismtranslation.NewClient(),
 						connectioncontextkernel.NewClient(),
-						stats.NewClient(ctx, opts.statsOpts...),
+						metrics.NewClient(ctx, vppConn, opts.statsOpts...),
 						up.NewClient(ctx, vppConn),
 						mtu.NewClient(vppConn),
 						tag.NewClient(ctx, vppConn),

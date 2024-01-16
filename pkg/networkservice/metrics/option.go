@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,5 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stats provides chain elements for retrieving statistics from vpp
-package stats
+package metrics
+
+type metricsOptions struct {
+	socket string
+}
+
+// Option is an option pattern for metrics server/client
+type Option func(o *metricsOptions)
+
+// WithSocket sets stats socket name
+func WithSocket(socket string) Option {
+	return func(o *metricsOptions) {
+		o.socket = socket
+	}
+}
