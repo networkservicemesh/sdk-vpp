@@ -27,7 +27,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/vpphelper"
 	"github.com/pkg/errors"
-	"go.fd.io/govpp/api"
 )
 
 const (
@@ -54,31 +53,6 @@ func waitForResponses(responseCh <-chan bool) bool {
 	}
 }
 
-func getAPIChannel(
-	ctx context.Context,
-	vppConn vpphelper.Connection,
-	dstIP ip_types.Address,
-	interval float64,
-	repeat uint32) (api.Channel, error) {
-	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
-	}
-	if _, err = ping.NewServiceClient(vppConn).WantPingFinishedEvents(ctx, &ping.WantPingFinishedEvents{
-		Address:  dstIP,
-		Interval: interval,
-		Repeat:   repeat,
-	}); err != nil {
-		apiChannel.Close()
-		return nil, errors.Wrap(err, "vppapi WantPingEvents returned error")
-	}
-	go func() {
-		<-ctx.Done()
-		apiChannel.Close()
-	}()
-	return apiChannel, nil
-}
-
 func doPing(
 	deadlineCtx context.Context,
 	vppConn vpphelper.Connection,
@@ -88,26 +62,30 @@ func doPing(
 	responseCh chan bool) {
 	logger := log.FromContext(deadlineCtx).WithField("srcIP", srcIP.String()).WithField("dstIP", dstIP.String())
 
-	apiChannel, err := getAPIChannel(deadlineCtx, vppConn, dstIP, interval, repeat)
-	if err != nil {
+	if _, err := ping.NewServiceClient(vppConn).WantPingFinishedEvents(deadlineCtx, &ping.WantPingFinishedEvents{
+		Address:  dstIP,
+		Interval: interval,
+		Repeat:   repeat,
+	}); err != nil {
+		logger.Error(errors.Wrap(err, "vppapi WantPingEvents returned error"))
 		responseCh <- true
 		return
 	}
 
-	notifCh := make(chan api.Message, 256)
-	subscription, err := apiChannel.SubscribeNotification(notifCh, &ping.PingFinishedEvent{})
+	watcher, err := vppConn.WatchEvent(deadlineCtx, &ping.PingFinishedEvent{})
 	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel").Error())
+		logger.Error(errors.Wrap(err, "failed to watch ping.PingFinishedEvent").Error())
 		responseCh <- true
 		return
 	}
-	defer func() { _ = subscription.Unsubscribe() }()
+
+	defer func() { watcher.Close() }()
 
 	select {
 	case <-deadlineCtx.Done():
 		responseCh <- true
 		return
-	case rawMsg := <-notifCh:
+	case rawMsg := <-watcher.Events():
 		if msg, ok := rawMsg.(*ping.PingFinishedEvent); ok {
 			if msg.ReplyCount == 0 {
 				logger.Errorf("No packets received")
