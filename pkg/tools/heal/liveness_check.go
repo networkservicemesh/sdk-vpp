@@ -25,8 +25,8 @@ import (
 	"github.com/networkservicemesh/govpp/binapi/ip_types"
 	"github.com/networkservicemesh/govpp/binapi/ping"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/networkservicemesh/vpphelper"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 )
 
 const (
@@ -55,7 +55,7 @@ func waitForResponses(responseCh <-chan bool) bool {
 
 func doPing(
 	deadlineCtx context.Context,
-	vppConn vpphelper.Connection,
+	vppConn api.Connection,
 	srcIP, dstIP ip_types.Address,
 	interval float64,
 	repeat uint32,
@@ -98,7 +98,7 @@ func doPing(
 }
 
 // VPPLivenessCheck return a liveness check function which uses VPP ping to check VPP dataplane
-func VPPLivenessCheck(vppConn vpphelper.Connection) func(deadlineCtx context.Context, conn *networkservice.Connection) bool {
+func VPPLivenessCheck(vppConn api.Connection) func(deadlineCtx context.Context, conn *networkservice.Connection) bool {
 	return func(deadlineCtx context.Context, conn *networkservice.Connection) bool {
 		deadline, ok := deadlineCtx.Deadline()
 		if !ok {

@@ -1,5 +1,7 @@
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2024 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +24,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -33,11 +36,11 @@ import (
 
 type peerupClient struct {
 	ctx     context.Context
-	vppConn Connection
+	vppConn api.Connection
 }
 
 // NewClient provides a NetworkServiceClient chain elements that 'up's the peer
-func NewClient(ctx context.Context, vppConn Connection) networkservice.NetworkServiceClient {
+func NewClient(ctx context.Context, vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &peerupClient{
 		ctx:     ctx,
 		vppConn: vppConn,

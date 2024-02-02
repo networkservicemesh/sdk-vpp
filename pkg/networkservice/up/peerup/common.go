@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -33,13 +33,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard/peer"
 )
 
-// Connection - simply combines tha api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
-func waitForPeerUp(ctx context.Context, vppConn Connection, pubKey string, isClient bool) error {
+func waitForPeerUp(ctx context.Context, vppConn api.Connection, pubKey string, isClient bool) error {
 	peerIndex, ok := peer.Load(ctx, isClient, pubKey)
 	if !ok {
 		return errors.New("Peer not found")
