@@ -55,7 +55,7 @@ func waitForPeerUp(ctx context.Context, vppConn api.Connection, pubKey string, i
 	watcher, err := vppConn.WatchEvent(ctx, &wireguard.WireguardPeerEvent{})
 
 	if err != nil {
-		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
+		return errors.Wrap(err, "failed to watch wireguard.WireguardPeerEvent")
 	}
 	defer func() { watcher.Close() }()
 
