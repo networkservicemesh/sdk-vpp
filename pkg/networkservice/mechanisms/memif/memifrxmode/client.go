@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 	"google.golang.org/grpc"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -38,11 +39,11 @@ import (
 
 type memifrxmodeClient struct {
 	chainCtx context.Context
-	vppConn  Connection
+	vppConn  api.Connection
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(chainCtx context.Context, vppConn Connection) networkservice.NetworkServiceClient {
+func NewClient(chainCtx context.Context, vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &memifrxmodeClient{
 		chainCtx: chainCtx,
 		vppConn:  vppConn,

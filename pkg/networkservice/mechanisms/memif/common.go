@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -42,12 +42,6 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
-
-// Connection aggregates the api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
 
 // NetNSInfo contains shared info for server and client
 type NetNSInfo struct {

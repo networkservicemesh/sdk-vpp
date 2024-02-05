@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
@@ -34,7 +35,7 @@ import (
 
 type upServer struct {
 	ctx         context.Context
-	vppConn     Connection
+	vppConn     api.Connection
 	loadIfIndex ifIndexFunc
 
 	inited    uint32
@@ -42,7 +43,7 @@ type upServer struct {
 }
 
 // NewServer provides a NetworkServiceServer chain elements that 'up's the swIfIndex
-func NewServer(ctx context.Context, vppConn Connection, opts ...Option) networkservice.NetworkServiceServer {
+func NewServer(ctx context.Context, vppConn api.Connection, opts ...Option) networkservice.NetworkServiceServer {
 	o := &options{
 		loadIfIndex: ifindex.Load,
 	}

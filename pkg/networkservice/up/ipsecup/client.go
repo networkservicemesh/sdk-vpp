@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 	"google.golang.org/grpc"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -34,11 +35,11 @@ import (
 
 type ipsecUpClient struct {
 	ctx     context.Context
-	vppConn Connection
+	vppConn api.Connection
 }
 
 // NewClient provides a NetworkServiceClient chain element that waits the 'up' of the IPSec interface
-func NewClient(ctx context.Context, vppConn Connection) networkservice.NetworkServiceClient {
+func NewClient(ctx context.Context, vppConn api.Connection) networkservice.NetworkServiceClient {
 	return &ipsecUpClient{
 		ctx:     ctx,
 		vppConn: vppConn,

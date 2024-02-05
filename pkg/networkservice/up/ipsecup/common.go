@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,13 +30,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-// Connection - simply combines tha api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
-func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) error {
+func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, isClient bool) error {
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return nil

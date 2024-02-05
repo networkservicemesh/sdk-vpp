@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -46,7 +46,7 @@ type memifServer struct {
 }
 
 // NewServer provides a NetworkServiceServer chain elements that support the memif Mechanism
-func NewServer(chainCtx context.Context, vppConn Connection, options ...Option) networkservice.NetworkServiceServer {
+func NewServer(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
 	opts := new(memifOptions)
 	for _, o := range options {
 		o(opts)
