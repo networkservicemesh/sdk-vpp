@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.fd.io/govpp/api"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -37,11 +38,11 @@ import (
 
 type memifrxmodeServer struct {
 	chainCtx context.Context
-	vppConn  Connection
+	vppConn  api.Connection
 }
 
 // NewServer - create a new memifProxy server chain element
-func NewServer(chainCtx context.Context, vppConn Connection) networkservice.NetworkServiceServer {
+func NewServer(chainCtx context.Context, vppConn api.Connection) networkservice.NetworkServiceServer {
 	return &memifrxmodeServer{
 		chainCtx: chainCtx,
 		vppConn:  vppConn,

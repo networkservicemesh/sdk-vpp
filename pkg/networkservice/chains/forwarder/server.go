@@ -77,18 +77,12 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/xconnect/l2bridgedomain"
 )
 
-// Connection aggregates the api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
 type xconnectNSServer struct {
 	endpoint.Endpoint
 }
 
 // NewServer - returns an implementation of the xconnectns network service
-func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn Connection, tunnelIP net.IP, options ...Option) endpoint.Endpoint {
+func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn api.Connection, tunnelIP net.IP, options ...Option) endpoint.Endpoint {
 	opts := &forwarderOptions{
 		name:                             "forwarder-vpp-" + uuid.New().String(),
 		authorizeServer:                  authorize.NewServer(authorize.Any()),

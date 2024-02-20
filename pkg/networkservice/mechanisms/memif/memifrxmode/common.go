@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -31,32 +31,19 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
-// Connection aggregates the api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
-func setRxMode(ctx context.Context, vppConn Connection, swIfIndex interface_types.InterfaceIndex) error {
-	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
+func setRxMode(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) error {
+	watcher, err := vppConn.WatchEvent(ctx, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
-	}
-
-	notifCh := make(chan api.Message, 256)
-	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
-	if err != nil {
-		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
+		return errors.Wrap(err, "failed to watch interfaces.SwInterfaceEvent")
 	}
 
 	go func() {
-		defer apiChannel.Close()
-		defer func() { _ = subscription.Unsubscribe() }()
+		defer func() { watcher.Close() }()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case rawMsg := <-notifCh:
+			case rawMsg := <-watcher.Events():
 				if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 					msg.SwIfIndex == swIfIndex &&
 					msg.Flags&interface_types.IF_STATUS_API_FLAG_LINK_UP != 0 {

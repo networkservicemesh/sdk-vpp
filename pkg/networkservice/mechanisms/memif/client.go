@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2021-2023 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2024 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +50,7 @@ type memifClient struct {
 }
 
 // NewClient provides a NetworkServiceClient chain elements that support the memif Mechanism
-func NewClient(chainCtx context.Context, vppConn Connection, options ...Option) networkservice.NetworkServiceClient {
+func NewClient(chainCtx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceClient {
 	opts := &memifOptions{}
 	for _, o := range options {
 		o(opts)

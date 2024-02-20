@@ -13,7 +13,6 @@ require (
 	github.com/networkservicemesh/govpp v0.0.0-20240130152300-43babf54855b
 	github.com/networkservicemesh/sdk v0.5.1-0.20240212105149-b1a3e26da857
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20240212105448-f9f740175836
-	github.com/networkservicemesh/vpphelper v0.0.0-20230901145133-a14aecebd1cb
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	github.com/thanhpk/randstr v1.0.4
@@ -25,11 +24,6 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
-)
-
-require (
-	github.com/edwarnicke/log v1.0.0 // indirect
-	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 )
 
 require (

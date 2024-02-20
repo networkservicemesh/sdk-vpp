@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,28 +30,16 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
-// Connection - simply combines tha api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
-func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) error {
+func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, isClient bool) error {
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return nil
 	}
-	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
+	watcher, err := vppConn.WatchEvent(ctx, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
+		return errors.Wrap(err, "failed to watch interfaces.SwInterfaceEvent")
 	}
-	defer apiChannel.Close()
-	notifCh := make(chan api.Message, 256)
-	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
-	if err != nil {
-		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
-	}
-	defer func() { _ = subscription.Unsubscribe() }()
+	defer func() { watcher.Close() }()
 
 	now := time.Now()
 	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
@@ -82,7 +70,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn Connection, isClient bool) err
 		select {
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "provided context is done")
-		case rawMsg := <-notifCh:
+		case rawMsg := <-watcher.Events():
 			if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 				msg.SwIfIndex == swIfIndex &&
 				msg.Flags&interface_types.IF_STATUS_API_FLAG_LINK_UP != 0 {

@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2021 Cisco and/or its affiliates.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,23 +30,11 @@ import (
 	"go.fd.io/govpp/api"
 )
 
-// Connection - simply combines tha api.Connection and api.ChannelProvider interfaces
-type Connection interface {
-	api.Connection
-	api.ChannelProvider
-}
-
-func up(ctx context.Context, vppConn Connection, loadIfIndex ifIndexFunc, isClient bool) error {
+func up(ctx context.Context, vppConn api.Connection, loadIfIndex ifIndexFunc, isClient bool) error {
 	swIfIndex, ok := loadIfIndex(ctx, isClient)
 	if !ok {
 		return nil
 	}
-
-	apiChannel, err := vppConn.NewAPIChannelBuffered(256, 256)
-	if err != nil {
-		return errors.Wrap(err, "failed to get new channel for communication with VPP via govpp core")
-	}
-	defer apiChannel.Close()
 
 	now := time.Now()
 	if _, err := interfaces.NewServiceClient(vppConn).SwInterfaceSetFlags(ctx, &interfaces.SwInterfaceSetFlags{
@@ -61,20 +49,19 @@ func up(ctx context.Context, vppConn Connection, loadIfIndex ifIndexFunc, isClie
 		WithField("vppapi", "SwInterfaceSetFlags").Debug("completed")
 
 	if waitTillUp, ok := Load(ctx, isClient); ok && waitTillUp {
-		if err := waitForUpLinkUp(ctx, vppConn, apiChannel, swIfIndex); err != nil {
+		if err := waitForUpLinkUp(ctx, vppConn, swIfIndex); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api.Channel, swIfIndex interface_types.InterfaceIndex) error {
-	notifCh := make(chan api.Message, 256)
-	subscription, err := apiChannel.SubscribeNotification(notifCh, &interfaces.SwInterfaceEvent{})
+func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) error {
+	watcher, err := vppConn.WatchEvent(ctx, &interfaces.SwInterfaceEvent{})
 	if err != nil {
-		return errors.Wrap(err, "failed to subscribe for receiving of the specified notification messages via provided Go channel")
+		return errors.Wrap(err, "failed to watch interfaces.SwInterfaceEvent")
 	}
-	defer func() { _ = subscription.Unsubscribe() }()
+	defer func() { watcher.Close() }()
 
 	now := time.Now()
 	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
@@ -105,7 +92,7 @@ func waitForUpLinkUp(ctx context.Context, vppConn api.Connection, apiChannel api
 		select {
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "provided context is done")
-		case rawMsg := <-notifCh:
+		case rawMsg := <-watcher.Events():
 			if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 				msg.SwIfIndex == swIfIndex &&
 				msg.Flags&interface_types.IF_STATUS_API_FLAG_LINK_UP != 0 {
