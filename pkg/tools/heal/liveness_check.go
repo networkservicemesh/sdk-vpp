@@ -24,10 +24,11 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/govpp/binapi/ip_types"
 	"github.com/networkservicemesh/govpp/binapi/ping"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"go.fd.io/govpp/api"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 const (
@@ -72,7 +73,7 @@ func doPing(
 
 	defer func() { watcher.Close() }()
 
-	ifindex, ok := ifindex.Load(deadlineCtx, true)
+	index, ok := ifindex.Load(deadlineCtx, true)
 	if !ok {
 		logger.Errorf("failed to load ifindex")
 		responseCh <- true
@@ -80,7 +81,7 @@ func doPing(
 	}
 	if _, err := ping.NewServiceClient(vppConn).WantPingFinishedEvents(deadlineCtx, &ping.WantPingFinishedEvents{
 		Address:   dstIP,
-		SwIfIndex: ifindex,
+		SwIfIndex: index,
 		Interval:  interval,
 		Repeat:    repeat,
 	}); err != nil {
