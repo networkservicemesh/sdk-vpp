@@ -27,6 +27,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 	"go.fd.io/govpp/api"
+
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 )
 
 const (
@@ -62,16 +64,6 @@ func doPing(
 	responseCh chan bool) {
 	logger := log.FromContext(deadlineCtx).WithField("srcIP", srcIP.String()).WithField("dstIP", dstIP.String())
 
-	if _, err := ping.NewServiceClient(vppConn).WantPingFinishedEvents(deadlineCtx, &ping.WantPingFinishedEvents{
-		Address:  dstIP,
-		Interval: interval,
-		Repeat:   repeat,
-	}); err != nil {
-		logger.Error(errors.Wrap(err, "vppapi WantPingEvents returned error"))
-		responseCh <- true
-		return
-	}
-
 	watcher, err := vppConn.WatchEvent(deadlineCtx, &ping.PingFinishedEvent{})
 	if err != nil {
 		logger.Error(errors.Wrap(err, "failed to watch ping.PingFinishedEvent").Error())
@@ -80,6 +72,23 @@ func doPing(
 	}
 
 	defer func() { watcher.Close() }()
+
+	index, ok := ifindex.Load(deadlineCtx, true)
+	if !ok {
+		logger.Errorf("failed to load ifindex")
+		responseCh <- true
+		return
+	}
+	if _, err := ping.NewServiceClient(vppConn).WantPingFinishedEvents(deadlineCtx, &ping.WantPingFinishedEvents{
+		Address:   dstIP,
+		SwIfIndex: index,
+		Interval:  interval,
+		Repeat:    repeat,
+	}); err != nil {
+		logger.Error(errors.Wrap(err, "vppapi WantPingEvents returned error"))
+		responseCh <- true
+		return
+	}
 
 	select {
 	case <-deadlineCtx.Done():
