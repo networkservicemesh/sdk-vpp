@@ -4,6 +4,8 @@
 //
 // Copyright (c) 2023 Cisco and/or its affiliates.
 //
+// Copyright (c) 2024 Ericsson Software Technologies and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,7 +86,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("vppapi", "AddNodeNext").Debug("completed")
 
 		now = time.Now()
-		vxlanAddDelTunnel := &vxlan.VxlanAddDelTunnelV2{
+		vxlanAddDelTunnel := &vxlan.VxlanAddDelTunnelV3{
 			IsAdd:          isAdd,
 			Instance:       ^uint32(0),
 			SrcAddress:     types.ToVppAddress(mechanism.SrcIP()),
@@ -98,9 +100,10 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			vxlanAddDelTunnel.SrcAddress = types.ToVppAddress(mechanism.DstIP())
 			vxlanAddDelTunnel.DstAddress = types.ToVppAddress(mechanism.SrcIP())
 		}
-		rsp, err := vxlan.NewServiceClient(vppConn).VxlanAddDelTunnelV2(ctx, vxlanAddDelTunnel)
+
+		rsp, err := vxlan.NewServiceClient(vppConn).VxlanAddDelTunnelV3(ctx, vxlanAddDelTunnel)
 		if err != nil {
-			return errors.Wrap(err, "vppapi VxlanAddDelTunnelV2 returned error")
+			return errors.Wrap(err, "vppapi VxlanAddDelTunnelV3 returned error")
 		}
 		log.FromContext(ctx).
 			WithField("isAdd", isAdd).
@@ -109,7 +112,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("DstAddress", vxlanAddDelTunnel.DstAddress).
 			WithField("Vni", vxlanAddDelTunnel.Vni).
 			WithField("duration", time.Since(now)).
-			WithField("vppapi", "VxlanAddDelTunnel").Debug("completed")
+			WithField("vppapi", "VxlanAddDelTunnelV3").Debug("completed")
 		if isAdd {
 			ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 		} else {
