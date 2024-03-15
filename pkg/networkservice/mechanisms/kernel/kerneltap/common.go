@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -62,12 +62,10 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 
 		now := time.Now()
-		tapCreateV2 := &tapv2.TapCreateV2{
+		tapCreate := &tapv2.TapCreateV3{
 			ID:               ^uint32(0),
 			UseRandomMac:     true,
 			NumRxQueues:      1,
-			TxRingSz:         1024,
-			RxRingSz:         1024,
 			HostIfNameSet:    true,
 			HostIfName:       mechanism.GetInterfaceName(),
 			HostNamespaceSet: true,
@@ -76,20 +74,20 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		}
 
 		if conn.GetPayload() == payload.Ethernet {
-			tapCreateV2.TapFlags ^= tapv2.TAP_API_FLAG_TUN
+			tapCreate.TapFlags ^= tapv2.TAP_API_FLAG_TUN
 		}
 
-		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV2(ctx, tapCreateV2)
+		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV3(ctx, tapCreate)
 		if err != nil {
-			return errors.Wrap(err, "vppapi TapCreateV2 returned error")
+			return errors.Wrap(err, "vppapi TapCreateV3 returned error")
 		}
 		log.FromContext(ctx).
 			WithField("swIfIndex", rsp.SwIfIndex).
-			WithField("HostIfName", tapCreateV2.HostIfName).
-			WithField("HostNamespace", tapCreateV2.HostNamespace).
-			WithField("TapFlags", tapCreateV2.TapFlags).
+			WithField("HostIfName", tapCreate.HostIfName).
+			WithField("HostNamespace", tapCreate.HostNamespace).
+			WithField("TapFlags", tapCreate.TapFlags).
 			WithField("duration", time.Since(now)).
-			WithField("vppapi", "TapCreateV2").Debug("completed")
+			WithField("vppapi", "TapCreateV3").Debug("completed")
 		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
 
 		now = time.Now()
@@ -106,12 +104,12 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			WithField("vppapi", "SwInterfaceSetRxMode").Debug("completed")
 
 		now = time.Now()
-		l, err := handle.LinkByName(tapCreateV2.HostIfName)
+		l, err := handle.LinkByName(tapCreate.HostIfName)
 		if err != nil {
-			return errors.Wrapf(err, "unable to find hostIfName %s", tapCreateV2.HostIfName)
+			return errors.Wrapf(err, "unable to find hostIfName %s", tapCreate.HostIfName)
 		}
 		log.FromContext(ctx).
-			WithField("link.Name", tapCreateV2.HostIfName).
+			WithField("link.Name", tapCreate.HostIfName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
 
