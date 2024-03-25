@@ -88,7 +88,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		authorizeServer:                  authorize.NewServer(authorize.Any()),
 		authorizeMonitorConnectionServer: authmonitor.NewMonitorConnectionServer(authmonitor.Any()),
 		clientURL:                        &url.URL{Scheme: "unix", Host: "connect.to.socket"},
-		dialTimeout:                      time.Millisecond * 200,
+		dialTimeout:                      time.Millisecond * 300,
 		domain2Device:                    make(map[string]string),
 	}
 	for _, opt := range options {
@@ -100,10 +100,12 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
 			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
 		),
+		registryclient.WithDialTimeout(opts.dialTimeout),
 		registryclient.WithDialOptions(opts.dialOpts...),
 	)
 	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx,
 		registryclient.WithClientURL(opts.clientURL),
+		registryclient.WithDialTimeout(opts.dialTimeout),
 		registryclient.WithDialOptions(opts.dialOpts...))
 
 	ikev2Key, err := ipsec.GenerateRSAKey()
