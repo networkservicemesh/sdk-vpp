@@ -40,7 +40,7 @@ type forwarderOptions struct {
 	dialTimeout                      time.Duration
 	domain2Device                    map[string]string
 	mechanismPrioriyList             []string
-	statsOpts                        []metrics.Option
+	metricsOpts                      []metrics.Option
 	cleanupOpts                      []cleanup.Option
 	vxlanOpts                        []vxlan.Option
 	dialOpts                         []grpc.DialOption
@@ -105,10 +105,10 @@ func WithMechanismPriority(priorityList []string) Option {
 	}
 }
 
-// WithStatsOptions sets metrics options
-func WithStatsOptions(opts ...metrics.Option) Option {
+// WithMetricsOptions sets metrics options
+func WithMetricsOptions(opts ...metrics.Option) Option {
 	return func(o *forwarderOptions) {
-		o.statsOpts = opts
+		o.metricsOpts = opts
 	}
 }
 
