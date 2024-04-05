@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/thanhpk/randstr"
 	"github.com/vishvananda/netlink"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -36,8 +35,9 @@ import (
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/tools/peer"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/nanoid"
+
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ethtool"
-	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
@@ -52,14 +52,17 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		defer handle.Close()
 
 		if _, ok := link.Load(ctx, isClient); ok {
-			if _, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
-				return nil
-			}
+			return nil
 		}
 
-		// Delete the previous kernel interface if there is one in the target namespace
+		// In the forwarder context:
+		// link is on the NSC/NSE side, peer is on the forwarder side.
+		linkAlias := mechutils.ToAlias(conn, isClient)
+		peerAlias := fmt.Sprintf("veth-%s", linkAlias)
+
+		// Delete the previous link if there is one in the target namespace
 		var prevLink netlink.Link
-		if prevLink, err = handle.LinkByName(mechanism.GetInterfaceName()); err == nil {
+		if prevLink, err = handle.LinkByAlias(linkAlias); err == nil {
 			now := time.Now()
 			if err = handle.LinkDel(prevLink); err != nil {
 				return errors.Wrapf(err, "failed to delete link device %v", prevLink)
@@ -69,18 +72,24 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
 		}
-		ifindex.Delete(ctx, isClient)
-
-		alias := mechutils.ToAlias(conn, isClient)
-		la := netlink.NewLinkAttrs()
-		la.Name = randstr.Hex(7)
 
 		// Create the veth pair
+		la := netlink.NewLinkAttrs()
+		la.Name, err = nanoid.GenerateLinuxInterfaceName()
+		if err != nil {
+			return err
+		}
+		peerName, err := nanoid.GenerateLinuxInterfaceName()
+		if err != nil {
+			return err
+		}
+
 		now := time.Now()
 		veth := &netlink.Veth{
 			LinkAttrs: la,
-			PeerName:  linuxIfaceName(alias),
+			PeerName:  peerName,
 		}
+
 		var l netlink.Link = veth
 		if addErr := netlink.LinkAdd(l); addErr != nil {
 			return errors.Wrapf(addErr, "failed to add new link device %v", l)
@@ -150,12 +159,12 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		// Set the Link Alias
 		now = time.Now()
-		if err = handle.LinkSetAlias(l, alias); err != nil {
-			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", alias, l)
+		if err = handle.LinkSetAlias(l, linkAlias); err != nil {
+			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", linkAlias, l)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", l.Attrs().Name).
-			WithField("alias", alias).
+			WithField("alias", linkAlias).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetAlias").Debug("completed")
 
@@ -187,14 +196,14 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		// Set Alias of peerLink
 		now = time.Now()
-		if err = netlink.LinkSetAlias(peerLink, fmt.Sprintf("veth-%s", alias)); err != nil {
+		if err = netlink.LinkSetAlias(peerLink, peerAlias); err != nil {
 			_ = netlink.LinkDel(l)
 			_ = netlink.LinkDel(peerLink)
-			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", fmt.Sprintf("veth-%s", alias), peerLink)
+			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", peerAlias, peerLink)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
-			WithField("peerLink", fmt.Sprintf("veth-%s", alias)).
+			WithField("peerLink", peerAlias).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetAlias").Debug("completed")
 
@@ -234,11 +243,4 @@ func del(ctx context.Context, conn *networkservice.Connection, isClient bool) er
 		link.Delete(ctx, isClient)
 	}
 	return nil
-}
-
-func linuxIfaceName(ifaceName string) string {
-	if len(ifaceName) <= kernel.LinuxIfMaxLength {
-		return ifaceName
-	}
-	return ifaceName[:kernel.LinuxIfMaxLength]
 }

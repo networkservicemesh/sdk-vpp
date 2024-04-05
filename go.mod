@@ -15,7 +15,6 @@ require (
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20240405103539-cf3b1676a8b2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
-	github.com/thanhpk/randstr v1.0.4
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
 	go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524

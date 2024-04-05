@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
-// Copyright (c) 2020-2023 Cisco and/or its affiliates.
+// Copyright (c) 2020-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -50,15 +50,13 @@ func ToNSFilename(mechanism *kernel.Mechanism) (string, error) {
 //
 //	Note: Don't use this in a non-forwarder context
 func ToAlias(conn *networkservice.Connection, isClient bool) string {
-	// Naming is tricky.  We want to name based on either the next or prev connection id depending on whether we
-	// are on the client or server side.  Since this chain element is designed for use in a Forwarder,
-	// if we are on the client side, we want to name based on the connection id from the NSE that is Next
-	// if we are not the client, we want to name for the connection of of the client addressing us, which is Prev
+	// Naming is tricky. For the same connection, the aliases must always be the same.
+	// For consistency when using healing when there are multiple restarts, we can only rely on the first PathSegment.
 	namingConn := conn.Clone()
-	namingConn.Id = namingConn.GetPrevPathSegment().GetId()
+	namingConn.Id = namingConn.GetPath().GetPathSegments()[0].GetId()
 	alias := fmt.Sprintf("server-%s", namingConn.GetId())
 	if isClient {
-		namingConn.Id = namingConn.GetNextPathSegment().GetId()
+		namingConn.Id = namingConn.GetPath().GetPathSegments()[0].GetId()
 		alias = fmt.Sprintf("client-%s", namingConn.GetId())
 	}
 	return alias
