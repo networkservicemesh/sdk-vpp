@@ -69,6 +69,7 @@ import (
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/vxlan"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/mechanisms/wireguard"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics"
+	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/nsmonitor"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/pinhole"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/tag"
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
@@ -166,6 +167,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 						afxdppinhole.NewClient(),
 						pinhole.NewClient(vppConn, pinhole.WithSharedMutex(pinholeMutex)),
 						recvfd.NewClient(),
+						nsmonitor.NewClient(ctx),
 						sendfd.NewClient(),
 					},
 						opts.clientAdditionalFunctionality...,

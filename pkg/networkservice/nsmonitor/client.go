@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -85,7 +85,7 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 				case <-cancelCtx.Done():
 					return
 				case _, ok := <-deleteCh:
-					if ok {
+					if ok && cancelCtx.Err() == nil {
 						factory.Close(begin.CancelContext(cancelCtx))
 					}
 					return
