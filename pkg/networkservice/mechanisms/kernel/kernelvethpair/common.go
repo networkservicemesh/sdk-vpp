@@ -75,11 +75,11 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 
 		// Create the veth pair
 		la := netlink.NewLinkAttrs()
-		la.Name, err = nanoid.GenerateLinuxInterfaceName()
+		la.Name, err = nanoid.GenerateLinuxInterfaceName(conn.GetNetworkService())
 		if err != nil {
 			return err
 		}
-		peerName, err := nanoid.GenerateLinuxInterfaceName()
+		peerName, err := nanoid.GenerateLinuxInterfaceName(conn.GetNetworkService())
 		if err != nil {
 			return err
 		}
