@@ -25,21 +25,10 @@ import (
 	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics/ifacename"
-	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/metrics/stats"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/null"
 )
 
 // NewServer provides NetworkServiceServer chain elements that retrieve vpp interface statistics and names.
-func NewServer(ctx context.Context, vppConn api.Connection, options ...Option) networkservice.NetworkServiceServer {
-	opts := &metricsOptions{}
-	for _, opt := range options {
-		opt(opts)
-	}
-
-	return chain.NewNetworkServiceServer(
-		stats.NewServer(ctx, stats.WithSocket(opts.socket)),
-		ifacename.NewServer(ctx, vppConn, ifacename.WithSocket(opts.socket)),
-	)
+func NewServer(_ context.Context, _ api.Connection, _ ...Option) networkservice.NetworkServiceServer {
+	return null.NewServer()
 }
