@@ -42,6 +42,7 @@ type statsServer struct {
 
 // NewServer provides a NetworkServiceServer chain elements that retrieves vpp interface statistics.
 func NewServer(ctx context.Context, options ...Option) networkservice.NetworkServiceServer {
+	prometheusInitOnce.Do(registerMetrics)
 	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)

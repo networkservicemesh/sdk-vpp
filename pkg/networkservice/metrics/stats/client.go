@@ -44,6 +44,7 @@ type statsClient struct {
 
 // NewClient provides a NetworkServiceClient chain elements that retrieves vpp interface metrics.
 func NewClient(ctx context.Context, options ...Option) networkservice.NetworkServiceClient {
+	prometheusInitOnce.Do(registerMetrics)
 	opts := &statsOptions{}
 	for _, opt := range options {
 		opt(opts)
