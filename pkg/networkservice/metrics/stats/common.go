@@ -32,6 +32,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/opentelemetry"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
@@ -67,6 +68,23 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 		segment.Metrics[addName+"rx_packets"] = strconv.FormatUint(iface.Rx.Packets, 10)
 		segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
 		segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
+
+		if opentelemetry.IsPrometheusEnabled() {
+			if addName == "server_" {
+				ServerRxBytes.Set(float64(iface.Rx.Bytes))
+				ServerTxBytes.Set(float64(iface.Tx.Bytes))
+				ServerRxPackets.Set(float64(iface.Rx.Packets))
+				ServerTxPackets.Set(float64(iface.Tx.Packets))
+				ServerDrops.Set(float64(iface.Drops))
+			} else {
+				ClientRxBytes.Set(float64(iface.Rx.Bytes))
+				ClientTxBytes.Set(float64(iface.Tx.Bytes))
+				ClientRxPackets.Set(float64(iface.Rx.Packets))
+				ClientTxPackets.Set(float64(iface.Tx.Packets))
+				ClientDrops.Set(float64(iface.Drops))
+			}
+		}
+
 		break
 	}
 }
