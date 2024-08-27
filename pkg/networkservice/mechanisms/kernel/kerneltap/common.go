@@ -21,6 +21,7 @@ package kerneltap
 
 import (
 	"context"
+	"runtime/debug"
 	"time"
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
@@ -75,6 +76,13 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 
 		if conn.GetPayload() == payload.Ethernet {
 			tapCreate.TapFlags ^= tapv2.TAP_API_FLAG_TUN
+		}
+
+		deadline, ok := ctx.Deadline()
+		if ok {
+			timeout := time.Until(deadline)
+			log.FromContext(ctx).Infof("timeout before creating tap inteface: %v", timeout)
+			log.FromContext(ctx).Infof("stack trace: %s", string(debug.Stack()))
 		}
 
 		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV3(ctx, tapCreate)
@@ -147,6 +155,13 @@ func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Conne
 			return nil
 		}
 		now := time.Now()
+
+		deadline, ok := ctx.Deadline()
+		if ok {
+			timeout := time.Until(deadline)
+			log.FromContext(ctx).Infof("timeout before deleting tap inteface: %v", timeout)
+			log.FromContext(ctx).Infof("stack trace: %s", string(debug.Stack()))
+		}
 		_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
 			SwIfIndex: swIfIndex,
 		})
