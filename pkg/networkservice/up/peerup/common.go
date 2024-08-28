@@ -89,7 +89,7 @@ func waitForPeerUp(ctx context.Context, vppConn api.Connection, pubKey string, i
 			log.FromContext(ctx).Infof("failed to get any WireguardPeerEvents: %s", ctx.Err())
 			return errors.Wrap(ctx.Err(), "provided context is done")
 		case rawMsg := <-watcher.Events():
-			log.FromContext(ctx).Infof("got WireguardPeerEvent: %v, %v", rawMsg.GetMessageName(), rawMsg.GetMessageType())
+			log.FromContext(ctx).Infof("received WireguardPeerEvent: %v", rawMsg)
 			if msg, ok := rawMsg.(*wireguard.WireguardPeerEvent); ok &&
 				msg.PeerIndex == peerIndex &&
 				msg.Flags&wireguard.WIREGUARD_PEER_ESTABLISHED != 0 {
