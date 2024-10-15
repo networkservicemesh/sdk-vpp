@@ -73,12 +73,14 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 		r.monitor = r.supplyMonitor(r.chainCtx)
 	})
 
-	cancelCtx, cancel := context.WithCancel(r.chainCtx)
-	if _, ok := metadata.Map(ctx, metadata.IsClient(r)).LoadOrStore(key{}, cancel); !ok {
+	if _, ok := metadata.Map(ctx, metadata.IsClient(r)).Load(key{}); !ok {
+		cancelCtx, cancel := context.WithCancel(r.chainCtx)
+		metadata.Map(ctx, metadata.IsClient(r)).Store(key{}, cancel)
 		if inodeURL, ok := conn.GetMechanism().GetParameters()[common.InodeURL]; ok {
 			deleteCh := r.monitor.Watch(cancelCtx, inodeURL)
 			factory := begin.FromContext(ctx)
 			go func() {
+				defer cancel()
 				select {
 				case <-r.chainCtx.Done():
 					return
@@ -86,7 +88,7 @@ func (r *netNSMonitorClient) Request(ctx context.Context, request *networkservic
 					return
 				case _, ok := <-deleteCh:
 					if ok && cancelCtx.Err() == nil {
-						factory.Close(begin.CancelContext(cancelCtx))
+						<-factory.Close(begin.CancelContext(cancelCtx))
 					}
 					return
 				}
