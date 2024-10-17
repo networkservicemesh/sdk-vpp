@@ -1,6 +1,6 @@
 module github.com/networkservicemesh/sdk-vpp
 
-go 1.20
+go 1.23
 
 require (
 	github.com/cilium/ebpf v0.10.0

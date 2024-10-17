@@ -1,8 +1,8 @@
 ---
 run:
   # concurrency: 6
-  go: "1.20"
-  timeout: 1.5m
+  go: "1.23"
+  timeout: 90s
   issues-exit-code: 1
   tests: true
 linters-settings:
@@ -10,7 +10,8 @@ linters-settings:
     check-type-assertions: false
     check-blank: false
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
     settings:
       printf:
         funcs:
@@ -18,8 +19,6 @@ linters-settings:
           - (github.com/sirupsen/logrus.FieldLogger).Warnf
           - (github.com/sirupsen/logrus.FieldLogger).Errorf
           - (github.com/sirupsen/logrus.FieldLogger).Fatalf
-  revive:
-    min-confidence: 0.8
   goimports:
     local-prefixes: github.com/networkservicemesh/sdk-vpp/
   goheader:
@@ -31,8 +30,6 @@ linters-settings:
         copyright-holders: ({{copyright-holder}})+
   gocyclo:
     min-complexity: 15
-  maligned:
-    suggest-new: true
   dupl:
     threshold: 150
   funlen:
@@ -56,6 +53,9 @@ linters-settings:
     simple: true
     range-loops: true
     for-loops: false
+  gosec:
+    excludes:
+      - G115
   gocritic:
     enabled-checks:
       - appendAssign
@@ -129,7 +129,6 @@ linters:
   enable:
     # - rowserrcheck
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -142,25 +141,19 @@ linters:
     - gofmt
     - goheader
     - goimports
-    - revive
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - interfacer
-    # - lll
     - misspell
     - nakedret
-    - scopelint
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
-    # - unused
-    - varcheck
     - whitespace
+    - copyloopvar
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0
