@@ -36,6 +36,7 @@ import (
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/link"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
@@ -68,6 +69,7 @@ func addDel(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 }
 
 func addDelVPP(ctx context.Context, vppConn api.Connection, isAdd bool, swIfIndex interface_types.InterfaceIndex, srcNet *net.IPNet, l netlink.Link) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
 	ipNeighborAddDel := &ip_neighbor.IPNeighborAddDel{
 		IsAdd: isAdd,
@@ -78,11 +80,11 @@ func addDelVPP(ctx context.Context, vppConn api.Connection, isAdd bool, swIfInde
 			IPAddress:  types.ToVppAddress(srcNet.IP),
 		},
 	}
-	_, err := ip_neighbor.NewServiceClient(vppConn).IPNeighborAddDel(ctx, ipNeighborAddDel)
+	_, err := ip_neighbor.NewServiceClient(vppConn).IPNeighborAddDel(newCtx, ipNeighborAddDel)
 	if err != nil {
 		return errors.Wrapf(err, "vppapi IPNeighborAddDel returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("swIfIndex", ipNeighborAddDel.Neighbor.SwIfIndex).
 		WithField("flags", ipNeighborAddDel.Neighbor.Flags).
 		WithField("macaddress", ipNeighborAddDel.Neighbor.MacAddress).

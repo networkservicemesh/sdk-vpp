@@ -41,6 +41,7 @@ import (
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 // NetNSInfo contains shared info for server and client
@@ -72,6 +73,7 @@ func newNetNSInfo() NetNSInfo {
 }
 
 func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppConn api.Connection, isClient bool, netNS netns.NsHandle) (socketID uint32, err error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	socketFilename, err := getVppSocketFilename(mechanism, netNS)
 	if err != nil {
 		return 0, err
@@ -85,26 +87,27 @@ func createMemifSocket(ctx context.Context, mechanism *memifMech.Mechanism, vppC
 
 	now := time.Now()
 
-	reply, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel)
+	reply, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(newCtx, memifSocketAddDel)
 	if err != nil {
 		return 0, errors.Wrap(err, "vppapi MemifSocketFilenameAddDel returned error")
 	}
 	memifSocketAddDel.SocketID = reply.SocketID
 
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifSocketFilenameAddDel").Debug("completed")
 
-	store(ctx, isClient, memifSocketAddDel)
+	store(newCtx, isClient, memifSocketAddDel)
 
 	return memifSocketAddDel.SocketID, nil
 }
 
 func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	memifSocketAddDel, ok := load(ctx, isClient)
+	newCtx := mechutils.ToSafeContext(ctx)
+	memifSocketAddDel, ok := load(newCtx, isClient)
 	if !ok {
 		return nil
 	}
@@ -113,11 +116,11 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 
 	now := time.Now()
 
-	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(ctx, memifSocketAddDel); err != nil {
+	if _, err := memif.NewServiceClient(vppConn).MemifSocketFilenameAddDelV2(newCtx, memifSocketAddDel); err != nil {
 		return errors.Wrap(err, "vppapi MemifSocketFilenameAddDelV2 returned error")
 	}
 
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("SocketID", memifSocketAddDel.SocketID).
 		WithField("SocketFilename", memifSocketAddDel.SocketFilename).
 		WithField("IsAdd", memifSocketAddDel.IsAdd).
@@ -128,6 +131,7 @@ func deleteMemifSocket(ctx context.Context, vppConn api.Connection, isClient boo
 }
 
 func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, mode memif.MemifMode, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	role := memif.MEMIF_ROLE_API_MASTER
 	if isClient {
 		role = memif.MEMIF_ROLE_API_SLAVE
@@ -138,26 +142,27 @@ func createMemif(ctx context.Context, vppConn api.Connection, socketID uint32, m
 		SocketID: socketID,
 		Mode:     mode,
 	}
-	rsp, err := memif.NewServiceClient(vppConn).MemifCreate(ctx, memifCreate)
+	rsp, err := memif.NewServiceClient(vppConn).MemifCreate(newCtx, memifCreate)
 	if err != nil {
 		return errors.Wrap(err, "vppapi MemifCreate returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("swIfIndex", rsp.SwIfIndex).
 		WithField("Role", memifCreate.Role).
 		WithField("SocketID", memifCreate.SocketID).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifCreate").Debug("completed")
-	ifindex.Store(ctx, isClient, rsp.SwIfIndex)
+	ifindex.Store(newCtx, isClient, rsp.SwIfIndex)
 
 	if isClient {
-		up.Store(ctx, isClient, true)
+		up.Store(newCtx, isClient, true)
 	}
 	return nil
 }
 
 func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) error {
-	swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+	newCtx := mechutils.ToSafeContext(ctx)
+	swIfIndex, ok := ifindex.LoadAndDelete(newCtx, isClient)
 	if !ok {
 		return nil
 	}
@@ -165,11 +170,11 @@ func deleteMemif(ctx context.Context, vppConn api.Connection, isClient bool) err
 	memifDel := &memif.MemifDelete{
 		SwIfIndex: swIfIndex,
 	}
-	_, err := memif.NewServiceClient(vppConn).MemifDelete(ctx, memifDel)
+	_, err := memif.NewServiceClient(vppConn).MemifDelete(newCtx, memifDel)
 	if err != nil {
 		return errors.Wrap(err, "vppapi MemifDelete returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("swIfIndex", memifDel.SwIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "MemifDelete").Debug("completed")

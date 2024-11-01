@@ -43,6 +43,7 @@ import (
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
@@ -51,7 +52,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		}
 		defer handle.Close()
 
-		if _, ok := link.Load(ctx, isClient); ok {
+		if _, ok := link.Load(newCtx, isClient); ok {
 			return nil
 		}
 
@@ -67,7 +68,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			if err = handle.LinkDel(prevLink); err != nil {
 				return errors.Wrapf(err, "failed to delete link device %v", prevLink)
 			}
-			log.FromContext(ctx).
+			log.FromContext(newCtx).
 				WithField("link.Name", prevLink.Attrs().Name).
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
@@ -94,7 +95,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if addErr := netlink.LinkAdd(l); addErr != nil {
 			return errors.Wrapf(addErr, "failed to add new link device %v", l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("link.PeerName", veth.PeerName).
 			WithField("duration", time.Since(now)).
@@ -117,7 +118,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err = netlink.LinkSetNsFd(l, int(nsHandle)); err != nil {
 			return errors.Wrapf(err, "unable to change to netns")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetNsFd").Debug("completed")
@@ -127,14 +128,14 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		name := l.Attrs().Name
 		l, err = handle.LinkByName(name)
 		if err != nil {
-			log.FromContext(ctx).
+			log.FromContext(newCtx).
 				WithField("duration", time.Since(now)).
 				WithField("link.Name", name).
 				WithField("err", err).
 				WithField("netlink", "LinkByName").Debug("error")
 			return errors.Wrapf(err, "failed to get net interface: %v", name)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("duration", time.Since(now)).
 			WithField("link.Name", name).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -143,7 +144,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		// Set the LinkName
 		now = time.Now()
 		if err = handle.LinkSetName(l, name); err != nil {
-			log.FromContext(ctx).
+			log.FromContext(newCtx).
 				WithField("link.Name", l.Attrs().Name).
 				WithField("link.NewName", name).
 				WithField("duration", time.Since(now)).
@@ -151,7 +152,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 				WithField("netlink", "LinkSetName").Debug("error")
 			return errors.Wrapf(err, "failed to set the name(%s) of the link device(%v)", name, l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("link.NewName", name).
 			WithField("duration", time.Since(now)).
@@ -162,7 +163,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err = handle.LinkSetAlias(l, linkAlias); err != nil {
 			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", linkAlias, l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("alias", linkAlias).
 			WithField("duration", time.Since(now)).
@@ -174,13 +175,13 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		if err != nil {
 			return errors.Wrapf(err, "failed to enable the link device: %v", l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
 
 		// Store the link for use by ipneighbor
-		link.Store(ctx, isClient, l)
+		link.Store(newCtx, isClient, l)
 
 		// Get the peerLink
 		now = time.Now()
@@ -189,7 +190,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(l)
 			return errors.Wrapf(err, "failed to get net interface: %v", name)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", veth.PeerName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -201,7 +202,7 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(peerLink)
 			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", peerAlias, peerLink)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", peerLink.Attrs().Name).
 			WithField("peerLink", peerAlias).
 			WithField("duration", time.Since(now)).
@@ -215,32 +216,33 @@ func create(ctx context.Context, conn *networkservice.Connection, isClient bool)
 			_ = netlink.LinkDel(peerLink)
 			return errors.Wrapf(err, "failed to enable the link device: %v", peerLink)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", peerLink.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
 
 		// Store the link and peerLink
-		peer.Store(ctx, isClient, peerLink)
+		peer.Store(newCtx, isClient, peerLink)
 	}
 	return nil
 }
 
 func del(ctx context.Context, conn *networkservice.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if peerLink, ok := peer.LoadAndDelete(ctx, isClient); ok {
+		if peerLink, ok := peer.LoadAndDelete(newCtx, isClient); ok {
 			// Delete the peerLink which deletes all associated pair partners, routes, etc
 			now := time.Now()
 			if err := netlink.LinkDel(peerLink); err != nil {
 				return errors.Wrapf(err, "failed to delete link device %v", peerLink)
 			}
-			log.FromContext(ctx).
+			log.FromContext(newCtx).
 				WithField("link.Name", peerLink.Attrs().Name).
 				WithField("duration", time.Since(now)).
 				WithField("netlink", "LinkDel").Debug("completed")
 		}
 		// Delete link from metadata
-		link.Delete(ctx, isClient)
+		link.Delete(newCtx, isClient)
 	}
 	return nil
 }

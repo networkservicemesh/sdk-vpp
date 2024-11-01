@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -13,6 +13,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//go:build linux
+// +build linux
 
 package ipsec
 
@@ -45,6 +48,7 @@ import (
 	"go.fd.io/govpp/api"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -55,64 +59,65 @@ import (
 
 // create - creates IPSEC with IKEv2
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := ipsec.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		_, ok := ifindex.Load(ctx, isClient)
+		_, ok := ifindex.Load(newCtx, isClient)
 		if ok {
 			return nil
 		}
 		profileName := fmt.Sprintf("%s-%s", isClientPrefix(isClient), conn.Id)
 
 		// *** CREATE IP TUNNEL *** //
-		swIfIndex, err := createIPSecTunnel(ctx, vppConn)
+		swIfIndex, err := createIPSecTunnel(newCtx, vppConn)
 		if err != nil {
 			return err
 		}
 
 		// *** CREATE PROFILE *** //
-		err = addDelProfile(ctx, vppConn, profileName, true)
+		err = addDelProfile(newCtx, vppConn, profileName, true)
 		if err != nil {
 			return err
 		}
 
 		// *** SET UDP ENCAPSULATION *** //
-		err = setUDPEncap(ctx, vppConn, profileName)
+		err = setUDPEncap(newCtx, vppConn, profileName)
 		if err != nil {
 			return err
 		}
 
 		// *** SET KEYS *** //
-		err = setKeys(ctx, vppConn, profileName, mechanism, isClient)
+		err = setKeys(newCtx, vppConn, profileName, mechanism, isClient)
 		if err != nil {
 			return err
 		}
 
 		// *** SET FQDN *** //
-		err = setFQDN(ctx, vppConn, mechanism, profileName, isClient)
+		err = setFQDN(newCtx, vppConn, mechanism, profileName, isClient)
 		if err != nil {
 			return err
 		}
 
 		// *** SET TRAFFIC-SELECTOR *** //
-		err = setTrafficSelector(ctx, vppConn, profileName, conn, isClient)
+		err = setTrafficSelector(newCtx, vppConn, profileName, conn, isClient)
 		if err != nil {
 			return err
 		}
 
 		// *** PROTECT THE TUNNEL *** //
-		err = protectTunnel(ctx, vppConn, profileName, swIfIndex)
+		err = protectTunnel(newCtx, vppConn, profileName, swIfIndex)
 		if err != nil {
 			return err
 		}
 
 		// *** INITIATOR STEPS *** //
 		if isClient {
-			err = initiate(ctx, vppConn, mechanism, profileName)
+			err = initiate(newCtx, vppConn, mechanism, profileName)
 			if err != nil {
 				return err
 			}
 		}
 
-		ifindex.Store(ctx, isClient, swIfIndex)
+		ifindex.Store(newCtx, isClient, swIfIndex)
 	}
 	return nil
 }
@@ -151,7 +156,8 @@ func initiate(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mech
 }
 
 func getSwIfIndexByIP(ctx context.Context, vppConn api.Connection, interfaceIP net.IP) (interface_types.InterfaceIndex, error) {
-	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
+	newCtx := mechutils.ToSafeContext(ctx)
+	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(newCtx, &interfaces.SwInterfaceDump{})
 	if err != nil {
 		return 0, errors.Wrapf(err, "error attempting to get interface dump client for IP %q", interfaceIP)
 	}
@@ -166,7 +172,7 @@ func getSwIfIndexByIP(ctx context.Context, vppConn api.Connection, interfaceIP n
 			return 0, errors.Wrapf(err, "error attempting to get interface details for IP %q", interfaceIP)
 		}
 
-		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(ctx, &ip.IPAddressDump{
+		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(newCtx, &ip.IPAddressDump{
 			SwIfIndex: details.SwIfIndex,
 			IsIPv6:    interfaceIP.To4() == nil,
 		})
@@ -192,15 +198,16 @@ func getSwIfIndexByIP(ctx context.Context, vppConn api.Connection, interfaceIP n
 }
 
 func createIPSecTunnel(ctx context.Context, vppConn api.Connection) (interface_types.InterfaceIndex, error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
 
-	reply, err := ipsecapi.NewServiceClient(vppConn).IpsecItfCreate(ctx, &ipsecapi.IpsecItfCreate{
+	reply, err := ipsecapi.NewServiceClient(vppConn).IpsecItfCreate(newCtx, &ipsecapi.IpsecItfCreate{
 		Itf: ipsecapi.IpsecItf{UserInstance: ^uint32(0)}})
 
 	if err != nil {
 		return interface_types.InterfaceIndex(^uint32(0)), errors.Wrap(err, "vppapi IpsecItfCreate returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("swIfIndex", reply.SwIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "IpsecItfCreate").Debug("completed")
@@ -208,17 +215,18 @@ func createIPSecTunnel(ctx context.Context, vppConn api.Connection) (interface_t
 }
 
 func delIPSecTunnel(ctx context.Context, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+	swIfIndex, ok := ifindex.LoadAndDelete(newCtx, isClient)
 	if !ok {
 		return nil
 	}
 
-	_, err := ipsecapi.NewServiceClient(vppConn).IpsecItfDelete(ctx, &ipsecapi.IpsecItfDelete{SwIfIndex: swIfIndex})
+	_, err := ipsecapi.NewServiceClient(vppConn).IpsecItfDelete(newCtx, &ipsecapi.IpsecItfDelete{SwIfIndex: swIfIndex})
 	if err != nil {
 		return errors.Wrap(err, "vppapi IpsecItfDelete returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("swIfIndex", swIfIndex).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "IpsecItfDelete").Debug("completed")
@@ -226,15 +234,16 @@ func delIPSecTunnel(ctx context.Context, vppConn api.Connection, isClient bool) 
 }
 
 func addDelProfile(ctx context.Context, vppConn api.Connection, profileName string, isAdd bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileAddDel(ctx, &ikev2.Ikev2ProfileAddDel{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileAddDel(newCtx, &ikev2.Ikev2ProfileAddDel{
 		Name:  profileName,
 		IsAdd: isAdd,
 	})
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2ProfileAddDel returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("IsAdd", isAdd).
 		WithField("duration", time.Since(now)).
@@ -243,14 +252,15 @@ func addDelProfile(ctx context.Context, vppConn api.Connection, profileName stri
 }
 
 func setUDPEncap(ctx context.Context, vppConn api.Connection, profileName string) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileSetUDPEncap(ctx, &ikev2.Ikev2ProfileSetUDPEncap{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileSetUDPEncap(newCtx, &ikev2.Ikev2ProfileSetUDPEncap{
 		Name: profileName,
 	})
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2ProfileSetUDPEncap returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2ProfileSetUDPEncap").Debug("completed")
@@ -258,6 +268,7 @@ func setUDPEncap(ctx context.Context, vppConn api.Connection, profileName string
 }
 
 func setKeys(ctx context.Context, vppConn api.Connection, profileName string, mechanism *ipsec.Mechanism, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	publicKeyBase64 := mechanism.SrcPublicKey()
 	if isClient {
 		publicKeyBase64 = mechanism.DstPublicKey()
@@ -266,10 +277,10 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 	if err != nil {
 		return err
 	}
-	log.FromContext(ctx).WithField("operation", "dumpCertBase64ToFile").Debug("completed")
+	log.FromContext(newCtx).WithField("operation", "dumpCertBase64ToFile").Debug("completed")
 
 	now := time.Now()
-	_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetAuth(ctx, &ikev2.Ikev2ProfileSetAuth{
+	_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetAuth(newCtx, &ikev2.Ikev2ProfileSetAuth{
 		Name:       profileName,
 		AuthMethod: 1, // rsa-sig
 		DataLen:    uint32(len(publicKeyFileName)),
@@ -278,7 +289,7 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2ProfileSetAuth returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2ProfileSetAuth").Debug("completed")
@@ -287,20 +298,22 @@ func setKeys(ctx context.Context, vppConn api.Connection, profileName string, me
 }
 
 func setIKEv2LocalKey(ctx context.Context, vppConn api.Connection, privateKeyFileName string) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetLocalKey(ctx, &ikev2.Ikev2SetLocalKey{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetLocalKey(newCtx, &ikev2.Ikev2SetLocalKey{
 		KeyFile: privateKeyFileName,
 	})
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetLocalKey returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2SetLocalKey").Debug("completed")
 	return nil
 }
 
 func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mechanism, profileName string, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
 
 	// We need unique values per client/server. Using public keys
@@ -309,7 +322,7 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 	if !isClient {
 		fqdnLocal, fqdnRemote = fqdnRemote, fqdnLocal
 	}
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileSetID(ctx, &ikev2.Ikev2ProfileSetID{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2ProfileSetID(newCtx, &ikev2.Ikev2ProfileSetID{
 		Name:    profileName,
 		IsLocal: true,
 		IDType:  2, // FQDN
@@ -319,14 +332,14 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2ProfileSetID returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("IsLocal", "true").
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2ProfileSetID").Debug("completed")
 
 	now = time.Now()
-	_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetID(ctx, &ikev2.Ikev2ProfileSetID{
+	_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetID(newCtx, &ikev2.Ikev2ProfileSetID{
 		Name:    profileName,
 		IsLocal: false,
 		IDType:  2, // FQDN
@@ -336,7 +349,7 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2ProfileSetID returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("IsLocal", "false").
 		WithField("duration", time.Since(now)).
@@ -345,13 +358,14 @@ func setFQDN(ctx context.Context, vppConn api.Connection, mechanism *ipsec.Mecha
 }
 
 func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName string, conn *networkservice.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
 	for _, addr := range conn.GetContext().GetIpContext().GetSrcIpAddrs() {
 		a, err := ip_types.ParseAddressWithPrefix(addr)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse address with prefix %s", addr)
 		}
-		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(ctx, &ikev2.Ikev2ProfileSetTs{
+		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(newCtx, &ikev2.Ikev2ProfileSetTs{
 			Name: profileName,
 			Ts: ikev2_types.Ikev2Ts{
 				IsLocal:   isClient,
@@ -364,7 +378,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 		if err != nil {
 			return errors.Wrap(err, "vppapi Ikev2ProfileSetTs returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("Name", profileName).
 			WithField("IsLocal", isClient).
 			WithField("Address", addr).
@@ -377,7 +391,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse address with prefix %s", addr)
 		}
-		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(ctx, &ikev2.Ikev2ProfileSetTs{
+		_, err = ikev2.NewServiceClient(vppConn).Ikev2ProfileSetTs(newCtx, &ikev2.Ikev2ProfileSetTs{
 			Name: profileName,
 			Ts: ikev2_types.Ikev2Ts{
 				IsLocal:   !isClient,
@@ -390,7 +404,7 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 		if err != nil {
 			return errors.Wrap(err, "vppapi Ikev2ProfileSetTs returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("Name", profileName).
 			WithField("IsLocal", !isClient).
 			WithField("Address", addr).
@@ -401,15 +415,16 @@ func setTrafficSelector(ctx context.Context, vppConn api.Connection, profileName
 }
 
 func protectTunnel(ctx context.Context, vppConn api.Connection, profileName string, tunSwIfIndex interface_types.InterfaceIndex) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetTunnelInterface(ctx, &ikev2.Ikev2SetTunnelInterface{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetTunnelInterface(newCtx, &ikev2.Ikev2SetTunnelInterface{
 		Name:      profileName,
 		SwIfIndex: tunSwIfIndex,
 	})
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetTunnelInterface returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("SwIfIndex", tunSwIfIndex).
 		WithField("duration", time.Since(now)).
@@ -418,8 +433,9 @@ func protectTunnel(ctx context.Context, vppConn api.Connection, profileName stri
 }
 
 func setResponder(ctx context.Context, vppConn api.Connection, profileName string, hostSwIfIndex interface_types.InterfaceIndex, responderIP net.IP) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetResponder(ctx, &ikev2.Ikev2SetResponder{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetResponder(newCtx, &ikev2.Ikev2SetResponder{
 		Name: profileName,
 		Responder: ikev2_types.Ikev2Responder{
 			SwIfIndex: hostSwIfIndex,
@@ -429,7 +445,7 @@ func setResponder(ctx context.Context, vppConn api.Connection, profileName strin
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetResponder returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("SwIfIndex", hostSwIfIndex).
 		WithField("Addr", responderIP.String()).
@@ -439,8 +455,9 @@ func setResponder(ctx context.Context, vppConn api.Connection, profileName strin
 }
 
 func setTransforms(ctx context.Context, vppConn api.Connection, profileName string) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetIkeTransforms(ctx, &ikev2.Ikev2SetIkeTransforms{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetIkeTransforms(newCtx, &ikev2.Ikev2SetIkeTransforms{
 		Name: profileName,
 		Tr: ikev2_types.Ikev2IkeTransforms{
 			CryptoAlg:     12, // aes-cbc
@@ -452,13 +469,13 @@ func setTransforms(ctx context.Context, vppConn api.Connection, profileName stri
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetIkeTransforms returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2SetIkeTransforms").Debug("completed")
 
 	now = time.Now()
-	_, err = ikev2.NewServiceClient(vppConn).Ikev2SetEspTransforms(ctx, &ikev2.Ikev2SetEspTransforms{
+	_, err = ikev2.NewServiceClient(vppConn).Ikev2SetEspTransforms(newCtx, &ikev2.Ikev2SetEspTransforms{
 		Name: profileName,
 		Tr: ikev2_types.Ikev2EspTransforms{
 			CryptoAlg:     12, // aes-cbc,
@@ -469,7 +486,7 @@ func setTransforms(ctx context.Context, vppConn api.Connection, profileName stri
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetEspTransforms returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2SetEspTransforms").Debug("completed")
@@ -477,8 +494,9 @@ func setTransforms(ctx context.Context, vppConn api.Connection, profileName stri
 }
 
 func setSaLifetime(ctx context.Context, vppConn api.Connection, profileName string) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetSaLifetime(ctx, &ikev2.Ikev2SetSaLifetime{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2SetSaLifetime(newCtx, &ikev2.Ikev2SetSaLifetime{
 		Name:            profileName,
 		Lifetime:        3600,
 		LifetimeJitter:  10,
@@ -488,7 +506,7 @@ func setSaLifetime(ctx context.Context, vppConn api.Connection, profileName stri
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2SetSaLifetime returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2SetSaLifetime").Debug("completed")
@@ -496,14 +514,15 @@ func setSaLifetime(ctx context.Context, vppConn api.Connection, profileName stri
 }
 
 func saInit(ctx context.Context, vppConn api.Connection, profileName string) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	_, err := ikev2.NewServiceClient(vppConn).Ikev2InitiateSaInit(ctx, &ikev2.Ikev2InitiateSaInit{
+	_, err := ikev2.NewServiceClient(vppConn).Ikev2InitiateSaInit(newCtx, &ikev2.Ikev2InitiateSaInit{
 		Name: profileName,
 	})
 	if err != nil {
 		return errors.Wrap(err, "vppapi Ikev2InitiateSaInit returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("Name", profileName).
 		WithField("duration", time.Since(now)).
 		WithField("vppapi", "Ikev2InitiateSaInit").Debug("completed")

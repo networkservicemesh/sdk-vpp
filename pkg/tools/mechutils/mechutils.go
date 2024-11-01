@@ -23,11 +23,15 @@
 package mechutils
 
 import (
+	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+	"github.com/networkservicemesh/sdk/pkg/tools/extend"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 )
 
@@ -60,4 +64,16 @@ func ToAlias(conn *networkservice.Connection, isClient bool) string {
 		alias = fmt.Sprintf("client-%s", namingConn.GetId())
 	}
 	return alias
+}
+
+// ToSafeContext - creates a new context with the same values, but with minimal 500ms deadline left
+func ToSafeContext(ctx context.Context) context.Context {
+	deadline, _ := ctx.Deadline()
+	minDeadline := time.Now().Add(500 * time.Millisecond)
+	if minDeadline.After(deadline) {
+		deadline = minDeadline
+		log.FromContext(ctx).Infof("Context deadline has been increased due to important request(s)")
+	}
+	postponedCtx, _ := context.WithDeadline(context.Background(), deadline)
+	return extend.WithValuesFromContext(postponedCtx, ctx)
 }

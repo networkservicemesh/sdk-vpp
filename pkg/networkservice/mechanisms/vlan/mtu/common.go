@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Nordix Foundation.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,6 +16,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
+// +build linux
+
 package mtu
 
 import (
@@ -27,12 +30,14 @@ import (
 	"go.fd.io/govpp/api"
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 func getMTU(ctx context.Context, vppConn api.Connection, ifName string) (uint32, error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
+	dc, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(newCtx, &interfaces.SwInterfaceDump{
 		NameFilterValid: true,
 		NameFilter:      ifName,
 	})
@@ -50,12 +55,12 @@ func getMTU(ctx context.Context, vppConn api.Connection, ifName string) (uint32,
 		}
 
 		if (ifName != details.InterfaceName) && (afPacketNamePrefix+ifName != details.InterfaceName) {
-			log.FromContext(ctx).
+			log.FromContext(newCtx).
 				WithField("InterfaceName", details.InterfaceName).
 				WithField("vppapi", "SwInterfaceDetails").Debug("skipped")
 			continue
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("InterfaceName", details.InterfaceName).
 			WithField("L3 MTU", details.Mtu[l3MtuIndex]).
 			WithField("duration", time.Since(now)).

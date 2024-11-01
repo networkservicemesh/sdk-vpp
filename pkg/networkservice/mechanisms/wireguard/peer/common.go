@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -15,6 +15,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//go:build linux
+// +build linux
 
 package peer
 
@@ -34,6 +37,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
@@ -45,13 +49,14 @@ func getKey(mech *wireguardMech.Mechanism, isClient bool) string {
 }
 
 func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		pubKeyStr := getKey(mechanism, isClient)
-		_, ok := Load(ctx, isClient, pubKeyStr)
+		_, ok := Load(newCtx, isClient, pubKeyStr)
 		if ok {
 			return nil
 		}
-		ifIdx, ok := ifindex.Load(ctx, isClient)
+		ifIdx, ok := ifindex.Load(newCtx, isClient)
 		if !ok {
 			return nil
 		}
@@ -83,22 +88,23 @@ func createPeer(ctx context.Context, conn *networkservice.Connection, vppConn ap
 		wgPeerCreate := &wireguard.WireguardPeerAdd{
 			Peer: peer,
 		}
-		rspPeer, err := wireguard.NewServiceClient(vppConn).WireguardPeerAdd(ctx, wgPeerCreate)
+		rspPeer, err := wireguard.NewServiceClient(vppConn).WireguardPeerAdd(newCtx, wgPeerCreate)
 		if err != nil {
 			return errors.Wrap(err, "vppapi WireguardPeerAdd returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("PeerIndex", rspPeer.PeerIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "WireguardPeerAdd").Debug("completed")
-		Store(ctx, isClient, pubKeyStr, rspPeer.PeerIndex)
+		Store(newCtx, isClient, pubKeyStr, rspPeer.PeerIndex)
 	}
 	return nil
 }
 
 func delPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		peerIdx, ok := LoadAndDelete(ctx, isClient, getKey(mechanism, isClient))
+		peerIdx, ok := LoadAndDelete(newCtx, isClient, getKey(mechanism, isClient))
 		if !ok {
 			return nil
 		}
@@ -106,11 +112,11 @@ func delPeer(ctx context.Context, conn *networkservice.Connection, vppConn api.C
 		wgPeerRem := &wireguard.WireguardPeerRemove{
 			PeerIndex: peerIdx,
 		}
-		_, err := wireguard.NewServiceClient(vppConn).WireguardPeerRemove(ctx, wgPeerRem)
+		_, err := wireguard.NewServiceClient(vppConn).WireguardPeerRemove(newCtx, wgPeerRem)
 		if err != nil {
 			return errors.Wrap(err, "vppapi WireguardPeerRemove returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "WireguardPeerRemove").Debug("completed")
 	}
