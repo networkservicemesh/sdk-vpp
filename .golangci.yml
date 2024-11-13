@@ -26,7 +26,7 @@ linters-settings:
     values:
       regexp:
         company: .*
-        copyright-holder: Copyright \(c\) ({{year-range}}) {{company}}\n\n
+        copyright-holder: Copyright \(c\) ({{mod-year-range}}) {{company}}\n\n
         copyright-holders: ({{copyright-holder}})+
   gocyclo:
     min-complexity: 15
