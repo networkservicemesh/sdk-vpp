@@ -66,6 +66,8 @@ linters-settings:
         deny:
           - pkg: "errors"
             desc: "Please use \"github.com/pkg/errors\" instead of \"errors\" in go imports"
+  lll:
+    line-length: 190
   misspell:
     locale: US
   unparam:
@@ -136,6 +138,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - lll
     - misspell
     - nakedret
     - copyloopvar
