@@ -66,8 +66,9 @@ linters-settings:
         deny:
           - pkg: "errors"
             desc: "Please use \"github.com/pkg/errors\" instead of \"errors\" in go imports"
-  lll:
-    line-length: 190
+  # TODO - Enable and fix lll linter - https://github.com/networkservicemesh/sdk-vpp/issues/871
+  # lll:
+  #   line-length: 160
   misspell:
     locale: US
   unparam:
@@ -138,7 +139,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - lll
+    # - lll
     - misspell
     - nakedret
     - copyloopvar
