@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -573,6 +573,7 @@ func privateKeyFromFile(f string) (*rsa.PrivateKey, error) {
 
 func createCertBase64(privatekey *rsa.PrivateKey, isClient bool) (string, error) {
 	// Generate cryptographically strong pseudo-random between 0 - max
+	// nolint: gocritic
 	max := new(big.Int)
 	max.Exp(big.NewInt(2), big.NewInt(130), nil).Sub(max, big.NewInt(1))
 	n, err := rand.Int(rand.Reader, max)
