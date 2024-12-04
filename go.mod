@@ -11,15 +11,15 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.14.2-0.20241114102931-df7655523954
 	github.com/networkservicemesh/govpp v0.0.0-20240328101142-8a444680fbba
-	github.com/networkservicemesh/sdk v0.5.1-0.20241126090610-35e15a45ac1a
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20241126090835-89a3b4302060
+	github.com/networkservicemesh/sdk v0.5.1-0.20241204094001-28a23286f23d
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20241204094203-bb7c671574d8
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.3.1-0.20240922070040-084abd93d350
 	github.com/vishvananda/netns v0.0.4
 	go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524
-	go.uber.org/goleak v1.3.0
+	go.uber.org/goleak v1.3.1-0.20241121203838-4ff5fa6529ee
 	golang.org/x/sys v0.18.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/grpc v1.60.1
