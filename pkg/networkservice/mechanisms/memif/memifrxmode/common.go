@@ -26,13 +26,15 @@ import (
 
 	interfaces "github.com/networkservicemesh/govpp/binapi/interface"
 	"github.com/networkservicemesh/govpp/binapi/interface_types"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 func setRxMode(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex) error {
-	watcher, err := vppConn.WatchEvent(ctx, &interfaces.SwInterfaceEvent{})
+	newCtx := mechutils.ToSafeContext(ctx)
+	watcher, err := vppConn.WatchEvent(newCtx, &interfaces.SwInterfaceEvent{})
 	if err != nil {
 		return errors.Wrap(err, "failed to watch interfaces.SwInterfaceEvent")
 	}
@@ -41,26 +43,26 @@ func setRxMode(ctx context.Context, vppConn api.Connection, swIfIndex interface_
 		defer func() { watcher.Close() }()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-newCtx.Done():
 				return
 			case rawMsg := <-watcher.Events():
 				if msg, ok := rawMsg.(*interfaces.SwInterfaceEvent); ok &&
 					msg.SwIfIndex == swIfIndex &&
 					msg.Flags&interface_types.IF_STATUS_API_FLAG_LINK_UP != 0 {
 					now := time.Now()
-					_, err = interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
+					_, err = interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(newCtx, &interfaces.SwInterfaceSetRxMode{
 						SwIfIndex: swIfIndex,
 						Mode:      interface_types.RX_MODE_API_ADAPTIVE,
 					})
 					if err != nil {
-						log.FromContext(ctx).
+						log.FromContext(newCtx).
 							WithField("swIfIndex", swIfIndex).
 							WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 							WithField("duration", time.Since(now)).
 							WithField("vppapi", "SwInterfaceSetRxMode").Debugf("error: %v", err.Error())
 						return
 					}
-					log.FromContext(ctx).
+					log.FromContext(newCtx).
 						WithField("swIfIndex", swIfIndex).
 						WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 						WithField("duration", time.Since(now)).

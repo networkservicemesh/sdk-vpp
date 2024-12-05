@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -15,6 +15,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//go:build linux
+// +build linux
 
 package vlan
 
@@ -35,6 +38,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 const (
@@ -81,15 +85,16 @@ func addSubIf(ctx context.Context, conn *networkservice.Connection, vppConn api.
 }
 
 func getHostOrVlanInterface(ctx context.Context, vppConn api.Connection, hostIFName string, vlanID uint32) (hostSwIfIndex, vlanSwIfIndex interface_types.InterfaceIndex, err error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
-	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{
+	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(newCtx, &interfaces.SwInterfaceDump{
 		NameFilterValid: true,
 		NameFilter:      hostIFName,
 	})
 	if err != nil {
 		return 0, 0, errors.Wrapf(err, "error attempting to get interface dump client to set vlan subinterface on %q", hostIFName)
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("duration", time.Since(now)).
 		WithField("HostInterfaceName", hostIFName).
 		WithField("vppapi", "SwInterfaceDump").Debug("completed")
@@ -116,17 +121,18 @@ func getHostOrVlanInterface(ctx context.Context, vppConn api.Connection, hostIFN
 }
 
 func vppAddSubIf(ctx context.Context, vppConn api.Connection, swIfIndex interface_types.InterfaceIndex, vlanID uint32) (*interface_types.InterfaceIndex, bool, error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	now := time.Now()
 	vlanSubif := &interfaces.CreateVlanSubif{
 		SwIfIndex: swIfIndex,
 		VlanID:    vlanID,
 	}
 
-	rsp, err := interfaces.NewServiceClient(vppConn).CreateVlanSubif(ctx, vlanSubif)
+	rsp, err := interfaces.NewServiceClient(vppConn).CreateVlanSubif(newCtx, vlanSubif)
 	if err != nil {
 		return nil, true, errors.Wrap(err, "vppapi CreateVlanSubif returned error")
 	}
-	log.FromContext(ctx).
+	log.FromContext(newCtx).
 		WithField("duration", time.Since(now)).
 		WithField("HostInterfaceIndex", swIfIndex).
 		WithField("SubInterfaceIndex", rsp.SwIfIndex).
