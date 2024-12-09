@@ -41,6 +41,7 @@ import (
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		// Construct the netlink handle for the target namespace for this kernel interface
 		handle, err := kernellink.GetNetlinkHandle(mechanism.GetNetNSURL())
@@ -55,7 +56,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			}
 		}
 		// Delete the kernel interface if there is one in the target namespace
-		_ = del(ctx, conn, vppConn, isClient)
+		_ = del(newCtx, conn, vppConn, isClient)
 
 		nsFilename, err := mechutils.ToNSFilename(mechanism)
 		if err != nil {
@@ -78,34 +79,34 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 			tapCreate.TapFlags ^= tapv2.TAP_API_FLAG_TUN
 		}
 
-		deadline, ok := ctx.Deadline()
+		deadline, ok := newCtx.Deadline()
 		if ok {
 			timeout := time.Until(deadline)
-			log.FromContext(ctx).Infof("timeout before creating tap inteface: %v", timeout)
-			log.FromContext(ctx).Infof("stack trace: %s", string(debug.Stack()))
+			log.FromContext(newCtx).Infof("timeout before creating tap inteface: %v", timeout)
+			log.FromContext(newCtx).Infof("stack trace: %s", string(debug.Stack()))
 		}
 
-		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV3(ctx, tapCreate)
+		rsp, err := tapv2.NewServiceClient(vppConn).TapCreateV3(newCtx, tapCreate)
 		if err != nil {
 			return errors.Wrap(err, "vppapi TapCreateV3 returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("HostIfName", tapCreate.HostIfName).
 			WithField("HostNamespace", tapCreate.HostNamespace).
 			WithField("TapFlags", tapCreate.TapFlags).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "TapCreateV3").Debug("completed")
-		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
+		ifindex.Store(newCtx, isClient, rsp.SwIfIndex)
 
 		now = time.Now()
-		if _, err = interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(ctx, &interfaces.SwInterfaceSetRxMode{
+		if _, err = interfaces.NewServiceClient(vppConn).SwInterfaceSetRxMode(newCtx, &interfaces.SwInterfaceSetRxMode{
 			SwIfIndex: rsp.SwIfIndex,
 			Mode:      interface_types.RX_MODE_API_ADAPTIVE,
 		}); err != nil {
 			return errors.Wrap(err, "vppapi SwInterfaceSetRxMode returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("mode", interface_types.RX_MODE_API_ADAPTIVE).
 			WithField("duration", time.Since(now)).
@@ -116,7 +117,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.Wrapf(err, "unable to find hostIfName %s", tapCreate.HostIfName)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", tapCreate.HostIfName).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkByName").Debug("completed")
@@ -128,7 +129,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err = handle.LinkSetAlias(l, alias); err != nil {
 			return errors.Wrapf(err, "failed to set the alias(%s) of the link device(%v)", alias, l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("alias", alias).
 			WithField("duration", time.Since(now)).
@@ -140,7 +141,7 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.Wrapf(err, "failed to enable the link device: %v", l)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("link.Name", l.Attrs().Name).
 			WithField("duration", time.Since(now)).
 			WithField("netlink", "LinkSetUp").Debug("completed")
@@ -149,26 +150,27 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 }
 
 func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+		swIfIndex, ok := ifindex.LoadAndDelete(newCtx, isClient)
 		if !ok {
 			return nil
 		}
 		now := time.Now()
 
-		deadline, ok := ctx.Deadline()
+		deadline, ok := newCtx.Deadline()
 		if ok {
 			timeout := time.Until(deadline)
-			log.FromContext(ctx).Infof("timeout before deleting tap inteface: %v", timeout)
-			log.FromContext(ctx).Infof("stack trace: %s", string(debug.Stack()))
+			log.FromContext(newCtx).Infof("timeout before deleting tap inteface: %v", timeout)
+			log.FromContext(newCtx).Infof("stack trace: %s", string(debug.Stack()))
 		}
-		_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(ctx, &tapv2.TapDeleteV2{
+		_, err := tapv2.NewServiceClient(vppConn).TapDeleteV2(newCtx, &tapv2.TapDeleteV2{
 			SwIfIndex: swIfIndex,
 		})
 		if err != nil {
 			return errors.Wrapf(err, "unable to delete connection with SwIfIndex %v", swIfIndex)
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("SwIfIndex", swIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "TapDeleteV2").Debug("completed")

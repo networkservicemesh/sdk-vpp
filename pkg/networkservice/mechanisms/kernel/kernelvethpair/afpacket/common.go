@@ -34,20 +34,22 @@ import (
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/networkservice/up"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
 func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		if _, ok := ifindex.Load(ctx, isClient); ok {
+		if _, ok := ifindex.Load(newCtx, isClient); ok {
 			return nil
 		}
-		peerLink, ok := peer.Load(ctx, isClient)
+		peerLink, ok := peer.Load(newCtx, isClient)
 		if !ok {
 			return errors.New("peer link not found")
 		}
 		now := time.Now()
-		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreateV3(ctx, &af_packet.AfPacketCreateV3{
+		rsp, err := af_packet.NewServiceClient(vppConn).AfPacketCreateV3(newCtx, &af_packet.AfPacketCreateV3{
 			Mode:        af_packet.AF_PACKET_API_MODE_ETHERNET,
 			HostIfName:  peerLink.Attrs().Name,
 			HwAddr:      types.ToVppMacAddress(&peerLink.Attrs().HardwareAddr),
@@ -58,35 +60,36 @@ func create(ctx context.Context, conn *networkservice.Connection, vppConn api.Co
 		if err != nil {
 			return errors.Wrap(err, "vppapi AfPacketCreateV3 returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", rsp.SwIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "AfPacketCreateV3").Debug("completed")
-		ifindex.Store(ctx, isClient, rsp.SwIfIndex)
+		ifindex.Store(newCtx, isClient, rsp.SwIfIndex)
 
-		up.Store(ctx, isClient, true)
+		up.Store(newCtx, isClient, true)
 	}
 	return nil
 }
 
 func del(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := kernel.ToMechanism(conn.GetMechanism()); mechanism != nil {
-		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+		swIfIndex, ok := ifindex.LoadAndDelete(newCtx, isClient)
 		if !ok {
 			return nil
 		}
-		peerLink, ok := peer.Load(ctx, isClient)
+		peerLink, ok := peer.Load(newCtx, isClient)
 		if !ok {
 			return errors.New("peer link not found")
 		}
 		now := time.Now()
-		_, err := af_packet.NewServiceClient(vppConn).AfPacketDelete(ctx, &af_packet.AfPacketDelete{
+		_, err := af_packet.NewServiceClient(vppConn).AfPacketDelete(newCtx, &af_packet.AfPacketDelete{
 			HostIfName: peerLink.Attrs().Name,
 		})
 		if err != nil {
 			return errors.Wrap(err, "vppapi AfPacketDelete returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", swIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "AfPacketDelete").Debug("completed")

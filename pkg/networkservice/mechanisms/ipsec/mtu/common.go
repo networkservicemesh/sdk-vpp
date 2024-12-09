@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,6 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
+// +build linux
+
 package mtu
 
 import (
@@ -26,11 +29,13 @@ import (
 	"github.com/pkg/errors"
 	"go.fd.io/govpp/api"
 
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
 func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint32, error) {
-	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(ctx, &interfaces.SwInterfaceDump{})
+	newCtx := mechutils.ToSafeContext(ctx)
+	client, err := interfaces.NewServiceClient(vppConn).SwInterfaceDump(newCtx, &interfaces.SwInterfaceDump{})
 	if err != nil {
 		return 0, errors.Wrapf(err, "error attempting to get interface dump client to determine MTU for tunnelIP %q", tunnelIP)
 	}
@@ -45,7 +50,7 @@ func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 			return 0, errors.Wrapf(err, "error attempting to get interface details to determine MTU for tunnelIP %q", tunnelIP)
 		}
 
-		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(ctx, &ip.IPAddressDump{
+		ipAddressClient, err := ip.NewServiceClient(vppConn).IPAddressDump(newCtx, &ip.IPAddressDump{
 			SwIfIndex: details.SwIfIndex,
 			IsIPv6:    tunnelIP.To4() == nil,
 		})

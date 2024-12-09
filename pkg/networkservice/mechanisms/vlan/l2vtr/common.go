@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Nordix Foundation.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -15,6 +15,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//go:build linux
+// +build linux
 
 package l2vtr
 
@@ -31,19 +34,21 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 )
 
 func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection) error {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := vlanmech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if mechanism.GetVlanID() == 0 {
 			return nil
 		}
-		swIfIndex, ok := ifindex.Load(ctx, true)
+		swIfIndex, ok := ifindex.Load(newCtx, true)
 		if !ok {
 			return nil
 		}
 		now := time.Now()
-		if _, err := l2.NewServiceClient(vppConn).L2InterfaceVlanTagRewrite(ctx, &l2.L2InterfaceVlanTagRewrite{
+		if _, err := l2.NewServiceClient(vppConn).L2InterfaceVlanTagRewrite(newCtx, &l2.L2InterfaceVlanTagRewrite{
 			SwIfIndex: swIfIndex,
 			VtrOp:     L2VtrPop1,
 			PushDot1q: 0,
@@ -52,7 +57,7 @@ func enableVtr(ctx context.Context, conn *networkservice.Connection, vppConn api
 		}); err != nil {
 			return errors.Wrap(err, "vppapi L2InterfaceVlanTagRewrite returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("duration", time.Since(now)).
 			WithField("SwIfIndex", swIfIndex).
 			WithField("operation", "POP 1").

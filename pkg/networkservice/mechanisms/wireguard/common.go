@@ -1,6 +1,6 @@
 // Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2022-2023 Cisco and/or its affiliates.
+// Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,10 +16,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
+// +build linux
+
 package wireguard
 
 import (
 	"context"
+	"runtime/debug"
 	"time"
 
 	"github.com/networkservicemesh/govpp/binapi/wireguard"
@@ -32,11 +36,13 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/ifindex"
+	"github.com/networkservicemesh/sdk-vpp/pkg/tools/mechutils"
 	"github.com/networkservicemesh/sdk-vpp/pkg/tools/types"
 )
 
 // createInterface - returns public key of wireguard interface
 func createInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, privateKey wgtypes.Key, isClient bool) (string, error) {
+	newCtx := mechutils.ToSafeContext(ctx)
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if pubKeyStr, ok := load(ctx, isClient); ok {
 			return pubKeyStr, nil
@@ -57,32 +63,41 @@ func createInterface(ctx context.Context, conn *networkservice.Connection, vppCo
 			wgIfCreate.Interface.SrcIP = types.ToVppAddress(mechanism.DstIP())
 		}
 
-		rspIf, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceCreate(ctx, wgIfCreate)
+		deadline, ok := newCtx.Deadline()
+		if ok {
+			timeout := time.Until(deadline)
+			log.FromContext(newCtx).Infof("timeout before creating wireguard inteface: %v", timeout)
+			log.FromContext(newCtx).Infof("stack trace: %s", string(debug.Stack()))
+		}
+
+		rspIf, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceCreate(newCtx, wgIfCreate)
 		if err != nil {
 			return "", errors.Wrap(err, "vppapi WireguardInterfaceCreate returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", rspIf.SwIfIndex).
 			WithField("SrcAddress", wgIfCreate.Interface.SrcIP).
 			WithField("Port", wgIfCreate.Interface.Port).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "WireguardInterfaceCreate").Debug("completed")
-		ifindex.Store(ctx, isClient, rspIf.SwIfIndex)
+		ifindex.Store(newCtx, isClient, rspIf.SwIfIndex)
 
 		newPublicKey := privateKey.PublicKey().String()
-		store(ctx, newPublicKey, isClient)
+		store(newCtx, newPublicKey, isClient)
 		return newPublicKey, nil
 	}
 	return "", nil
 }
 
 func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn api.Connection, isClient bool) error {
+	deadline, _ := ctx.Deadline()
+	newCtx, _ := context.WithDeadline(context.Background(), deadline.Add(2*time.Second))
 	if mechanism := wireguardMech.ToMechanism(conn.GetMechanism()); mechanism != nil {
 		if _, ok := loadAndDelete(ctx, isClient); !ok {
 			return nil
 		}
 
-		swIfIndex, ok := ifindex.LoadAndDelete(ctx, isClient)
+		swIfIndex, ok := ifindex.LoadAndDelete(newCtx, isClient)
 		if !ok {
 			return nil
 		}
@@ -91,11 +106,11 @@ func delInterface(ctx context.Context, conn *networkservice.Connection, vppConn 
 			SwIfIndex: swIfIndex,
 		}
 
-		_, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceDelete(ctx, wgIfDel)
+		_, err := wireguard.NewServiceClient(vppConn).WireguardInterfaceDelete(newCtx, wgIfDel)
 		if err != nil {
 			return errors.Wrap(err, "vppapi WireguardInterfaceDelete returned error")
 		}
-		log.FromContext(ctx).
+		log.FromContext(newCtx).
 			WithField("swIfIndex", wgIfDel.SwIfIndex).
 			WithField("duration", time.Since(now)).
 			WithField("vppapi", "WireguardInterfaceDelete").Debug("completed")
