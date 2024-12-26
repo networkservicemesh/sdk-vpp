@@ -54,6 +54,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
+	"github.com/networkservicemesh/sdk/pkg/registry/common/null"
 	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
 	registrysendfd "github.com/networkservicemesh/sdk/pkg/registry/common/sendfd"
 
@@ -102,11 +103,16 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		),
 		registryclient.WithDialTimeout(opts.dialTimeout),
 		registryclient.WithDialOptions(opts.dialOpts...),
+		registryclient.WithNSEHealClient(null.NewNetworkServiceEndpointRegistryClient()),
+		registryclient.WithNSERetryClient(null.NewNetworkServiceEndpointRegistryClient()),
 	)
 	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx,
 		registryclient.WithClientURL(opts.clientURL),
 		registryclient.WithDialTimeout(opts.dialTimeout),
-		registryclient.WithDialOptions(opts.dialOpts...))
+		registryclient.WithDialOptions(opts.dialOpts...),
+		registryclient.WithNSHealClient(null.NewNetworkServiceRegistryClient()),
+		registryclient.WithNSRetryClient(null.NewNetworkServiceRegistryClient()),
+	)
 
 	ikev2Key, err := ipsec.GenerateRSAKey()
 	if err != nil {
