@@ -14,7 +14,7 @@ require (
 	github.com/networkservicemesh/api v1.14.2-rc.1.0.20241209080353-bbb4cd5f8f00
 	github.com/networkservicemesh/govpp v0.0.0-20240328101142-8a444680fbba
 	github.com/networkservicemesh/sdk v0.5.1-0.20250326135120-8ba46cbbc552
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20250326140908-e10ad1442b3c
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20250331111652-d55ca5c44579
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
