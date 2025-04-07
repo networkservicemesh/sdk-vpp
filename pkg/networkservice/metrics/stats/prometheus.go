@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Nordix Foundation.
+// Copyright (c) 2025 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -104,65 +104,55 @@ func registerMetrics() {
 		prometheusMetricPrefixEnv := "PROMETHEUS_METRIC_PREFIX"
 		prefix := os.Getenv(prometheusMetricPrefixEnv)
 		if prefix != "" {
-			ClientRxBytes = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "client_rx_bytes_total",
-					Help: "Total number of received bytes by the local NetworkServiceClient vpp interface.",
-				},
+			ClientRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "client_rx_bytes_total",
+				Help: "Total number of received bytes by the local NetworkServiceClient vpp interface.",
+			},
 			)
-			ClientTxBytes = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "client_tx_bytes_total",
-					Help: "Total number of transmitted bytes by the local NetworkServiceClient vpp interface.",
-				},
+			ClientTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "client_tx_bytes_total",
+				Help: "Total number of transmitted bytes by the local NetworkServiceClient vpp interface.",
+			},
 			)
-			ClientRxPackets = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "client_rx_packets_total",
-					Help: "Total number of received packets by the local NetworkServiceClient vpp interface.",
-				},
+			ClientRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "client_rx_packets_total",
+				Help: "Total number of received packets by the local NetworkServiceClient vpp interface.",
+			},
 			)
-			ClientTxPackets = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "client_tx_packets_total",
-					Help: "Total number of transmitted packets by the local NetworkServiceClient vpp interface.",
-				},
+			ClientTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "client_tx_packets_total",
+				Help: "Total number of transmitted packets by the local NetworkServiceClient vpp interface.",
+			},
 			)
-			ClientDrops = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "client_drops_total",
-					Help: "Total number of dropped packets by the local NetworkServiceClient vpp interface.",
-				},
+			ClientDrops = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "client_drops_total",
+				Help: "Total number of dropped packets by the local NetworkServiceClient vpp interface.",
+			},
 			)
-			ServerRxBytes = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "server_rx_bytes_total",
-					Help: "Total number of received bytes by the local NetworkServiceServer vpp interface.",
-				},
+			ServerRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "server_rx_bytes_total",
+				Help: "Total number of received bytes by the local NetworkServiceServer vpp interface.",
+			},
 			)
-			ServerTxBytes = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "server_tx_bytes_total",
-					Help: "Total number of transmitted bytes by the local NetworkServiceServer vpp interface.",
-				},
+			ServerTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "server_tx_bytes_total",
+				Help: "Total number of transmitted bytes by the local NetworkServiceServer vpp interface.",
+			},
 			)
-			ServerRxPackets = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "server_rx_packets_total",
-					Help: "Total number of received packets by the local NetworkServiceServer vpp interface.",
-				},
+			ServerRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "server_rx_packets_total",
+				Help: "Total number of received packets by the local NetworkServiceServer vpp interface.",
+			},
 			)
-			ServerTxPackets = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "server_tx_packets_total",
-					Help: "Total number of transmitted packets by the local NetworkServiceServer vpp interface.",
-				},
+			ServerTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "server_tx_packets_total",
+				Help: "Total number of transmitted packets by the local NetworkServiceServer vpp interface.",
+			},
 			)
-			ServerDrops = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: prefix + "server_drops_total",
-					Help: "Total number of dropped packets by the local NetworkServiceServer vpp interface.",
-				},
+			ServerDrops = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: prefix + "server_drops_total",
+				Help: "Total number of dropped packets by the local NetworkServiceServer vpp interface.",
+			},
 			)
 		}
 
