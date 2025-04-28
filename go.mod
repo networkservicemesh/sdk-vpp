@@ -13,8 +13,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/networkservicemesh/api v1.14.5-0.20250331122810-c41e3fdcf9e1
 	github.com/networkservicemesh/govpp v0.0.0-20240328101142-8a444680fbba
-	github.com/networkservicemesh/sdk v0.5.1-0.20250401065529-7c0bd2f15e17
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20250401065746-7508fae33014
+	github.com/networkservicemesh/sdk v0.5.1-0.20250428120038-b6c4fd5f2b6d
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20250428120231-4c620f77f088
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
@@ -22,7 +22,7 @@ require (
 	github.com/vishvananda/netns v0.0.4
 	go.fd.io/govpp v0.10.0-alpha.0.20240110141843-761adec77524
 	go.uber.org/goleak v1.3.1-0.20241121203838-4ff5fa6529ee
-	golang.org/x/sys v0.30.0
+	golang.org/x/sys v0.31.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.33.0
@@ -77,11 +77,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.20.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231012201019-e917dd12ba7a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
