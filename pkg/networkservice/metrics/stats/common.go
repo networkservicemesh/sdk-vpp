@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
+// Copyright (c) 2025 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +42,109 @@ import (
 
 const serverPref string = "server_"
 
+var (
+	lastClientRxBytes   uint64
+	lastClientTxBytes   uint64
+	lastClientRxPackets uint64
+	lastClientTxPackets uint64
+	lastClientDrops     uint64
+	lastServerRxBytes   uint64
+	lastServerTxBytes   uint64
+	lastServerRxPackets uint64
+	lastServerTxPackets uint64
+	lastServerDrops     uint64
+)
+
+func updateClientRxBytes(current uint64) {
+	if current < lastClientRxBytes {
+		lastClientRxBytes = 0
+	}
+	delta := current - lastClientRxBytes
+	ClientRxBytes.Add(float64(delta))
+	lastClientRxBytes = current
+}
+
+func updateClientTxBytes(current uint64) {
+	if current < lastClientTxBytes {
+		lastClientTxBytes = 0
+	}
+	delta := current - lastClientTxBytes
+	ClientTxBytes.Add(float64(delta))
+	lastClientTxBytes = current
+}
+
+func updateClientRxPackets(current uint64) {
+	if current < lastClientRxPackets {
+		lastClientRxPackets = 0
+	}
+	delta := current - lastClientRxPackets
+	ClientRxPackets.Add(float64(delta))
+	lastClientRxPackets = current
+}
+
+func updateClientTxPackets(current uint64) {
+	if current < lastClientTxPackets {
+		lastClientTxPackets = 0
+	}
+	delta := current - lastClientTxPackets
+	ClientTxPackets.Add(float64(delta))
+	lastClientTxPackets = current
+}
+
+func updateClientDrops(current uint64) {
+	if current < lastClientDrops {
+		lastClientDrops = 0
+	}
+	delta := current - lastClientDrops
+	ClientDrops.Add(float64(delta))
+	lastClientDrops = current
+}
+
+func updateServerRxBytes(current uint64) {
+	if current < lastServerRxBytes {
+		lastServerRxBytes = 0
+	}
+	delta := current - lastServerRxBytes
+	ServerRxBytes.Add(float64(delta))
+	lastServerRxBytes = current
+}
+
+func updateServerTxBytes(current uint64) {
+	if current < lastServerTxBytes {
+		lastServerTxBytes = 0
+	}
+	delta := current - lastServerTxBytes
+	ServerTxBytes.Add(float64(delta))
+	lastServerTxBytes = current
+}
+
+func updateServerRxPackets(current uint64) {
+	if current < lastServerRxPackets {
+		lastServerRxPackets = 0
+	}
+	delta := current - lastServerRxPackets
+	ServerRxPackets.Add(float64(delta))
+	lastServerRxPackets = current
+}
+
+func updateServerTxPackets(current uint64) {
+	if current < lastServerTxPackets {
+		lastServerTxPackets = 0
+	}
+	delta := current - lastServerTxPackets
+	ServerTxPackets.Add(float64(delta))
+	lastServerTxPackets = current
+}
+
+func updateServerDrops(current uint64) {
+	if current < lastServerDrops {
+		lastServerDrops = 0
+	}
+	delta := current - lastServerDrops
+	ServerDrops.Add(float64(delta))
+	lastServerDrops = current
+}
+
 // Save retrieved vpp interface metrics in pathSegment
 func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segment *networkservice.PathSegment, isClient bool) {
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
@@ -73,17 +178,17 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 
 		if prometheus.IsEnabled() {
 			if addName == serverPref {
-				ServerRxBytes.Set(float64(iface.Rx.Bytes))
-				ServerTxBytes.Set(float64(iface.Tx.Bytes))
-				ServerRxPackets.Set(float64(iface.Rx.Packets))
-				ServerTxPackets.Set(float64(iface.Tx.Packets))
-				ServerDrops.Set(float64(iface.Drops))
+				updateServerRxBytes(iface.Rx.Bytes)
+				updateServerTxBytes(iface.Tx.Bytes)
+				updateServerRxPackets(iface.Rx.Packets)
+				updateServerTxPackets(iface.Tx.Packets)
+				updateServerDrops(iface.Drops)
 			} else {
-				ClientRxBytes.Set(float64(iface.Rx.Bytes))
-				ClientTxBytes.Set(float64(iface.Tx.Bytes))
-				ClientRxPackets.Set(float64(iface.Rx.Packets))
-				ClientTxPackets.Set(float64(iface.Tx.Packets))
-				ClientDrops.Set(float64(iface.Drops))
+				updateClientRxBytes(iface.Rx.Bytes)
+				updateClientTxBytes(iface.Tx.Bytes)
+				updateClientRxPackets(iface.Rx.Packets)
+				updateClientTxPackets(iface.Tx.Packets)
+				updateClientDrops(iface.Drops)
 			}
 		}
 
