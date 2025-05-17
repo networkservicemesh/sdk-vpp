@@ -28,71 +28,71 @@ var (
 	prometheusInitOnce sync.Once
 
 	// ClientRxBytes - Total received bytes by client
-	ClientRxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ClientRxBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "client_rx_bytes_total",
 			Help: "Total number of received bytes by the NetworkServiceClient vpp interface.",
 		},
 	)
 	// ClientTxBytes - Total transmitted bytes by client
-	ClientTxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ClientTxBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "client_tx_bytes_total",
 			Help: "Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
 		},
 	)
 	// ClientRxPackets - Total received packets by client
-	ClientRxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ClientRxPackets = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "client_rx_packets_total",
 			Help: "Total number of received packets by the NetworkServiceClient vpp interface.",
 		},
 	)
 	// ClientTxPackets - Total transmitted packets by client
-	ClientTxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ClientTxPackets = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "client_tx_packets_total",
 			Help: "Total number of transmitted packets by the NetworkServiceClient vpp interface.",
 		},
 	)
 	// ClientDrops - Total drops by client
-	ClientDrops = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ClientDrops = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "client_drops_total",
 			Help: "Total number of dropped packets by the NetworkServiceClient vpp interface.",
 		},
 	)
 	// ServerRxBytes - Total received bytes by server
-	ServerRxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ServerRxBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "server_rx_bytes_total",
 			Help: "Total number of received bytes by the NetworkServiceServer vpp interface.",
 		},
 	)
 	// ServerTxBytes - Total transmitted bytes by server
-	ServerTxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ServerTxBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "server_tx_bytes_total",
 			Help: "Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
 		},
 	)
 	// ServerRxPackets - Total received packets by server
-	ServerRxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ServerRxPackets = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "server_rx_packets_total",
 			Help: "Total number of received packets by the NetworkServiceServer vpp interface.",
 		},
 	)
 	// ServerTxPackets - Total transmitted packets by server
-	ServerTxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ServerTxPackets = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "server_tx_packets_total",
 			Help: "Total number of transmitted packets by the NetworkServiceServer vpp interface.",
 		},
 	)
 	// ServerDrops - Total drops by server
-	ServerDrops = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	ServerDrops = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "server_drops_total",
 			Help: "Total number of dropped packets by the NetworkServiceServer vpp interface.",
 		},
@@ -103,52 +103,52 @@ func registerMetrics() {
 	if prom.IsEnabled() {
 		prefix := os.Getenv("PROMETHEUS_METRICS_PREFIX")
 		if prefix != "" {
-			ClientRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+			ClientRxBytes = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_client_rx_bytes_total",
 				Help: "Total number of received bytes by the NetworkServiceClient vpp interface.",
 			},
 			)
-			ClientTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+			ClientTxBytes = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_client_tx_bytes_total",
 				Help: "Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
 			},
 			)
-			ClientRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+			ClientRxPackets = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_client_rx_packets_total",
 				Help: "Total number of received packets by the NetworkServiceClient vpp interface.",
 			},
 			)
-			ClientTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+			ClientTxPackets = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_client_tx_packets_total",
 				Help: "Total number of transmitted packets by the NetworkServiceClient vpp interface.",
 			},
 			)
-			ClientDrops = prometheus.NewGauge(prometheus.GaugeOpts{
+			ClientDrops = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_client_drops_total",
 				Help: "Total number of dropped packets by the NetworkServiceClient vpp interface.",
 			},
 			)
-			ServerRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+			ServerRxBytes = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_server_rx_bytes_total",
 				Help: "Total number of received bytes by the NetworkServiceServer vpp interface.",
 			},
 			)
-			ServerTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
+			ServerTxBytes = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_server_tx_bytes_total",
 				Help: "Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
 			},
 			)
-			ServerRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+			ServerRxPackets = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_server_rx_packets_total",
 				Help: "Total number of received packets by the NetworkServiceServer vpp interface.",
 			},
 			)
-			ServerTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
+			ServerTxPackets = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_server_tx_packets_total",
 				Help: "Total number of transmitted packets by the NetworkServiceServer vpp interface.",
 			},
 			)
-			ServerDrops = prometheus.NewGauge(prometheus.GaugeOpts{
+			ServerDrops = prometheus.NewCounter(prometheus.CounterOpts{
 				Name: prefix + "_server_drops_total",
 				Help: "Total number of dropped packets by the NetworkServiceServer vpp interface.",
 			},
