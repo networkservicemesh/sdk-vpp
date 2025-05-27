@@ -67,7 +67,18 @@ func (s *statsClient) Request(ctx context.Context, request *networkservice.Netwo
 		return conn, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
+	nscInterface := conn.Path.PathSegments[0].Metrics["client_interface"]
+	nseInterface := conn.Path.PathSegments[len(conn.Path.PathSegments)-1].Metrics["server_interface"]
+	if len(conn.Path.PathSegments) > 4 {
+		if conn.Path.Index < 4 {
+			nseInterface = ""
+		} else {
+			nscInterface = ""
+		}
+	}
+
+	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true,
+		conn.Id, conn.NetworkService, conn.Path.PathSegments[0].Id, nscInterface, nseInterface, false)
 	return conn, nil
 }
 
@@ -77,7 +88,18 @@ func (s *statsClient) Close(ctx context.Context, conn *networkservice.Connection
 		return rv, err
 	}
 
-	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true)
+	nscInterface := conn.Path.PathSegments[0].Metrics["client_interface"]
+	nseInterface := conn.Path.PathSegments[len(conn.Path.PathSegments)-1].Metrics["server_interface"]
+	if len(conn.Path.PathSegments) > 4 {
+		if conn.Path.Index < 4 {
+			nseInterface = ""
+		} else {
+			nscInterface = ""
+		}
+	}
+
+	retrieveMetrics(ctx, s.statsConn, conn.Path.PathSegments[conn.Path.Index], true,
+		conn.Id, conn.NetworkService, conn.Path.PathSegments[0].Id, nscInterface, nseInterface, true)
 	return &empty.Empty{}, nil
 }
 

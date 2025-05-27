@@ -18,152 +18,145 @@ package stats
 
 import (
 	"os"
+	"strings"
 	"sync"
 
 	prom "github.com/networkservicemesh/sdk/pkg/tools/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type LabeledCounter struct {
+	metric     *prometheus.CounterVec
+	lastValues map[string]float64
+	mu         sync.Mutex
+}
+
+func NewLabeledCounter(opts prometheus.CounterOpts, labelNames []string) *LabeledCounter {
+	vec := prometheus.NewCounterVec(opts, labelNames)
+	prometheus.MustRegister(vec)
+
+	return &LabeledCounter{
+		metric:     vec,
+		lastValues: make(map[string]float64),
+	}
+}
+
+func keyFromLabels(labelValues []string) string {
+	return strings.Join(labelValues, "|")
+}
+
+func (lc *LabeledCounter) Update(labelValues []string, newValue float64) {
+	lc.mu.Lock()
+	defer lc.mu.Unlock()
+
+	key := keyFromLabels(labelValues)
+	delta := newValue - lc.lastValues[key]
+
+	if delta > 0 {
+		lc.metric.WithLabelValues(labelValues...).Add(delta)
+		lc.lastValues[key] = newValue
+	}
+}
+
+func (lc *LabeledCounter) Delete(labelValues []string) bool {
+	lc.mu.Lock()
+	defer lc.mu.Unlock()
+
+	delete(lc.lastValues, keyFromLabels(labelValues))
+	return lc.metric.DeleteLabelValues(labelValues...)
+}
+
 var (
 	prometheusInitOnce sync.Once
 
-	// ClientRxBytes - Total received bytes by client
-	ClientRxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "client_rx_bytes_total",
-			Help: "Total number of received bytes by the NetworkServiceClient vpp interface.",
-		},
-	)
-	// ClientTxBytes - Total transmitted bytes by client
-	ClientTxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "client_tx_bytes_total",
-			Help: "Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
-		},
-	)
-	// ClientRxPackets - Total received packets by client
-	ClientRxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "client_rx_packets_total",
-			Help: "Total number of received packets by the NetworkServiceClient vpp interface.",
-		},
-	)
-	// ClientTxPackets - Total transmitted packets by client
-	ClientTxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "client_tx_packets_total",
-			Help: "Total number of transmitted packets by the NetworkServiceClient vpp interface.",
-		},
-	)
-	// ClientDrops - Total drops by client
-	ClientDrops = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "client_drops_total",
-			Help: "Total number of dropped packets by the NetworkServiceClient vpp interface.",
-		},
-	)
-	// ServerRxBytes - Total received bytes by server
-	ServerRxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "server_rx_bytes_total",
-			Help: "Total number of received bytes by the NetworkServiceServer vpp interface.",
-		},
-	)
-	// ServerTxBytes - Total transmitted bytes by server
-	ServerTxBytes = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "server_tx_bytes_total",
-			Help: "Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
-		},
-	)
-	// ServerRxPackets - Total received packets by server
-	ServerRxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "server_rx_packets_total",
-			Help: "Total number of received packets by the NetworkServiceServer vpp interface.",
-		},
-	)
-	// ServerTxPackets - Total transmitted packets by server
-	ServerTxPackets = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "server_tx_packets_total",
-			Help: "Total number of transmitted packets by the NetworkServiceServer vpp interface.",
-		},
-	)
-	// ServerDrops - Total drops by server
-	ServerDrops = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "server_drops_total",
-			Help: "Total number of dropped packets by the NetworkServiceServer vpp interface.",
-		},
-	)
+	ClientRxBytes   *LabeledCounter
+	ClientTxBytes   *LabeledCounter
+	ClientRxPackets *LabeledCounter
+	ClientTxPackets *LabeledCounter
+	ClientDrops     *LabeledCounter
+	ServerRxBytes   *LabeledCounter
+	ServerTxBytes   *LabeledCounter
+	ServerRxPackets *LabeledCounter
+	ServerTxPackets *LabeledCounter
+	ServerDrops     *LabeledCounter
 )
 
 func registerMetrics() {
 	if prom.IsEnabled() {
+		forwarderName := os.Getenv("NSM_NAME")
 		prefix := os.Getenv("PROMETHEUS_METRICS_PREFIX")
 		if prefix != "" {
-			ClientRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_client_rx_bytes_total",
+			prefix = prefix + "_"
+		}
+		ClientRxBytes = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_client_rx_bytes_total",
 				Help: "Total number of received bytes by the NetworkServiceClient vpp interface.",
 			},
-			)
-			ClientTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_client_tx_bytes_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ClientTxBytes = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_client_tx_bytes_total",
 				Help: "Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
 			},
-			)
-			ClientRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_client_rx_packets_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ClientRxPackets = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_client_rx_packets_total",
 				Help: "Total number of received packets by the NetworkServiceClient vpp interface.",
 			},
-			)
-			ClientTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_client_tx_packets_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ClientTxPackets = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_client_tx_packets_total",
 				Help: "Total number of transmitted packets by the NetworkServiceClient vpp interface.",
 			},
-			)
-			ClientDrops = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_client_drops_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ClientDrops = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_client_drops_total",
 				Help: "Total number of dropped packets by the NetworkServiceClient vpp interface.",
 			},
-			)
-			ServerRxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_server_rx_bytes_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ServerRxBytes = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_server_rx_bytes_total",
 				Help: "Total number of received bytes by the NetworkServiceServer vpp interface.",
 			},
-			)
-			ServerTxBytes = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_server_tx_bytes_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ServerTxBytes = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_server_tx_bytes_total",
 				Help: "Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
 			},
-			)
-			ServerRxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_server_rx_packets_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ServerRxPackets = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_server_rx_packets_total",
 				Help: "Total number of received packets by the NetworkServiceServer vpp interface.",
 			},
-			)
-			ServerTxPackets = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_server_tx_packets_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ServerTxPackets = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_server_tx_packets_total",
 				Help: "Total number of transmitted packets by the NetworkServiceServer vpp interface.",
 			},
-			)
-			ServerDrops = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: prefix + "_server_drops_total",
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
+		ServerDrops = NewLabeledCounter(
+			prometheus.CounterOpts{
+				Name: prefix + forwarderName + "_server_drops_total",
 				Help: "Total number of dropped packets by the NetworkServiceServer vpp interface.",
 			},
-			)
-		}
-
-		prometheus.MustRegister(ClientRxBytes)
-		prometheus.MustRegister(ClientTxBytes)
-		prometheus.MustRegister(ClientRxPackets)
-		prometheus.MustRegister(ClientTxPackets)
-		prometheus.MustRegister(ClientDrops)
-		prometheus.MustRegister(ServerRxBytes)
-		prometheus.MustRegister(ServerTxBytes)
-		prometheus.MustRegister(ServerRxPackets)
-		prometheus.MustRegister(ServerTxPackets)
-		prometheus.MustRegister(ServerDrops)
+			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
+		)
 	}
 }
