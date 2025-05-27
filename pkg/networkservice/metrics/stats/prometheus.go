@@ -31,8 +31,12 @@ type labeledCounter struct {
 	mu         sync.Mutex
 }
 
-func newLabeledCounter(opts prometheus.CounterOpts, labelNames []string) *labeledCounter {
-	vec := prometheus.NewCounterVec(opts, labelNames)
+func newLabeledCounter(metricsName, metricsHelp string, labelNames []string) *labeledCounter {
+	vec := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: metricsName,
+			Help: metricsHelp,
+		}, labelNames)
 	prometheus.MustRegister(vec)
 
 	return &labeledCounter{
@@ -58,12 +62,12 @@ func (lc *labeledCounter) update(labelValues []string, newValue float64) {
 	}
 }
 
-func (lc *labeledCounter) delete(labelValues []string) bool {
+func (lc *labeledCounter) delete(labelValues []string) {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
 
 	delete(lc.lastValues, keyFromLabels(labelValues))
-	return lc.metric.DeleteLabelValues(labelValues...)
+	lc.metric.DeleteLabelValues(labelValues...)
 }
 
 var (
@@ -83,69 +87,59 @@ var (
 
 func registerMetrics() {
 	if prom.IsEnabled() {
-		forwarderName := os.Getenv("NSM_NAME")
+		nsmName := os.Getenv("NSM_NAME")
 		prefix := os.Getenv("PROMETHEUS_METRICS_PREFIX")
 		if prefix != "" {
 			prefix += "_"
 		}
-		clientRxBytes = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_client_rx_bytes_total",
-			Help: "Total number of received bytes by the NetworkServiceClient vpp interface.",
-		},
+		clientRxBytes = newLabeledCounter(
+			prefix+nsmName+"_client_rx_bytes_total",
+			"Total number of received bytes by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		clientTxBytes = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_client_tx_bytes_total",
-			Help: "Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
-		},
+		clientTxBytes = newLabeledCounter(
+			prefix+nsmName+"_client_tx_bytes_total",
+			"Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		clientRxPackets = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_client_rx_packets_total",
-			Help: "Total number of received packets by the NetworkServiceClient vpp interface.",
-		},
+		clientRxPackets = newLabeledCounter(
+			prefix+nsmName+"_client_rx_packets_total",
+			"Total number of received packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		clientTxPackets = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_client_tx_packets_total",
-			Help: "Total number of transmitted packets by the NetworkServiceClient vpp interface.",
-		},
+		clientTxPackets = newLabeledCounter(
+			prefix+nsmName+"_client_tx_packets_total",
+			"Total number of transmitted packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		clientDrops = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_client_drops_total",
-			Help: "Total number of dropped packets by the NetworkServiceClient vpp interface.",
-		},
+		clientDrops = newLabeledCounter(
+			prefix+nsmName+"_client_drops_total",
+			"Total number of dropped packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		serverRxBytes = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_server_rx_bytes_total",
-			Help: "Total number of received bytes by the NetworkServiceServer vpp interface.",
-		},
+		serverRxBytes = newLabeledCounter(
+			prefix+nsmName+"_server_rx_bytes_total",
+			"Total number of received bytes by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		serverTxBytes = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_server_tx_bytes_total",
-			Help: "Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
-		},
+		serverTxBytes = newLabeledCounter(
+			prefix+nsmName+"_server_tx_bytes_total",
+			"Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		serverRxPackets = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_server_rx_packets_total",
-			Help: "Total number of received packets by the NetworkServiceServer vpp interface.",
-		},
+		serverRxPackets = newLabeledCounter(
+			prefix+nsmName+"_server_rx_packets_total",
+			"Total number of received packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		serverTxPackets = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_server_tx_packets_total",
-			Help: "Total number of transmitted packets by the NetworkServiceServer vpp interface.",
-		},
+		serverTxPackets = newLabeledCounter(
+			prefix+nsmName+"_server_tx_packets_total",
+			"Total number of transmitted packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
-		serverDrops = newLabeledCounter(prometheus.CounterOpts{
-			Name: prefix + forwarderName + "_server_drops_total",
-			Help: "Total number of dropped packets by the NetworkServiceServer vpp interface.",
-		},
+		serverDrops = newLabeledCounter(
+			prefix+nsmName+"_server_drops_total",
+			"Total number of dropped packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 	}
