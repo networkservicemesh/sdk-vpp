@@ -87,58 +87,57 @@ var (
 
 func registerMetrics() {
 	if prom.IsEnabled() {
-		nsmName := os.Getenv("NSM_NAME")
 		prefix := os.Getenv("PROMETHEUS_METRICS_PREFIX")
 		if prefix != "" {
 			prefix += "_"
 		}
 		clientRxBytes = newLabeledCounter(
-			prefix+nsmName+"_client_rx_bytes_total",
+			prefix+"client_rx_bytes_total",
 			"Total number of received bytes by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		clientTxBytes = newLabeledCounter(
-			prefix+nsmName+"_client_tx_bytes_total",
+			prefix+"client_tx_bytes_total",
 			"Total number of transmitted bytes by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		clientRxPackets = newLabeledCounter(
-			prefix+nsmName+"_client_rx_packets_total",
+			prefix+"client_rx_packets_total",
 			"Total number of received packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		clientTxPackets = newLabeledCounter(
-			prefix+nsmName+"_client_tx_packets_total",
+			prefix+"client_tx_packets_total",
 			"Total number of transmitted packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		clientDrops = newLabeledCounter(
-			prefix+nsmName+"_client_drops_total",
+			prefix+"client_drops_total",
 			"Total number of dropped packets by the NetworkServiceClient vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		serverRxBytes = newLabeledCounter(
-			prefix+nsmName+"_server_rx_bytes_total",
+			prefix+"server_rx_bytes_total",
 			"Total number of received bytes by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		serverTxBytes = newLabeledCounter(
-			prefix+nsmName+"_server_tx_bytes_total",
+			prefix+"server_tx_bytes_total",
 			"Total number of transmitted bytes by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		serverRxPackets = newLabeledCounter(
-			prefix+nsmName+"_server_rx_packets_total",
+			prefix+"server_rx_packets_total",
 			"Total number of received packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		serverTxPackets = newLabeledCounter(
-			prefix+nsmName+"_server_tx_packets_total",
+			prefix+"server_tx_packets_total",
 			"Total number of transmitted packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
 		serverDrops = newLabeledCounter(
-			prefix+nsmName+"_server_drops_total",
+			prefix+"server_drops_total",
 			"Total number of dropped packets by the NetworkServiceServer vpp interface.",
 			[]string{"connection_id", "network_service", "nsc", "nsc_interface", "nse_interface"},
 		)
