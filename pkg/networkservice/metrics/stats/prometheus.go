@@ -56,7 +56,7 @@ func (lc *labeledCounter) update(labelValues []string, newValue float64) {
 	key := keyFromLabels(labelValues)
 	delta := newValue - lc.lastValues[key]
 
-	if delta > 0 {
+	if delta >= 0 {
 		lc.metric.WithLabelValues(labelValues...).Add(delta)
 		lc.lastValues[key] = newValue
 	}
