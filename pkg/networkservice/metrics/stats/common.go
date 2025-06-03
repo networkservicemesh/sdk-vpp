@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
+// Copyright (c) 2025 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +43,25 @@ import (
 const serverPref string = "server_"
 
 // Save retrieved vpp interface metrics in pathSegment
-func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segment *networkservice.PathSegment, isClient bool) {
+func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segment *networkservice.PathSegment, isClient bool,
+	connectionID, networkService, nsc, nscInterface, nseInterface string, isClose bool,
+) {
+	if prometheus.IsEnabled() && isClose {
+		if isClient {
+			clientRxBytes.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			clientTxBytes.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			clientRxPackets.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			clientTxPackets.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			clientDrops.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+		} else {
+			serverRxBytes.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			serverTxBytes.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			serverRxPackets.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			serverTxPackets.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+			serverDrops.delete([]string{connectionID, networkService, nsc, nscInterface, nseInterface})
+		}
+	}
+
 	swIfIndex, ok := ifindex.Load(ctx, isClient)
 	if !ok {
 		return
@@ -71,19 +91,19 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 		segment.Metrics[addName+"tx_packets"] = strconv.FormatUint(iface.Tx.Packets, 10)
 		segment.Metrics[addName+"drops"] = strconv.FormatUint(iface.Drops, 10)
 
-		if prometheus.IsEnabled() {
+		if prometheus.IsEnabled() && !isClose {
 			if addName == serverPref {
-				ServerRxBytes.Set(float64(iface.Rx.Bytes))
-				ServerTxBytes.Set(float64(iface.Tx.Bytes))
-				ServerRxPackets.Set(float64(iface.Rx.Packets))
-				ServerTxPackets.Set(float64(iface.Tx.Packets))
-				ServerDrops.Set(float64(iface.Drops))
+				serverRxBytes.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Rx.Bytes))
+				serverTxBytes.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Tx.Bytes))
+				serverRxPackets.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Rx.Packets))
+				serverTxPackets.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Tx.Packets))
+				serverDrops.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Drops))
 			} else {
-				ClientRxBytes.Set(float64(iface.Rx.Bytes))
-				ClientTxBytes.Set(float64(iface.Tx.Bytes))
-				ClientRxPackets.Set(float64(iface.Rx.Packets))
-				ClientTxPackets.Set(float64(iface.Tx.Packets))
-				ClientDrops.Set(float64(iface.Drops))
+				clientRxBytes.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Rx.Bytes))
+				clientTxBytes.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Tx.Bytes))
+				clientRxPackets.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Rx.Packets))
+				clientTxPackets.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Tx.Packets))
+				clientDrops.update([]string{connectionID, networkService, nsc, nscInterface, nseInterface}, float64(iface.Drops))
 			}
 		}
 
