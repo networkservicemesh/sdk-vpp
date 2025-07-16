@@ -4,6 +4,8 @@
 //
 // Copyright (c) 2024 Cisco and/or its affiliates.
 //
+// Copyright (c) 2025 OpenInfra Foundation Europe and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +91,7 @@ func NewServer(ctx context.Context, tokenGenerator token.GeneratorFunc, vppConn 
 		authorizeServer:                  authorize.NewServer(authorize.Any()),
 		authorizeMonitorConnectionServer: authmonitor.NewMonitorConnectionServer(authmonitor.Any()),
 		clientURL:                        &url.URL{Scheme: "unix", Host: "connect.to.socket"},
-		dialTimeout:                      time.Millisecond * 300,
+		dialTimeout:                      time.Second * 15,
 		domain2Device:                    make(map[string]string),
 	}
 	for _, opt := range options {
