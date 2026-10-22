@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2023 Cisco and/or its affiliates.
 //
+// Copyright (c) 2026 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +62,7 @@ func getMTU(ctx context.Context, vppConn api.Connection, tunnelIP net.IP) (uint3
 				break
 			}
 			if err != nil {
-				return 0, errors.Wrapf(err, "error attempting to get interface ip address for %q (swIfIndex: %q) to determine MTU for tunnelIP %q", details.InterfaceName, details.SwIfIndex, tunnelIP)
+				return 0, errors.Wrapf(err, "error attempting to get interface ip address for %q (swIfIndex: %d) to determine MTU for tunnelIP %q", details.InterfaceName, details.SwIfIndex, tunnelIP)
 			}
 			if types.FromVppAddressWithPrefix(ipAddressDetails.Prefix).IP.Equal(tunnelIP) && details.Mtu[0] != 0 {
 				return (details.Mtu[0] - overhead(tunnelIP.To4() == nil)), nil

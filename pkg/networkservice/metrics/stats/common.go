@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
-// Copyright (c) 2025 Nordix Foundation.
+// Copyright (c) 2025-2026 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -68,7 +68,7 @@ func retrieveMetrics(ctx context.Context, statsConn *core.StatsConnection, segme
 	}
 	stats := new(api.InterfaceStats)
 	if e := statsConn.GetInterfaceStats(stats); e != nil {
-		log.FromContext(ctx).Errorf("getting interface stats failed:", e)
+		log.FromContext(ctx).Errorf("getting interface stats failed: %v", e)
 		return
 	}
 

@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2024 Cisco and/or its affiliates.
 //
+// Copyright (c) 2026 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,7 +183,7 @@ func getSwIfIndexByIP(ctx context.Context, vppConn api.Connection, interfaceIP n
 				break
 			}
 			if err != nil {
-				return 0, errors.Wrapf(err, "error attempting to get ip address for %q (swIfIndex: %q)", details.InterfaceName, details.SwIfIndex)
+				return 0, errors.Wrapf(err, "error attempting to get ip address for %q (swIfIndex: %d)", details.InterfaceName, details.SwIfIndex)
 			}
 			if types.FromVppAddressWithPrefix(ipAddressDetails.Prefix).IP.Equal(interfaceIP) {
 				return details.SwIfIndex, nil
