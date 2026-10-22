@@ -1,5 +1,7 @@
 // Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
+// Copyright (c) 2026 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +53,7 @@ func setMTU(ctx context.Context, conn *networkservice.Connection, isClient bool)
 		now := time.Now()
 
 		if err := netlink.LinkSetMTU(peerLink, int(mtu)); err != nil {
-			return errors.Wrapf(err, "error attempting to set MTU on link %q to value %q", peerLink.Attrs().Name, mtu)
+			return errors.Wrapf(err, "error attempting to set MTU on link %q to value %d", peerLink.Attrs().Name, mtu)
 		}
 		log.FromContext(ctx).
 			WithField("link.Name", peerLink.Attrs().Name).
